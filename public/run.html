@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/assets/auth.js"></script>
+  <title>Running — AEO</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <style>
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+
+    .run-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 0;
+      height: calc(100vh - 49px);
+    }
+
+    /* ── Left panel ── */
+    .run-left {
+      border-right: 1px solid var(--border);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .run-label {
+      font-size: var(--text-xs);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 4px;
+    }
+
+    .run-status-text {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .progress-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--text-xs);
+      color: var(--text2);
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .phase-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .phase-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      transition: color 0.3s;
+    }
+    .phase-item.active { color: var(--accent); }
+    .phase-item.done   { color: var(--success); }
+
+    .phase-marker {
+      width: 6px; height: 6px;
+      border-radius: 1px;
+      background: var(--border2);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .phase-item.active .phase-marker { background: var(--accent); }
+    .phase-item.done   .phase-marker { background: var(--success); }
+
+    .cancel-btn {
+      margin-top: auto;
+    }
+
+    /* ── Right panel ── */
+    .run-right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .run-right-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .feeds-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .error-box {
+      background: rgba(196,112,112,0.08);
+      border: 1px solid rgba(196,112,112,0.25);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: var(--text-sm);
+      color: var(--danger);
+      display: none;
+    }
+
+    @media (max-width: 700px) {
+      .run-layout { grid-template-columns: 1fr; height: auto; }
+      .run-left  { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="logo">A<em>.</em>E<em>.</em>O</div>
+    <div id="live-ind"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a id="live-link" href="#" class="btn btn-ghost btn-sm" style="display:none">View Live Responses ↗</a>
+      <a id="dashboard-link" href="#" class="btn btn-primary btn-sm" style="display:none">Dashboard</a>
+    </div>
+  </div>
+
+  <div class="run-layout">
+
+    <!-- ── Left: progress ── -->
+    <div class="run-left">
+      <div>
+        <div class="run-label">Status</div>
+        <div class="run-status-text" id="run-status-text">Initializing</div>
+      </div>
+
+      <div>
+        <div class="progress-label-row">
+          <span id="progress-label">–</span>
+          <span id="progress-pct">0%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progress-bar" style="width:0%"></div></div>
+      </div>
+
+      <div class="sep-dots"></div>
+
+      <div>
+        <div class="run-label" style="margin-bottom:12px">Phases</div>
+        <div class="phase-list">
+          <div class="phase-item" id="step-querying">
+            <div class="phase-marker"></div>01 — Querying LLMs
+          </div>
+          <div class="phase-item" id="step-analyzing">
+            <div class="phase-marker"></div>02 — Analyzing Responses
+          </div>
+          <div class="phase-item" id="step-complete">
+            <div class="phase-marker"></div>03 — Complete
+          </div>
+        </div>
+      </div>
+
+      <div class="error-box" id="error-box"></div>
+
+      <div class="cancel-btn">
+        <button class="btn btn-danger btn-sm" id="cancel-btn">Cancel Run</button>
+      </div>
+    </div>
+
+    <!-- ── Right: live responses ── -->
+    <div class="run-right">
+      <div class="run-right-header">
+        <div style="font-size:var(--text-xs);letter-spacing:0.12em;text-transform:uppercase;color:var(--text2)">
+          Live Responses
+        </div>
+        <div class="live-indicator" id="live-indicator" style="display:none">
+          <div class="live-dot"></div>LIVE
+        </div>
+      </div>
+      <div class="feeds-wrap" id="feeds-wrap">
+        <div style="font-size:var(--text-sm);color:var(--text3);letter-spacing:0.06em;margin-top:20px;text-align:center">
+          Responses will appear here as queries complete…
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const runId = params.get('runId')
+    if (!runId) location.href = '/'
+
+    // ── Error log ────────────────────────────────────────────────────────────
+    const errorLog = []
+    function logError(source, msg, detail = '') {
+      errorLog.push({ time: new Date().toISOString(), source, message: msg, detail: String(detail).substring(0, 600) })
+      let btn = document.getElementById('error-log-btn')
+      if (!btn) {
+        btn = document.createElement('button')
+        btn.id = 'error-log-btn'
+        btn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;font-family:var(--font);font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;padding:6px 12px;background:rgba(196,112,112,0.15);border:1px solid var(--danger);color:var(--danger);cursor:pointer;border-radius:2px'
+        btn.addEventListener('click', downloadErrorLog)
+        document.body.appendChild(btn)
+      }
+      btn.textContent = `⚠ ${errorLog.length} Error${errorLog.length > 1 ? 's' : ''} — Download Log`
+    }
+    function downloadErrorLog() {
+      const text = [
+        'AEO ERROR LOG',
+        `Generated: ${new Date().toISOString()}`,
+        `Run: ${runId || 'n/a'}`,
+        `URL: ${location.href}`,
+        '═'.repeat(60),
+        '',
+        ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '─'.repeat(40)].filter(Boolean).join('\n')),
+      ].join('\n')
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `aeo-errors-${Date.now()}.txt` })
+      a.click()
+    }
+
+    // ── Safe JSON parser ─────────────────────────────────────────────────────
+    async function safeJson(res) {
+      const text = await res.text()
+      try { return JSON.parse(text) }
+      catch {
+        const truncated = text.substring(0, 400)
+        logError('API', `Non-JSON response (HTTP ${res.status})`, truncated)
+        return { error: truncated }
+      }
+    }
+
+    let polling = false
+    let cancelled = false
+    const PHASES = ['querying', 'analyzing', 'complete']
+    const PHASE_LABELS = {
+      pending: 'Initializing',
+      querying: 'Querying LLMs',
+      scraping: 'Analyzing', // legacy; runs transition immediately to analyzing
+      analyzing: 'Analyzing',
+      complete: 'Complete',
+      failed: 'Cancelled',
+    }
+    const LLM_ORDER = ['claude', 'chatgpt', 'gemini']
+
+    document.getElementById('live-link').href = `/live.html?runId=${runId}`
+
+    function setStep(phase) {
+      const idx = PHASES.indexOf(phase)
+      PHASES.forEach((p, i) => {
+        const el = document.getElementById(`step-${p}`)
+        el.className = 'phase-item'
+        if (i < idx)  el.className += ' done'
+        if (i === idx) el.className += ' active'
+      })
+    }
+
+    function setProgress(pct, label) {
+      document.getElementById('progress-bar').style.width = `${pct}%`
+      document.getElementById('progress-pct').textContent = `${Math.round(pct)}%`
+      document.getElementById('progress-label').textContent = label
+    }
+
+    // Feed management
+    const feedEls = {}
+    const feedCounts = { claude: 0, chatgpt: 0, gemini: 0 }
+    const seenIds = new Set()
+
+    function ensureFeeds() {
+      const wrap = document.getElementById('feeds-wrap')
+      // Clear placeholder
+      if (wrap.querySelector('[style*="text-align:center"]')) wrap.innerHTML = ''
+
+      LLM_ORDER.forEach(llm => {
+        if (!feedEls[llm]) {
+          const div = document.createElement('div')
+          div.className = 'llm-feed'
+          div.innerHTML = `
+            <div class="llm-feed-header" onclick="toggleFeed('${llm}')">
+              <span class="llm-feed-title"><span class="llm-badge llm-${llm}">${llm}</span></span>
+              <span class="llm-feed-count" id="feed-count-${llm}">0 / –</span>
+            </div>
+            <div class="llm-feed-body" id="feed-body-${llm}"></div>
+          `
+          wrap.appendChild(div)
+          feedEls[llm] = div
+        }
+      })
+    }
+
+    function toggleFeed(llm) {
+      const body = document.getElementById(`feed-body-${llm}`)
+      body.style.display = body.style.display === 'none' ? '' : ''
+    }
+
+    function updateFeeds(data) {
+      const { grouped, progress } = data
+      ensureFeeds()
+      document.getElementById('live-indicator').style.display = 'inline-flex'
+      document.getElementById('live-link').style.display = ''
+
+      LLM_ORDER.forEach(llm => {
+        const items = grouped[llm] || []
+        const prog = progress[llm] || { done: 0, total: 0 }
+        document.getElementById(`feed-count-${llm}`).textContent =
+          `${prog.done} / ${prog.total}`
+
+        const body = document.getElementById(`feed-body-${llm}`)
+        const newItems = items.filter(r => !seenIds.has(r.id))
+        newItems.forEach(r => seenIds.add(r.id))
+
+        // Prepend new items
+        newItems.forEach(r => {
+          const item = document.createElement('div')
+          item.className = 'llm-feed-item new'
+          item.innerHTML = `
+            <div class="llm-feed-prompt">${escHtml(r.prompt_text)} <span class="badge badge-${r.funnel_stage}" style="margin-left:4px">${r.funnel_stage}</span></div>
+            <div class="llm-feed-response" onclick="this.classList.toggle('expanded')">${escHtml((r.response_text||'').substring(0, 500))}</div>
+          `
+          body.insertBefore(item, body.firstChild)
+          setTimeout(() => item.classList.remove('new'), 1000)
+        })
+      })
+    }
+
+    function escHtml(s) {
+      return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    }
+
+    async function fetchLiveResponses() {
+      try {
+        const res = await fetch(`/api/runs/${runId}/live-responses`)
+        if (res.ok) updateFeeds(await res.json())
+      } catch {}
+    }
+
+    async function process() {
+      if (polling || cancelled) return
+      polling = true
+
+      try {
+        const res = await fetch(`/api/runs/${runId}/process`, { method: 'POST' })
+        const data = await safeJson(res)
+
+        if (!res.ok) {
+          showError(data.error || 'Unknown error')
+          return
+        }
+
+        const { phase, total, completed, done } = data
+        document.getElementById('run-status-text').textContent = PHASE_LABELS[phase] || phase
+        setStep(phase)
+
+        if (phase === 'querying' && total > 0) {
+          setProgress((completed / total) * 80, `${completed} / ${total} queries`)
+        } else if (phase === 'analyzing') {
+          setProgress(85, 'Analyzing mentions…')
+        }
+
+        // Fetch live responses during querying phase
+        if (phase === 'querying') {
+          await fetchLiveResponses()
+        }
+
+        if (done || phase === 'complete') {
+          setProgress(100, 'Complete')
+          setStep('complete')
+          document.getElementById('run-status-text').textContent = 'Complete'
+          document.getElementById('live-indicator').style.display = 'none'
+          await fetchLiveResponses()
+          // Show Dashboard button — keep page accessible for raw data (no redirect)
+          const dashLink = document.getElementById('dashboard-link')
+          if (dashLink) {
+            dashLink.href = `/dashboard.html?runId=${runId}`
+            dashLink.style.display = ''
+          }
+          return
+        }
+
+        polling = false
+        setTimeout(process, 1800)
+      } catch (err) {
+        showError(err.message)
+      }
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('error-box')
+      box.textContent = `Error: ${msg}`
+      box.style.display = 'block'
+      polling = false
+      if (!cancelled) setTimeout(process, 6000)
+    }
+
+    document.getElementById('cancel-btn').addEventListener('click', async () => {
+      if (!confirm('Cancel this run?')) return
+      cancelled = true
+      polling = false
+      await fetch(`/api/runs/${runId}/cancel`, { method: 'POST' })
+      document.getElementById('run-status-text').textContent = 'Cancelled'
+      document.getElementById('cancel-btn').style.display = 'none'
+      document.getElementById('live-indicator').style.display = 'none'
+      setStep('querying')
+    })
+
+    process()
+  </script>
+</body>
+</html>

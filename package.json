@@ -1,0 +1,25 @@
+{
+  "name": "aeo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create aeo-db",
+    "db:migrate": "wrangler d1 execute aeo-db --local --file=./schema.sql",
+    "db:migrate:remote": "wrangler d1 execute aeo-db --remote --file=./schema.sql",
+    "db:migrate:positioning": "wrangler d1 execute aeo-db --local --file=./migrations/0002_add_positioning.sql",
+    "db:migrate:page_title": "wrangler d1 execute aeo-db --local --file=./migrations/0003_add_page_title.sql",
+    "db:migrate:persona_goals": "wrangler d1 execute aeo-db --local --file=./migrations/0004_add_persona_goals_pain_points.sql",
+    "db:migrate:persona_prompts": "wrangler d1 execute aeo-db --local --file=./migrations/0005_persona_prompts.sql",
+    "kv:create": "wrangler kv:namespace create AEO_KV"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "typescript": "^5.5.0",
+    "wrangler": "^4.69.0"
+  }
+}

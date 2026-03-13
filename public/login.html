@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AEO</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .login-box {
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .login-logo {
+      font-size: var(--text-md);
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 48px;
+    }
+    .login-logo em { font-style: normal; color: var(--text); }
+    #pwd {
+      width: 100%;
+      text-align: center;
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+      font-size: var(--text-sm);
+    }
+    #submit-btn {
+      width: 100%;
+      justify-content: center;
+    }
+    #err {
+      margin-top: 14px;
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      color: var(--danger);
+      min-height: 14px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="login-logo">A<em>.</em>E<em>.</em>O</div>
+    <input
+      type="password"
+      id="pwd"
+      placeholder="password"
+      autocomplete="current-password"
+      autofocus
+    />
+    <button class="btn btn-primary" id="submit-btn" onclick="submit()">Enter →</button>
+    <div id="err"></div>
+  </div>
+
+  <script>
+    document.getElementById('pwd').addEventListener('keydown', e => {
+      if (e.key === 'Enter') submit()
+    })
+
+    async function submit() {
+      const pwd = document.getElementById('pwd').value
+      if (!pwd) return
+      const btn = document.getElementById('submit-btn')
+      const err = document.getElementById('err')
+      btn.disabled = true
+      btn.innerHTML = '<span class="spinner"></span>'
+      err.textContent = ''
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd }),
+        })
+        if (res.ok) {
+          window.location.href = '/'
+        } else {
+          err.textContent = 'incorrect password'
+          btn.disabled = false
+          btn.textContent = 'Enter →'
+          const input = document.getElementById('pwd')
+          input.value = ''
+          input.focus()
+        }
+      } catch {
+        err.textContent = 'connection error'
+        btn.disabled = false
+        btn.textContent = 'Enter →'
+      }
+    }
+  </script>
+</body>
+</html>

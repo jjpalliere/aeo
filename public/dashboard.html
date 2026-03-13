@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/assets/auth.js"></script>
+  <title>Dashboard — AEO</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    .brand-tag {
+      font-size: var(--text-xs);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 3px 10px;
+      border-radius: 1px;
+    }
+    .rank-cell {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 2px;
+      font-size: var(--text-sm); font-weight: 700;
+    }
+    .rank-1 { background: rgba(74,222,128,0.15); color: var(--success); }
+    .rank-2 { background: rgba(251,191,36,0.15); color: var(--warning); }
+    .rank-3 { background: rgba(96,165,250,0.15); color: var(--tofu); }
+    .rank-other { background: var(--surface2); color: var(--text2); }
+    #loading { display:flex; align-items:center; justify-content:center; height:100vh; gap:10px; font-size:var(--text-sm); letter-spacing:0.08em; color:var(--text2); }
+    .target-row td { background: var(--accent-dim); }
+    .no-data { color:var(--text3); font-size:var(--text-sm); letter-spacing:0.06em; }
+    .suggestions { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .rank-filter-btn {
+      font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 1px; border: 1px solid var(--border2);
+      background: transparent; color: var(--text2); cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .rank-filter-btn.active { border-color: var(--text2); color: var(--text); background: var(--surface2); }
+    .rank-filter-btn:hover { color: var(--text); }
+    .sortable-th { cursor: pointer; user-select: none; }
+    .sortable-th:hover { color: var(--accent); }
+    .sortable-th.sort-desc::after { content: ' ▼'; margin-left: 4px; font-size: 0.85em; color: var(--accent); }
+    .sortable-th.sort-asc::after { content: ' ▲'; margin-left: 4px; font-size: 0.85em; color: var(--accent); }
+
+    /* ── Prompt group accordion ──────────────────────────────────────────── */
+    .pg-header {
+      display: grid; grid-template-columns: 1fr auto; gap: 16px;
+      align-items: start; padding: 12px 0;
+      border-bottom: 1px solid var(--border); cursor: pointer;
+    }
+    .pg-header:hover .pg-prompt-text { color: var(--accent); }
+    .pg-detail { border-bottom: 1px solid var(--border); }
+    .pg-sub {
+      display: grid; grid-template-columns: 1fr 100px; gap: 16px;
+      padding: 10px 0 10px 16px; border-bottom: 1px solid var(--border2);
+    }
+    .pg-sub:last-child { border-bottom: none; }
+    .pg-count {
+      font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text3); border: 1px solid var(--border2); padding: 2px 6px;
+    }
+    .pg-caret { font-size: var(--text-xs); color: var(--text3); }
+
+    /* ── Citation domain filters ─────────────────────────────────────────── */
+    .domain-filter-bubble {
+      font-size: var(--text-xs); letter-spacing: 0.04em;
+      padding: 6px 14px; border-radius: 4px; border: 1px solid var(--border2);
+      background: var(--surface2); color: var(--text2); cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .domain-filter-bubble:hover { border-color: var(--text3); color: var(--text); background: var(--surface3); }
+    .domain-filter-bubble.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .source-type-badge {
+      font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 2px;
+    }
+    .source-type-owned { background: rgba(74,222,128,0.15); color: var(--success); }
+    .source-type-competitor { background: rgba(248,113,113,0.15); color: var(--danger); }
+    .source-type-news { background: rgba(96,165,250,0.15); color: var(--tofu); }
+    .source-type-industry { background: rgba(251,191,36,0.15); color: var(--warning); }
+    .source-type-unknown { background: var(--surface2); color: var(--text2); }
+    .citation-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: var(--text-sm);
+    }
+    .citation-row a { word-break: break-all; color: var(--accent); }
+    .citation-row a:hover { text-decoration: underline; }
+    .citation-count { flex-shrink: 0; color: var(--text2); font-size: var(--text-xs); }
+    .citation-detail-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); table-layout: fixed; }
+    .citation-detail-table th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text2); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+    .citation-detail-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .citation-detail-table tr:hover td { background: var(--surface); }
+    .citation-prompt-snippet { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Citations panel: fixed width, prevent filter-dependent layout shift */
+    #panel-citations { width: 100%; min-width: 0; overflow: hidden; }
+    #panel-citations .card { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+    #panel-citations .table-wrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
+    .citation-output-btn {
+      background: none; border: 1px solid var(--border2); color: var(--text2); cursor: pointer;
+      padding: 4px 8px; border-radius: 2px; font-size: var(--text-xs); transition: all 0.15s;
+    }
+    .citation-output-btn:hover { border-color: var(--accent); color: var(--accent); }
+    /* Column filter popovers */
+    .citation-col-filter {
+      cursor: pointer; user-select: none; position: relative;
+      border-radius: 2px; transition: all 0.15s;
+    }
+    .citation-col-filter:hover { color: var(--accent); background: var(--surface2); }
+    .citation-col-filter.active { color: var(--accent); background: var(--accent-dim); }
+    .citation-col-filter::after { content: ' ▾'; font-size: 0.7em; opacity: 0.6; }
+    .citation-col-filter:hover::after, .citation-col-filter.active::after { opacity: 1; }
+    .citation-filter-popover {
+      position: absolute; z-index: 100; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 12px; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      font-size: var(--text-sm);
+    }
+    .citation-filter-popover input { width: 100%; padding: 6px 10px; border: 1px solid var(--border2); border-radius: 2px; background: var(--bg); color: var(--text); font-size: var(--text-sm); box-sizing: border-box; }
+    .citation-filter-popover .cf-check { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
+    .citation-filter-popover .cf-check:hover { color: var(--accent); }
+    .citation-filter-popover .cf-check input[type="checkbox"] { width: auto; margin: 0; }
+    /* Page title search row */
+    .citation-filter-row th { padding: 4px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .citation-page-title-search-cell { padding: 6px 12px !important; }
+    .citation-filter-search {
+      width: 100%; padding: 6px 10px; border: 1px solid var(--border2); border-radius: 2px;
+      background: var(--bg); color: var(--text); font-size: var(--text-sm); font-family: var(--font);
+      box-sizing: border-box;
+    }
+    .citation-filter-search:focus { outline: none; border-color: var(--accent); }
+    .citation-brand-filter-label {
+      display: flex; align-items: center; gap: 8px; white-space: nowrap;
+      font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--text2);
+      cursor: pointer; font-weight: 400; padding: 6px 10px;
+      border: 1px solid var(--border2); border-radius: 4px; background: var(--surface2);
+      transition: all 0.15s;
+    }
+    .citation-brand-filter-label:hover { border-color: var(--text3); color: var(--text); }
+    .citation-brand-filter-label input { margin: 0; }
+    .citation-domain-filters-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .citation-filters-label { font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--text3); }
+    #output-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; }
+    #output-modal-overlay.open { display: flex; align-items: center; justify-content: center; }
+    #output-modal {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+      max-width: 640px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    #output-modal-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    #output-modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: var(--text-md); }
+    #output-modal-body { padding: 16px; overflow-y: auto; font-size: var(--text-sm); line-height: 1.6; }
+
+    /* ── Runs drawer ───────────────────────────────────────────────────── */
+    /* Runs sidebar — fixed left panel, collapsible (default: collapsed) */
+    #content { display: none; min-height: 100vh; }
+    #runs-sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-width);
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+      z-index: 50;
+      transition: width 0.2s ease;
+    }
+    #runs-sidebar.collapsed {
+      width: 48px;
+    }
+    #runs-sidebar.collapsed .sidebar-header-text,
+    #runs-sidebar.collapsed #sidebar-list { display: none; }
+    .sidebar-toggle {
+      background: none; border: none; color: var(--text2); cursor: pointer;
+      padding: 4px; font-size: 14px; line-height: 1;
+      flex-shrink: 0;
+    }
+    .sidebar-toggle:hover { color: var(--accent); }
+    #runs-sidebar.collapsed .sidebar-header { justify-content: center; padding: 13px 0; }
+    .dash-main {
+      margin-left: var(--sidebar-width);
+      width: calc(100vw - var(--sidebar-width));
+      flex: 1; display: flex; flex-direction: column; min-width: 0;
+      overflow-y: auto;
+      transition: margin-left 0.2s ease, width 0.2s ease;
+    }
+    #runs-sidebar.collapsed ~ .dash-main {
+      margin-left: 48px;
+      width: calc(100vw - 48px);
+    }
+    .sidebar-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:13px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+      font-size:var(--text-xs); letter-spacing:0.12em; text-transform:uppercase; color:var(--text2);
+      min-width:0;
+    }
+    #sidebar-list { flex:1; overflow-y:auto; }
+    .sidebar-run {
+      padding:11px 16px; border-bottom:1px solid var(--border);
+      cursor:pointer; transition:background 0.1s; position:relative;
+    }
+    .sidebar-run:hover { background:var(--bg); }
+    .sidebar-run.current { background:var(--w-04); border-left:3px solid var(--accent); }
+    .sidebar-run-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+    .sidebar-run-date { font-size:var(--text-xs); color:var(--text3); }
+    .sidebar-run-status {
+      font-size:var(--text-xs); letter-spacing:0.1em; text-transform:uppercase;
+      padding:2px 7px; border-radius:1px;
+    }
+    .sidebar-status-complete  { background:rgba(74,222,128,0.15); color:var(--success); }
+    .sidebar-status-querying,
+    .sidebar-status-scraping,
+    .sidebar-status-analyzing,
+    .sidebar-status-pending   { background:rgba(251,191,36,0.12); color:var(--accent); }
+    .sidebar-status-failed    { background:rgba(248,113,113,0.12); color:var(--danger); }
+    .sidebar-run-bar  { height:2px; background:var(--surface2); border-radius:1px; margin:5px 0; }
+    .sidebar-run-fill { height:100%; border-radius:1px; background:var(--accent); transition:width 0.3s; }
+    .sidebar-run-footer { display:flex; align-items:center; justify-content:space-between; }
+    .sidebar-run-pct  { font-size:var(--text-xs); color:var(--text3); }
+    .sidebar-del-btn  {
+      background:none; border:none; color:var(--text3); cursor:pointer;
+      font-size:var(--text-xs); letter-spacing:0.06em; padding:2px 0;
+      opacity:0; transition:opacity 0.15s, color 0.15s;
+    }
+    .sidebar-run:hover .sidebar-del-btn { opacity:1; }
+    .sidebar-del-btn:hover { color:var(--danger); }
+    .sidebar-del-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .sidebar-del-btn:disabled:hover { color:var(--text3); }
+
+    /* Top bar: logo on top row, nav below */
+    .top-bar { flex-direction: column; align-items: stretch; padding: 12px 24px 10px; gap: 12px; }
+    .top-bar-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .top-bar-logo-row { flex-shrink: 0; }
+    .top-bar-nav-row { border-top: 1px solid var(--border2); padding-top: 10px; }
+
+    /* Report panel: match AI Chat width and height */
+    .report-panel-card { width: 100%; }
+    .report-preview {
+      font-size: var(--text-xs); line-height: 1.8; color: var(--text);
+      padding: 8px 0; overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+      min-height: 500px; max-height: 70vh; overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading"><span class="spinner"></span><span>Loading results…</span></div>
+
+  <div id="content">
+    <aside id="runs-sidebar" class="collapsed">
+      <div class="sidebar-header">
+        <span class="sidebar-header-text">Runs</span>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar">▶</button>
+      </div>
+      <div id="sidebar-list"></div>
+    </aside>
+    <main class="dash-main">
+    <div class="top-bar">
+      <div class="top-bar-row top-bar-logo-row">
+        <div class="logo">A<em>.</em>E<em>.</em>O</div>
+        <div class="brand-tag" id="brand-tag">–</div>
+      </div>
+      <div class="top-bar-row top-bar-nav-row">
+      <div class="dash-nav" style="margin:0;border:none">
+        <div class="dash-nav-item active" onclick="showPanel('ranking',this)">Ranking</div>
+        <div class="dash-nav-item" onclick="showPanel('citations',this)">Citations</div>
+        <div class="dash-nav-item" onclick="showPanel('competitors',this)">Competitors</div>
+          <div class="dash-nav-item" onclick="showPanel('personas',this)">Personas</div>
+        <div class="dash-nav-item" onclick="showPanel('assistant',this)">AI Chat</div>
+        <div class="dash-nav-item" onclick="showPanel('report',this)">Report</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="live-indicator" id="live-ind" style="display:none">
+          <div class="live-dot"></div>LIVE
+        </div>
+        <span id="live-progress" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2);display:none"></span>
+          <a id="live-link" href="#" class="btn btn-ghost btn-sm">Live View ↗</a>
+        <a href="/" class="btn btn-ghost btn-sm">New</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-wide">
+
+      <!-- RANKING -->
+      <div id="panel-ranking" class="dash-panel active">
+        <!-- Overview stats + charts (only in Rankings) -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">Overview</div>
+        <div id="stats-row" class="stats-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin-bottom:16px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div><div class="card-title" style="font-size:var(--text-xs);margin-bottom:8px">LLM Top-3 Visibility</div><div class="chart-wrap" style="height:180px"><canvas id="chart-visibility"></canvas></div></div>
+          <div><div class="card-title" style="font-size:var(--text-xs);margin-bottom:8px">Citation Sources</div><div class="chart-wrap" style="height:180px"><canvas id="chart-source-types"></canvas></div></div>
+        </div>
+      </div>
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            Brand Rank Per Query
+            <div style="display:flex;gap:6px;flex-wrap:wrap" id="rank-filter-btns">
+              <button class="rank-filter-btn active" onclick="setRankFilter('all',this)">All Queries</button>
+              <button class="rank-filter-btn" onclick="setRankFilter('multi',this)">Multi-brand</button>
+              <button class="rank-filter-btn" onclick="setRankFilter('mentioned',this)">Brand Mentioned</button>
+            </div>
+          </div>
+          <div id="ranking-per-prompt"></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">Brand Summary</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Brand</th>
+                <th class="sortable-th" data-sort="mentions" onclick="setRankingSort('mentions',this)">Mentions</th>
+                <th class="sortable-th" data-sort="avg_rank" onclick="setRankingSort('avg_rank',this)">Avg Rank</th>
+                <th class="sortable-th" data-sort="best_rank" onclick="setRankingSort('best_rank',this)">Best Rank</th>
+              </tr></thead>
+              <tbody id="ranking-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CITATIONS -->
+      <div id="panel-citations" class="dash-panel">
+          <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;align-items:center;gap:12px">
+            Citations
+              <label class="citation-brand-filter-label">
+                <input type="checkbox" id="citation-brand-toggle" onchange="toggleCitationBrandFilter(this.checked)" /> Brand mentioned only
+              </label>
+          </div>
+            <div class="citation-domain-filters-wrap">
+              <span class="citation-filters-label">Filter by domain:</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap" id="citation-domain-filters"></div>
+          </div>
+        </div>
+          <div class="table-wrap" id="citations-table-wrap">
+            <table class="citation-detail-table" id="citations-table">
+              <thead>
+                <tr>
+                  <th class="citation-col-filter" data-col="query" onclick="openCitationColFilter('query', event)" style="width:22%">Query</th>
+                  <th class="citation-col-filter" data-col="llm" onclick="openCitationColFilter('llm', event)" style="width:8%">LLM</th>
+                  <th class="citation-col-filter" data-col="source" onclick="openCitationColFilter('source', event)" style="width:10%">Source</th>
+                  <th class="citation-page-title-header" style="width:28%">Page Title</th>
+                  <th class="citation-col-filter" data-col="domain" onclick="openCitationColFilter('domain', event)" style="width:22%">Domain</th>
+                  <th style="width:40px"></th>
+                </tr>
+                <tr class="citation-filter-row">
+                  <th></th><th></th><th></th>
+                  <th class="citation-page-title-search-cell">
+                    <input type="text" id="citation-page-title-search" class="citation-filter-search" placeholder="Search page titles…" />
+                  </th>
+                  <th></th><th></th>
+                </tr>
+              </thead>
+              <tbody id="citations-list"></tbody>
+            </table>
+            <div id="citation-col-popover" class="citation-filter-popover" style="display:none" onclick="event.stopPropagation()"></div>
+          </div>
+          <div id="citations-empty" class="no-data" style="padding:16px 0;display:none">No citations yet.</div>
+        </div>
+      </div>
+
+      <!-- COMPETITORS -->
+      <div id="panel-competitors" class="dash-panel">
+        <div class="card">
+          <div class="card-title">Top Competitors by Mention Count</div>
+          <div class="chart-wrap"><canvas id="chart-competitors"></canvas></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">Competitor vs. Brand Ranking</div>
+          <div class="table-wrap">
+            <table class="competitor-ranking-table">
+              <thead><tr><th>Brand</th><th>Positioning</th><th>Mentions</th><th>By LLM</th><th>Avg Rank</th><th>Best Rank</th><th>vs. You</th></tr></thead>
+              <tbody id="competitor-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">Competitor Analysis</div>
+          <div style="font-size:var(--text-xs);color:var(--text2);margin-bottom:10px;line-height:1.5">
+            Each card shows a competitor and how the AI characterized them. Click to expand: each row shows one AI response—the characterization and the surrounding quote from the response where the competitor was mentioned.
+          </div>
+          <div id="competitor-analysis"></div>
+        </div>
+      </div>
+
+      <!-- PERSONAS -->
+      <div id="panel-personas" class="dash-panel">
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">Persona Performance Comparison</div>
+          <div style="font-size:var(--text-xs);color:var(--text2);margin-bottom:10px;line-height:1.5">
+            Compares how each persona performs across AI models. Shows average rank, top-3 rate, mention rate, and per-LLM breakdown. Personas with no completed queries yet appear with placeholder metrics.
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Persona</th>
+                <th>Queries</th>
+                <th>Avg Rank</th>
+                <th>Top-3 Rate</th>
+                <th>Mention Rate</th>
+                <th>By LLM (Top-3)</th>
+              </tr></thead>
+              <tbody id="persona-comparison-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">Per-Persona Prompt Performance</div>
+          <div style="font-size:var(--text-xs);color:var(--text2);margin-bottom:10px;line-height:1.5">
+            Per-prompt performance for each persona. Expand a persona to see how each question performs for that persona across models. Personas without completed prompts show an empty breakdown.
+          </div>
+          <div id="persona-prompt-breakdown"></div>
+        </div>
+      </div>
+
+      <!-- REPORT (same width as AI Chat panel) -->
+      <div id="panel-report" class="dash-panel">
+        <div class="card report-panel-card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+            AEO Report
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm" onclick="downloadReport('txt')">Download .txt</button>
+              <button class="btn btn-primary btn-sm" onclick="downloadReport('md')">Download .md</button>
+            </div>
+          </div>
+          <pre id="report-preview" class="report-preview"></pre>
+        </div>
+      </div>
+
+      <!-- AI ASSISTANT -->
+      <div id="panel-assistant" class="dash-panel">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="chat-window" style="height:500px;border:none;border-radius:0">
+            <div class="chat-messages" id="chat-messages">
+              <div class="chat-message assistant">
+                <div class="chat-bubble">
+                  I have access to your full AEO dataset. Ask me anything — "Which LLM ranks us worst?", "What pages should we create?", "What are competitors doing better?"
+                </div>
+              </div>
+            </div>
+            <div class="chat-input-row">
+              <input type="text" id="chat-input" placeholder="Ask about your brand's AI visibility…" />
+              <button class="btn btn-primary" id="chat-send">Send</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">Suggested Questions</div>
+          <div class="suggestions" id="suggestions"></div>
+        </div>
+      </div>
+
+    </div>
+    </main>
+  </div>
+
+  <!-- Output modal (LLM response viewer) -->
+  <div id="output-modal-overlay" onclick="closeOutputModal(event)">
+    <div id="output-modal" onclick="event.stopPropagation()">
+      <div id="output-modal-header">
+        <span style="font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">LLM Output</span>
+        <button id="output-modal-close" onclick="closeOutputModal()">✕</button>
+      </div>
+      <div id="output-modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const runId = params.get('runId')
+    if (!runId) location.href = '/'
+
+    // API base for subpath deployments (e.g. /aeo/dashboard.html -> /aeo)
+    const API = (path) => {
+      const base = location.pathname.replace(/\/[^/]*$/, '') || ''
+      return base + (path.startsWith('/') ? path : '/' + path)
+    }
+
+    const LLM_KEYS = ['claude', 'chatgpt', 'gemini']
+    let data = null
+    let liveInterval = null
+    let charts = {}
+
+    // ── Error log ────────────────────────────────────────────────────────────
+    const errorLog = []
+    function logError(source, msg, detail = '') {
+      errorLog.push({ time: new Date().toISOString(), source, message: msg, detail: String(detail).substring(0, 600) })
+      let btn = document.getElementById('error-log-btn')
+      if (!btn) {
+        btn = document.createElement('button')
+        btn.id = 'error-log-btn'
+        btn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;font-family:var(--font);font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;padding:6px 12px;background:rgba(248,113,113,0.15);border:1px solid var(--danger);color:var(--danger);cursor:pointer;border-radius:2px'
+        btn.addEventListener('click', downloadErrorLog)
+        document.body.appendChild(btn)
+      }
+      btn.textContent = `⚠ ${errorLog.length} Error${errorLog.length > 1 ? 's' : ''} — Download Log`
+    }
+    function downloadErrorLog() {
+      const text = [
+        'AEO ERROR LOG',
+        `Generated: ${new Date().toISOString()}`,
+        `Run: ${runId || 'n/a'}`,
+        `URL: ${location.href}`,
+        '═'.repeat(60),
+        '',
+        ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '─'.repeat(40)].filter(Boolean).join('\n')),
+      ].join('\n')
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `aeo-errors-${Date.now()}.txt` })
+      a.click()
+    }
+
+    // ── Safe JSON parser ─────────────────────────────────────────────────────
+    async function safeJson(res) {
+      const text = await res.text()
+      try { return JSON.parse(text) }
+      catch {
+        const truncated = text.substring(0, 400)
+        logError('API', `Non-JSON response (HTTP ${res.status})`, truncated)
+        return { error: truncated }
+      }
+    }
+
+    const COLORS = ['#c8a96e','#7dba84','#7a9cc8','#a07abf','#c47070','#c8956e','#6b9e8a','#9e8a6b']
+
+    Chart.defaults.color = '#6b6660'
+    Chart.defaults.borderColor = '#2c2a27'
+    Chart.defaults.font.family = "'JetBrains Mono', monospace"
+    Chart.defaults.font.size = 11
+
+    document.getElementById('live-link').href = `live.html?runId=${runId}`
+
+    function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    function rankBadge(r) {
+      const cls = r===1?'rank-1':r===2?'rank-2':r===3?'rank-3':'rank-other'
+      return `<span class="rank-cell ${cls}">${r}</span>`
+    }
+
+    function llmBadge(llm) { return `<span class="llm-badge llm-${llm}">${llm}</span>` }
+    function srcBadge(t) { return `<span class="badge badge-${t||'unknown'}">${t||'unknown'}</span>` }
+    function stageBadge(s) { return `<span class="badge badge-${s}">${s}</span>` }
+    /** Total mentions: prefer sum of mentions_by_llm (matches By LLM column) over mention_count */
+    function totalMentions(r) {
+      const mbl = r?.mentions_by_llm
+      if (mbl && typeof mbl === 'object') {
+        const sum = (mbl.claude || 0) + (mbl.chatgpt || 0) + (mbl.gemini || 0)
+        if (sum > 0) return sum
+      }
+      return Number(r?.mention_count) || 0
+    }
+
+    function showPanel(name, el) {
+      document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'))
+      document.querySelectorAll('.dash-nav-item').forEach(i => i.classList.remove('active'))
+      document.getElementById(`panel-${name}`).classList.add('active')
+      el.classList.add('active')
+      if (name === 'competitors') resetCompetitorAnalysisAccordions()
+    }
+
+    function resetCompetitorAnalysisAccordions() {
+      document.querySelectorAll('[id^="ca-detail-"]').forEach(d => { d.style.display = 'none' })
+      document.querySelectorAll('[id^="ca-caret-"]').forEach(c => { c.textContent = '▼' })
+    }
+
+    function destroyChart(id) {
+      if (charts[id]) { charts[id].destroy(); delete charts[id] }
+    }
+
+    function buildOverview() {
+      const { run, competitorRanks, competitorDetail, sourceTypes = [], mentions = [] } = data
+      const compsForOverview = competitorDetail?.length ? competitorDetail : competitorRanks || []
+      const targetRank = compsForOverview.find(r => r.is_target)
+      const totalCitations = sourceTypes.reduce((s, r) => s + Number(r.count), 0)
+      const ownedCitations = sourceTypes.find(s => s.source_type === 'owned')?.count ?? 0
+      const competitors = compsForOverview.filter(r => !r.is_target)
+      const totalQueries = run?.total_queries ?? 0
+      const top3Pct = mentions.length > 0
+        ? Math.round((mentions.filter(m => m.is_target && m.rank <= 3).length / Math.max(totalQueries,1)) * 100)
+        : 0
+
+      document.getElementById('stats-row').innerHTML = [
+        { v: totalQueries,                                     label: 'Queries Run' },
+        { v: targetRank != null ? `#${(+targetRank.avg_rank).toFixed(1)}` : '—', label: 'Avg Brand Rank' },
+        { v: totalCitations,                                   label: 'Citations Found' },
+        { v: competitors.length,                               label: 'Competitors' },
+        { v: ownedCitations,                                   label: 'Owned Pages Cited', warnZero: true },
+        { v: `${top3Pct}%`,                                    label: 'Top-3 Visibility', warnZero: true },
+      ].map(s => {
+        const isZero = s.v === 0 || s.v === '0%'
+        const valStyle = (s.warnZero && isZero) ? ' style="color:var(--danger)"' : ''
+        return `<div class="stat-card"><div class="stat-value"${valStyle}>${s.v}</div><div class="stat-label">${s.label}</div></div>`
+      }).join('')
+
+      const llms = LLM_KEYS
+      const llmVis = llms.map(llm => {
+        const tot = mentions.filter(m => m.llm===llm).length
+        const top3 = mentions.filter(m => m.llm===llm && m.is_target && m.rank<=3).length
+        return tot > 0 ? Math.round((top3/tot)*100) : 0
+      })
+
+      destroyChart('visibility')
+      charts.visibility = new Chart(document.getElementById('chart-visibility'), {
+        type: 'bar',
+        data: { labels: ['Claude','ChatGPT','Gemini'], datasets:[{ label:'% in Top 3', data: llmVis, backgroundColor: COLORS.slice(0,3), borderRadius:2 }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{max:100,ticks:{callback:v=>`${v}%`}}} },
+      })
+
+      destroyChart('sourceTypes')
+      const onlyUnknown = totalCitations > 0 && sourceTypes.length === 1 && (sourceTypes[0]?.source_type === 'unknown' || !sourceTypes[0]?.source_type)
+      const emptyCites = totalCitations === 0 || onlyUnknown
+      const sourceLabels = emptyCites ? ['none'] : sourceTypes.map(s=>s.source_type)
+      const sourceData = emptyCites ? [1] : sourceTypes.map(s=>s.count)
+      const sourceColors = emptyCites ? ['#5c5850'] : COLORS
+      charts.sourceTypes = new Chart(document.getElementById('chart-source-types'), {
+        type: 'doughnut',
+        data: { labels: sourceLabels, datasets:[{ data: sourceData, backgroundColor: sourceColors, borderWidth:0 }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}} },
+      })
+
+      const topComp = [...competitors].sort((a,b) => totalMentions(b) - totalMentions(a)).slice(0,8)
+      const mentionValues = topComp.map(c=>totalMentions(c))
+      const maxMentions = Math.max(1, ...mentionValues)
+      const barColors = topComp.map((_, i) => COLORS[i % COLORS.length])
+      destroyChart('competitors')
+      charts.competitors = new Chart(document.getElementById('chart-competitors'), {
+        type: 'bar',
+        data: { labels: topComp.map(c=>c.brand_name), datasets:[{ label:'Mentions', data:mentionValues, backgroundColor:barColors, borderRadius:2 }] },
+        options: {
+          responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}},
+          scales: {
+            x: { min:0, max: maxMentions, ticks: { stepSize:1, precision:0 } }
+          }
+        },
+      })
+    }
+
+    let rankFilter = 'all'
+    let promptGroups = []
+    let rankingSort = { col: 'mentions', dir: -1 }  // -1 = desc, 1 = asc
+
+    function setRankingSort(col, thEl) {
+      const same = rankingSort.col === col
+      rankingSort = { col, dir: same ? -rankingSort.dir : -1 }
+      document.querySelectorAll('.sortable-th').forEach(h => {
+        h.classList.remove('sort-active', 'sort-asc', 'sort-desc')
+        if (h.dataset.sort === col) {
+          h.classList.add('sort-active', rankingSort.dir === 1 ? 'sort-asc' : 'sort-desc')
+        }
+      })
+      buildRanking()
+    }
+
+    function setRankFilter(filter, btn) {
+      rankFilter = filter
+      document.querySelectorAll('#rank-filter-btns .rank-filter-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      renderRankingPerPrompt()
+    }
+
+    function renderRankingPerPrompt() {
+      const { mentions, promptDetail } = data
+
+      // Group mentions by query_id (not prompt_text|llm|persona — those can collide when prompts/personas share text)
+      const mentionsByQueryId = {}
+      for (const m of mentions) {
+        const qid = m.query_id
+        if (!qid) continue
+        if (!mentionsByQueryId[qid]) mentionsByQueryId[qid] = []
+        mentionsByQueryId[qid].push(m)
+      }
+
+      // Build sub-items from promptDetail — each row is one query; get mentions by query_id
+      const subsByPrompt = {}
+      for (const r of promptDetail) {
+        const qid = r.query_id
+        const allBrands = (qid && mentionsByQueryId[qid]) || []
+        if (!subsByPrompt[r.prompt_text]) subsByPrompt[r.prompt_text] = { funnel_stage: r.funnel_stage, subs: [] }
+        subsByPrompt[r.prompt_text].subs.push({
+          query_id: r.query_id,
+          llm: r.llm,
+          persona_name: r.persona_name,
+          target: allBrands.find(b => b.is_target),
+          brand_count: allBrands.length,
+        })
+      }
+
+      // Build promptGroups array (stable indices used in toggle handlers)
+      promptGroups = Object.entries(subsByPrompt).map(([prompt_text, { funnel_stage, subs }]) => {
+        const ranked = subs.filter(s => s.target)
+        const avg_rank = ranked.length > 0
+          ? ranked.reduce((sum, s) => sum + s.target.rank, 0) / ranked.length
+          : null
+        const max_brand_count = subs.reduce((m, s) => Math.max(m, s.brand_count), 0)
+        return { prompt_text, funnel_stage, subs, avg_rank, count: subs.length, max_brand_count }
+      })
+
+      console.log(`[ranking] ${promptGroups.length} prompt groups built, filter=${rankFilter}`)
+
+      // Apply filter at group level
+      let filtered = promptGroups
+      if (rankFilter === 'multi')      filtered = promptGroups.filter(g => g.max_brand_count > 1)
+      else if (rankFilter === 'mentioned') filtered = promptGroups.filter(g => g.subs.some(s => s.target))
+
+      console.log(`[ranking] ${filtered.length} groups visible after filter`)
+
+      const container = document.getElementById('ranking-per-prompt')
+      if (filtered.length === 0) {
+        const msg = rankFilter === 'multi'
+          ? 'No multi-brand responses in this run yet. Competitor names are extracted automatically from list patterns in LLM responses — try running queries that ask LLMs to compare or list tools.'
+          : 'No matching responses.'
+        container.innerHTML = `<div class="no-data" style="padding:16px 0">${msg}</div>`
+        return
+      }
+
+      container.innerHTML = filtered.map(group => {
+        const gi = promptGroups.indexOf(group)
+
+        // Avg rank badge
+        const avgStr = group.avg_rank !== null
+          ? rankBadge(Math.round(group.avg_rank)) +
+            (!group.avg_rank.toFixed(1).endsWith('.0')
+              ? `<span style="color:var(--text3);font-size:var(--text-xs);margin-left:3px">(${group.avg_rank.toFixed(1)})</span>`
+              : '')
+          : `<span style="color:var(--text3);font-size:var(--text-xs);letter-spacing:0.04em">No ranking</span>`
+
+        // Sub-rows
+        const subRows = group.subs.map((sub, j) => {
+          const rankStr = sub.target
+            ? rankBadge(sub.target.rank) + (sub.brand_count > 1
+                ? ` <span style="color:var(--text3);font-size:var(--text-xs);letter-spacing:0.04em">of ${sub.brand_count}</span>`
+                : '')
+            : `<span style="color:var(--text3);font-size:var(--text-xs);letter-spacing:0.04em">No ranking</span>`
+          return `<div class="pg-sub">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+                ${llmBadge(sub.llm)}
+                <span style="font-size:var(--text-xs);color:var(--text3);letter-spacing:0.04em">${escHtml(sub.persona_name)}</span>
+              </div>
+              <div id="pg-resp-${gi}-${j}" data-loaded="false" style="color:var(--text3);font-size:var(--text-xs)">—</div>
+            </div>
+            <div style="text-align:right;white-space:nowrap">${rankStr}</div>
+          </div>`
+        }).join('')
+
+        return `<div>
+          <div class="pg-header" onclick="togglePromptGroup(${gi})">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
+                ${stageBadge(group.funnel_stage)}
+            </div>
+              <div class="pg-prompt-text" style="font-size:var(--text-sm);line-height:1.5;color:var(--text)">${escHtml(group.prompt_text)}</div>
+          </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-top:2px">
+              <span class="pg-count">${group.count} response${group.count !== 1 ? 's' : ''}</span>
+              ${avgStr}
+              <span class="pg-caret" id="pg-caret-${gi}">▼</span>
+            </div>
+          </div>
+          <div class="pg-detail" id="pg-detail-${gi}" style="display:none">${subRows}</div>
+        </div>`
+      }).join('')
+    }
+
+    function togglePromptGroup(gi) {
+      const detail = document.getElementById(`pg-detail-${gi}`)
+      const caret  = document.getElementById(`pg-caret-${gi}`)
+      if (!detail || !caret) return
+      const isOpen = detail.style.display !== 'none'
+      detail.style.display = isOpen ? 'none' : 'block'
+      caret.textContent    = isOpen ? '▼' : '▲'
+      console.log(`[pg] group ${gi} ${isOpen ? 'collapsed' : 'expanded'}`)
+      if (!isOpen) {
+        const group = promptGroups[gi]
+        if (group) group.subs.forEach((_, j) => loadPgResponse(gi, j))
+      }
+    }
+
+    function toggleCompAnalysisGroup(gi) {
+      const detail = document.getElementById(`ca-detail-${gi}`)
+      const caret  = document.getElementById(`ca-caret-${gi}`)
+      if (!detail || !caret) return
+      const isOpen = detail.style.display !== 'none'
+      detail.style.display = isOpen ? 'none' : 'block'
+      caret.textContent = isOpen ? '▼' : '▲'
+    }
+
+    function loadPgResponse(gi, j) {
+      const el = document.getElementById(`pg-resp-${gi}-${j}`)
+      if (!el || el.dataset.loaded !== 'false') return
+      const queryId = promptGroups[gi]?.subs[j]?.query_id
+      if (!queryId) {
+        console.warn(`[pg] no query_id for group ${gi} sub ${j}`)
+        return
+      }
+      el.dataset.loaded = 'loading'
+      el.innerHTML = '<span class="spinner"></span>'
+      console.log(`[pg] fetching response group=${gi} sub=${j} query=${queryId.slice(0, 8)}`)
+      fetch(API(`/api/runs/${runId}/queries/${queryId}/response`))
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          return r.json()
+        })
+        .then(d => {
+          console.log(`[pg] loaded group=${gi} sub=${j}`)
+          el.dataset.loaded = 'true'
+          el.innerHTML = `<div style="white-space:pre-wrap;font-size:var(--text-sm);line-height:1.6;color:var(--text2);max-height:220px;overflow-y:auto;border:1px solid var(--border);padding:8px 10px;margin-top:4px">${escHtml(d.response_text || '')}</div>`
+        })
+        .catch(err => {
+          console.warn(`[pg] failed group=${gi} sub=${j}: ${err.message}`)
+          logError('ranking', `Failed to load response group=${gi} sub=${j}`, err.message)
+          el.dataset.loaded = 'false'
+          el.innerHTML = `<span style="color:var(--danger);font-size:var(--text-xs);cursor:pointer" onclick="loadPgResponse(${gi},${j})">⟳ Retry</span>`
+        })
+    }
+
+    function buildRanking() {
+      renderRankingPerPrompt()
+
+      const compsForRanking = data.competitorDetail?.length ? data.competitorDetail : data.competitorRanks || []
+      const sorted = [...compsForRanking].sort((a, b) => {
+        const { col, dir } = rankingSort
+        let va, vb
+        if (col === 'mentions') { va = totalMentions(a); vb = totalMentions(b) }
+        else if (col === 'avg_rank') { va = +(a?.avg_rank ?? 999); vb = +(b?.avg_rank ?? 999) }
+        else { va = +(a?.best_rank ?? 999); vb = +(b?.best_rank ?? 999) }
+        return dir * (va > vb ? 1 : va < vb ? -1 : 0)
+      })
+      document.getElementById('ranking-table').innerHTML = sorted.length
+        ? sorted.map(r => `
+          <tr class="${r.is_target?'target-row':''}">
+            <td><strong>${escHtml(r.brand_name)}</strong>${r.is_target?' <span style="font-size:var(--text-xs);color:var(--text2)">(you)</span>':''}</td>
+            <td>${totalMentions(r)}</td>
+            <td>${rankBadge(Math.round(Number(r?.avg_rank) || 0))}</td>
+            <td>${rankBadge(Number(r?.best_rank) || 0)}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="4" class="no-data" style="padding:16px 0">No brand data yet.</td></tr>'
+      // Sync header sort indicators on first load
+      document.querySelectorAll('.sortable-th').forEach(h => {
+        h.classList.remove('sort-active', 'sort-asc', 'sort-desc')
+        if (h.dataset.sort === rankingSort.col) h.classList.add('sort-active', rankingSort.dir === 1 ? 'sort-asc' : 'sort-desc')
+      })
+    }
+
+    let citationDomainFilter = null
+    let citationLLMFilters = null  // array for column dropdown multi-select, e.g. ['claude','chatgpt']
+    let citationQueryFilter = ''
+    let citationDomainKeywordFilter = ''
+    let citationPageTitleFilter = ''
+    let citationSourceFilters = null  // array e.g. ['owned','competitor']
+    let citationMentionsFilter = false
+    let citationColPopoverOpen = null
+
+    function setCitationDomainFilter(domain, btn) {
+      citationDomainFilter = (domain === '' || domain === undefined || domain === null) ? null : String(domain)
+      document.querySelectorAll('#citation-domain-filters .domain-filter-bubble').forEach(b => b.classList.remove('active'))
+      if (btn) btn.classList.add('active')
+      renderCitationsList()
+    }
+
+    function toggleCitationBrandFilter(checked) {
+      citationMentionsFilter = !!checked
+      buildCitationDomainFilters()
+      renderCitationsList()
+    }
+
+    function isCitationColFiltered(col) {
+      if (col === 'query') return !!(citationQueryFilter && citationQueryFilter.trim())
+      if (col === 'domain') return !!(citationDomainKeywordFilter && citationDomainKeywordFilter.trim())
+      if (col === 'llm') return !!(citationLLMFilters && citationLLMFilters.length)
+      if (col === 'source') return !!(citationSourceFilters && citationSourceFilters.length)
+      return false
+    }
+
+    function updateCitationColIndicators() {
+      document.querySelectorAll('.citation-col-filter').forEach(th => {
+        th.classList.toggle('active', isCitationColFiltered(th.dataset.col) || citationColPopoverOpen === th.dataset.col)
+      })
+    }
+
+    function closeCitationColFilter() {
+      const pop = document.getElementById('citation-col-popover')
+      if (pop) pop.style.display = 'none'
+      citationColPopoverOpen = null
+      document.removeEventListener('click', closeCitationColFilterOnClick)
+      updateCitationColIndicators()
+    }
+    function closeCitationColFilterOnClick(e) {
+      const pop = document.getElementById('citation-col-popover')
+      if (pop && !pop.contains(e.target) && !e.target.closest('.citation-col-filter')) closeCitationColFilter()
+    }
+
+    function openCitationColFilter(col, ev) {
+      ev.stopPropagation()
+      const pop = document.getElementById('citation-col-popover')
+      const wrap = document.getElementById('citations-table-wrap')
+      if (!pop || !wrap) return
+      if (citationColPopoverOpen === col) { closeCitationColFilter(); return }
+      citationColPopoverOpen = col
+      document.querySelectorAll('.citation-col-filter').forEach(h => h.classList.remove('active'))
+      ev.currentTarget.classList.add('active')
+
+      const citationDetail = (data && data.citationDetail) || []
+      const sourceTypes = [...new Set(citationDetail.map(c => String(c.source_type || 'unknown').toLowerCase()))].sort()
+      const llms = LLM_KEYS
+
+      if (col === 'query') {
+        pop.innerHTML = `<input type="text" placeholder="Search keywords…" value="${escHtml(citationQueryFilter)}" id="cf-query-input" />`
+        setTimeout(() => {
+          const inp = document.getElementById('cf-query-input')
+          if (inp) {
+            inp.focus()
+            inp.oninput = () => { citationQueryFilter = inp.value; buildCitationDomainFilters(); renderCitationsList() }
+          }
+        }, 0)
+      } else if (col === 'domain') {
+        pop.innerHTML = `<input type="text" placeholder="Search domain…" value="${escHtml(citationDomainKeywordFilter)}" id="cf-domain-input" />`
+        setTimeout(() => {
+          const inp = document.getElementById('cf-domain-input')
+          if (inp) {
+            inp.focus()
+            inp.oninput = () => { citationDomainKeywordFilter = inp.value; buildCitationDomainFilters(); renderCitationsList() }
+          }
+        }, 0)
+      } else if (col === 'llm') {
+        const sel = citationLLMFilters || []
+        pop.innerHTML = llms.map(l => {
+          const checked = sel.includes(l) ? ' checked' : ''
+          const label = l.charAt(0).toUpperCase() + l.slice(1)
+          return `<label class="cf-check"><input type="checkbox" data-llm="${escHtml(l)}"${checked} onchange="toggleCitationLLMFilter(this.dataset.llm, this.checked)">${label}</label>`
+        }).join('')
+      } else if (col === 'source') {
+        const sel = citationSourceFilters || []
+        const types = sourceTypes.length ? sourceTypes : ['owned', 'competitor', 'news', 'industry', 'unknown']
+        pop.innerHTML = types.map(s => {
+          const checked = sel.includes(s) ? ' checked' : ''
+          const label = s.charAt(0).toUpperCase() + s.slice(1)
+          return `<label class="cf-check"><input type="checkbox" data-source="${escHtml(s)}"${checked} onchange="toggleCitationSourceFilter(this.dataset.source, this.checked)">${label}</label>`
+        }).join('')
+      }
+      // Position popover below the clicked header
+      pop.style.display = 'block'
+      const rect = ev.currentTarget.getBoundingClientRect()
+      const wrapRect = wrap.getBoundingClientRect()
+      pop.style.left = (rect.left - wrapRect.left + wrap.scrollLeft) + 'px'
+      pop.style.top = (rect.bottom - wrapRect.top + wrap.scrollTop + 4) + 'px'
+      setTimeout(() => document.addEventListener('click', closeCitationColFilterOnClick), 0)
+    }
+
+    function toggleCitationLLMFilter(llm, checked) {
+      citationLLMFilters = citationLLMFilters || []
+      if (checked) citationLLMFilters = [...citationLLMFilters, llm]
+      else citationLLMFilters = citationLLMFilters.filter(l => l !== llm)
+      if (citationLLMFilters.length === 0) citationLLMFilters = null
+      buildCitationDomainFilters()
+      renderCitationsList()
+    }
+
+    function toggleCitationSourceFilter(source, checked) {
+      citationSourceFilters = citationSourceFilters || []
+      if (checked) citationSourceFilters = [...citationSourceFilters, source]
+      else citationSourceFilters = citationSourceFilters.filter(s => s !== source)
+      if (citationSourceFilters.length === 0) citationSourceFilters = null
+      buildCitationDomainFilters()
+      renderCitationsList()
+    }
+
+    function renderCitationsList() {
+      const tbody = document.getElementById('citations-list')
+      const emptyEl = document.getElementById('citations-empty')
+      const tableEl = document.getElementById('citations-table')
+      if (!tbody) return
+      let list = (data && data.citationDetail) || []
+      if (!Array.isArray(list)) list = []
+      let filtered = list.filter(c => c)
+      if (citationDomainFilter) filtered = filtered.filter(c => String(c.domain || '') === String(citationDomainFilter))
+      if (citationDomainKeywordFilter && citationDomainKeywordFilter.trim()) {
+        const k = citationDomainKeywordFilter.trim().toLowerCase()
+        filtered = filtered.filter(c => String(c.domain || '').toLowerCase().includes(k))
+      }
+      if (citationLLMFilters && citationLLMFilters.length) {
+        const llmSet = new Set(citationLLMFilters.map(l => String(l).toLowerCase()))
+        filtered = filtered.filter(c => llmSet.has(String(c.llm || '').toLowerCase()))
+      }
+      if (citationQueryFilter && citationQueryFilter.trim()) {
+        const q = citationQueryFilter.trim().toLowerCase()
+        filtered = filtered.filter(c => String(c.prompt_text || '').toLowerCase().includes(q))
+      }
+      if (citationSourceFilters && citationSourceFilters.length) {
+        const srcSet = new Set(citationSourceFilters.map(s => String(s).toLowerCase()))
+        filtered = filtered.filter(c => srcSet.has(String(c.source_type || 'unknown').toLowerCase()))
+      }
+      if (citationPageTitleFilter && citationPageTitleFilter.trim()) {
+        const k = citationPageTitleFilter.trim().toLowerCase()
+        filtered = filtered.filter(c => String(c.page_title || '').toLowerCase().includes(k))
+      }
+      if (citationMentionsFilter) {
+        filtered = filtered.filter(c => c.mentions_target === 1 || c.mentions_target === true)
+      }
+
+      const hasFilters = citationDomainFilter || citationDomainKeywordFilter || (citationLLMFilters && citationLLMFilters.length) || citationSourceFilters?.length || citationMentionsFilter || (citationQueryFilter && citationQueryFilter.trim()) || (citationPageTitleFilter && citationPageTitleFilter.trim())
+      if (filtered.length === 0) {
+        tbody.innerHTML = ''
+        if (emptyEl) {
+          emptyEl.style.display = 'block'
+          emptyEl.textContent = hasFilters ? 'No citations match the current filters.' : 'No citations yet.'
+        }
+        if (tableEl) tableEl.style.display = 'none'
+        return
+      }
+      if (emptyEl) emptyEl.style.display = 'none'
+      if (tableEl) tableEl.style.display = 'table'
+
+      updateCitationColIndicators()
+
+      tbody.innerHTML = filtered.map(c => {
+        const url = (c && c.url) ? String(c.url).trim() : ''
+        const domain = (c && c.domain) ? String(c.domain) : ''
+        const pageTitle = (c && c.page_title) ? String(c.page_title).trim() : ''
+        const promptText = (c && c.prompt_text) ? String(c.prompt_text).trim() : ''
+        const promptSnippet = promptText ? (promptText.substring(0, 80) + (promptText.length > 80 ? '…' : '')) : '—'
+        const qId = (c && c.query_id) ? String(c.query_id) : ''
+        const llm = (c && c.llm) ? String(c.llm) : ''
+        const sourceType = (c && c.source_type) ? String(c.source_type) : 'unknown'
+        const sourceBadge = `<span class="source-type-badge source-type-${sourceType}">${escHtml(sourceType)}</span>`
+        return `<tr>
+          <td class="citation-prompt-snippet" title="${escHtml(promptText)}">${escHtml(promptSnippet)}</td>
+          <td>${llmBadge(llm)}</td>
+          <td>${sourceBadge}</td>
+          <td title="${escHtml(pageTitle)}">${url && url.startsWith('http') ? `<a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:var(--accent)">${escHtml(pageTitle || '—')}</a>` : escHtml(pageTitle || '—')}</td>
+          <td>${escHtml(domain)}</td>
+          <td><button class="citation-output-btn" data-query-id="${escHtml(qId)}" onclick="openOutputModal(this.dataset.queryId)" title="View LLM output">💬</button></td>
+        </tr>`
+      }).join('')
+    }
+
+    function buildCitationDomainFilters() {
+      if (!data) return
+      const citationDetail = data.citationDetail || []
+      let filtered = citationDetail.filter(c => c && c.domain && String(c.domain) !== '_none_')
+      if (citationLLMFilters && citationLLMFilters.length) {
+        const llmSet = new Set(citationLLMFilters.map(l => String(l).toLowerCase()))
+        filtered = filtered.filter(c => llmSet.has(String(c.llm || '').toLowerCase()))
+      }
+      if (citationMentionsFilter) filtered = filtered.filter(c => c.mentions_target === 1 || c.mentions_target === true)
+      if (citationQueryFilter && citationQueryFilter.trim()) {
+        const q = citationQueryFilter.trim().toLowerCase()
+        filtered = filtered.filter(c => String(c.prompt_text || '').toLowerCase().includes(q))
+      }
+      if (citationDomainKeywordFilter && citationDomainKeywordFilter.trim()) {
+        const k = citationDomainKeywordFilter.trim().toLowerCase()
+        filtered = filtered.filter(c => String(c.domain || '').toLowerCase().includes(k))
+      }
+      if (citationSourceFilters && citationSourceFilters.length) {
+        const srcSet = new Set(citationSourceFilters.map(s => String(s).toLowerCase()))
+        filtered = filtered.filter(c => srcSet.has(String(c.source_type || 'unknown').toLowerCase()))
+      }
+      if (citationPageTitleFilter && citationPageTitleFilter.trim()) {
+        const k = citationPageTitleFilter.trim().toLowerCase()
+        filtered = filtered.filter(c => String(c.page_title || '').toLowerCase().includes(k))
+      }
+      const domainCounts = {}
+      filtered.forEach(c => {
+        const d = String(c.domain || '').trim()
+        if (d) domainCounts[d] = (domainCounts[d] || 0) + 1
+      })
+      const topDomainFilters = Object.entries(domainCounts)
+        .map(([domain, count]) => ({ domain, count }))
+        .filter(d => d.count >= 3)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+
+      if (citationDomainFilter && !topDomainFilters.some(d => d.domain === citationDomainFilter)) {
+        citationDomainFilter = null
+      }
+
+      const filtersEl = document.getElementById('citation-domain-filters')
+      if (!filtersEl) return
+      const parts = []
+      if (topDomainFilters.length > 0) {
+        const allActive = !citationDomainFilter ? ' active' : ''
+        parts.push(`<button class="domain-filter-bubble${allActive}" data-domain=""
+                onclick="setCitationDomainFilter(null, this)">All</button>`)
+      }
+      parts.push(...topDomainFilters.map(d => {
+        const domain = String(d.domain ?? '').trim()
+        const count = d.count != null ? Number(d.count) : 0
+        const active = citationDomainFilter === domain ? ' active' : ''
+        return `<button class="domain-filter-bubble${active}" data-domain="${escHtml(domain)}"
+                onclick="setCitationDomainFilter(this.dataset.domain, this)">
+          ${escHtml(domain)} (${count})
+        </button>`
+      }))
+      filtersEl.innerHTML = parts.join('')
+    }
+
+    function buildCitations() {
+      if (!data) return
+
+      const pageTitleInput = document.getElementById('citation-page-title-search')
+      if (pageTitleInput && !pageTitleInput.dataset.wired) {
+        pageTitleInput.dataset.wired = '1'
+        pageTitleInput.value = citationPageTitleFilter
+        pageTitleInput.oninput = () => {
+          citationPageTitleFilter = pageTitleInput.value
+          buildCitationDomainFilters()
+          renderCitationsList()
+        }
+      }
+      buildCitationDomainFilters()
+      renderCitationsList()
+    }
+
+    async function openOutputModal(queryId) {
+      if (!queryId || !runId) return
+      const overlay = document.getElementById('output-modal-overlay')
+      const body = document.getElementById('output-modal-body')
+      if (!overlay || !body) return
+      body.innerHTML = '<span class="spinner"></span> Loading…'
+      overlay.classList.add('open')
+      try {
+        const res = await fetch(API(`/api/runs/${runId}/queries/${queryId}/response`))
+        if (!res.ok) throw new Error(res.status === 404 ? 'Not found' : `HTTP ${res.status}`)
+        const d = await res.json()
+        body.innerHTML = `
+          <div style="margin-bottom:12px">
+            <div style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text2);margin-bottom:4px">Prompt</div>
+            <div style="font-size:var(--text-sm)">${escHtml(d.prompt_text || '')}</div>
+          </div>
+          <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+            ${llmBadge(d.llm || '')}
+            ${d.persona_name ? `<span class="badge">${escHtml(d.persona_name)}</span>` : ''}
+            ${d.funnel_stage ? stageBadge(d.funnel_stage) : ''}
+          </div>
+          <div>
+            <div style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text2);margin-bottom:4px">Response</div>
+            <div class="snippet" style="white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow-y:auto">${escHtml(d.response_text || '')}</div>
+          </div>`
+      } catch (err) {
+        body.innerHTML = `<div style="color:var(--danger)">Failed to load: ${escHtml(err.message)}</div>`
+      }
+    }
+
+    function closeOutputModal(event) {
+      const overlay = document.getElementById('output-modal-overlay')
+      if (!overlay) return
+      if (event && event.target !== overlay) return
+      overlay.classList.remove('open')
+    }
+
+    function buildCompetitors() {
+      if (!data) return
+      const { competitorRanks, competitorDetail, mentions } = data
+      // Prefer competitorDetail (has mentions_by_llm, top_positionings, etc.) else fall back to competitorRanks
+      const comps = competitorDetail?.length ? competitorDetail : competitorRanks || []
+      const target = comps.find(r=>r.is_target)
+      const targetAvg = target?.avg_rank ?? null
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('[Competitors] buildCompetitors — comps:', comps.length, 'competitorDetail:', !!competitorDetail?.length)
+      }
+
+      /** Format mentions_by_llm as "C:12 Ch:8 G:5" for table cell */
+      function byLlmStr(mbl) {
+        if (!mbl || typeof mbl !== 'object') return '—'
+        const parts = []
+        if (mbl.claude) parts.push(`C:${mbl.claude}`)
+        if (mbl.chatgpt) parts.push(`Ch:${mbl.chatgpt}`)
+        if (mbl.gemini) parts.push(`G:${mbl.gemini}`)
+        return parts.length ? parts.join(' ') : '—'
+      }
+
+      // Top 20 by mentions, sorted descending; target brand always included
+      const competitors = comps.filter(r=>!r.is_target)
+      const sorted = [...competitors].sort((a,b) => totalMentions(b) - totalMentions(a))
+      const top20 = sorted.slice(0, 20)
+      const withTarget = target ? [...top20, target] : top20
+      const rowsForTable = [...withTarget].sort((a,b) => totalMentions(b) - totalMentions(a))
+
+      const tableEl = document.getElementById('competitor-table')
+      if (tableEl) tableEl.innerHTML =
+        rowsForTable.map(r => {
+          const diff = targetAvg !== null && !r.is_target ? r.avg_rank - targetAvg : null
+          const diffStr = diff === null ? '—'
+            : diff < 0 ? `<span style="color:var(--danger)">▲ ${Math.abs(diff).toFixed(1)} ahead</span>`
+            : `<span style="color:var(--success)">▼ ${diff.toFixed(1)} behind</span>`
+          return `<tr class="${r.is_target?'target-row':''}">
+            <td><strong>${escHtml(r.brand_name)}</strong>${r.is_target?' <span style="font-size:var(--text-xs);color:var(--accent)">(you)</span>':''}</td>
+            <td class="competitor-positioning-cell">${r.positioning ? escHtml(String(r.positioning)) : '—'}</td>
+            <td>${totalMentions(r)}</td>
+            <td style="font-size:var(--text-xs);color:var(--text2)">${byLlmStr(r.mentions_by_llm)}</td>
+            <td>${rankBadge(Math.round(Number(r?.avg_rank) || 0))}</td>
+            <td>${rankBadge(Number(r?.best_rank) || 0)}</td>
+            <td style="font-size:var(--text-sm)">${diffStr}</td>
+          </tr>`
+        }).join('')
+
+      // Merged Competitor Analysis: group by brand, accordion with chat bubble per response (like ranking tab)
+      const analysisEl = document.getElementById('competitor-analysis')
+      if (analysisEl) {
+        const ms = (mentions || []).filter(m=>!m.is_target)
+        const groups = []
+        const byBrand = new Map()
+        for (const m of ms) {
+          const key = String(m.brand_name || '').trim() || '—'
+          if (!byBrand.has(key)) byBrand.set(key, [])
+          byBrand.get(key).push(m)
+        }
+        byBrand.forEach((arr, brand) => groups.push({ brand, mentions: arr }))
+        // Sort by mention count (desc), matching table order; use comps for consistent counts when available
+        const brandToCount = new Map(comps.filter(r=>!r.is_target).map(r => [String(r.brand_name||'').trim(), totalMentions(r)]))
+        groups.sort((a,b) => {
+          const countA = brandToCount.get(a.brand) ?? a.mentions.length
+          const countB = brandToCount.get(b.brand) ?? b.mentions.length
+          return countB - countA || a.brand.localeCompare(b.brand)
+        })
+        const topGroups = groups.slice(0, 25)
+
+        if (topGroups.length === 0) {
+          analysisEl.innerHTML = '<div class="no-data">No competitor mentions found yet.</div>'
+        } else {
+          analysisEl.innerHTML = topGroups.map((g, gi) => {
+            const first = g.mentions[0]
+            const subRows = g.mentions.map((m) => `
+              <div class="pg-sub" style="grid-template-columns:1fr 1fr auto;gap:12px">
+                <div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+              ${llmBadge(m.llm)} ${stageBadge(m.funnel_stage)} ${rankBadge(m.rank)}
+            </div>
+                  <div style="font-size:var(--text-sm);color:var(--text2);line-height:1.5">${m.positioning ? escHtml(m.positioning) : '<span class="no-data">—</span>'}</div>
+                </div>
+                <div class="snippet" style="font-size:var(--text-sm);color:var(--text2);line-height:1.5">${escHtml(m.context_snippet||'—')}</div>
+                <div style="display:flex;align-items:flex-start;justify-content:flex-end;padding-top:4px">
+                  <button class="citation-output-btn" onclick="openOutputModal(this.dataset.queryId)" data-query-id="${m.query_id||''}" title="View LLM output">💬</button>
+                </div>
+          </div>`).join('')
+            return `
+              <div style="margin-bottom:12px;border:1px solid var(--border);border-radius:4px;overflow:hidden">
+                <div class="pg-header" onclick="toggleCompAnalysisGroup(${gi})" style="padding:12px 14px;margin:0">
+                  <div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+                      <strong style="font-size:var(--text-sm)">${escHtml(g.brand)}</strong>
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--text2);line-height:1.4">${first.positioning ? escHtml(first.positioning) : '—'}</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                    <span class="pg-count">${g.mentions.length} response${g.mentions.length !== 1 ? 's' : ''}</span>
+                    <span class="pg-caret" id="ca-caret-${gi}">▼</span>
+                  </div>
+                </div>
+                <div class="pg-detail" id="ca-detail-${gi}" style="display:none;padding:0 14px 12px;border-top:1px solid var(--border2)">${subRows}</div>
+              </div>`
+          }).join('')
+        }
+      }
+    }
+
+    // ── Chat persistence ─────────────────────────────────────────────────────
+    const CHAT_KEY = `aeo-chat-${runId}`
+    let assistantReady = false
+
+    function saveChatHistory() {
+      try {
+        const msgs = document.getElementById('chat-messages')
+        const items = [...msgs.querySelectorAll('.chat-message')].map(el => ({
+          role: el.classList.contains('user') ? 'user' : 'assistant',
+          html: el.querySelector('.chat-bubble').innerHTML,
+        }))
+        localStorage.setItem(CHAT_KEY, JSON.stringify(items))
+      } catch {}
+    }
+
+    function loadChatHistory() {
+      try {
+        const saved = localStorage.getItem(CHAT_KEY)
+        if (!saved) return
+        const items = JSON.parse(saved)
+        if (!items?.length) return
+        const msgs = document.getElementById('chat-messages')
+        msgs.innerHTML = items.map(item =>
+          `<div class="chat-message ${item.role}"><div class="chat-bubble">${item.html}</div></div>`
+        ).join('')
+        msgs.scrollTop = msgs.scrollHeight
+      } catch {}
+    }
+
+    function buildAssistant() {
+      const qs = [
+        'Which LLM ranks us worst?',
+        'What owned pages should we improve?',
+        'What are our top competitors doing better?',
+        'Which citation sources should we target?',
+        'What topics are missing in our ToFu coverage?',
+      ]
+      document.getElementById('suggestions').innerHTML = qs.map(q=>
+        `<button class="btn btn-ghost btn-sm" onclick="askSuggestion('${escHtml(q)}')">${escHtml(q)}</button>`
+      ).join('')
+
+      // Only wire up listeners and restore history once
+      if (!assistantReady) {
+        assistantReady = true
+        loadChatHistory()
+        document.getElementById('chat-send').addEventListener('click', sendChat)
+        document.getElementById('chat-input').addEventListener('keydown', e => {
+          if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendChat() }
+        })
+      }
+    }
+
+    function askSuggestion(q) {
+      document.getElementById('chat-input').value = q
+      sendChat()
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chat-input')
+      const q = input.value.trim()
+      if (!q) return
+      input.value = ''
+
+      const msgs = document.getElementById('chat-messages')
+      msgs.innerHTML += `<div class="chat-message user"><div class="chat-bubble">${escHtml(q)}</div></div>`
+      const lid = `m${Date.now()}`
+      msgs.innerHTML += `<div class="chat-message assistant" id="${lid}"><div class="chat-bubble"><span class="spinner"></span></div></div>`
+      msgs.scrollTop = msgs.scrollHeight
+      saveChatHistory()
+
+      const btn = document.getElementById('chat-send')
+      btn.disabled = true
+
+      try {
+        const res = await fetch(API('/api/assistant'), {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ run_id: runId, question: q }),
+        })
+        const result = await safeJson(res)
+        document.getElementById(lid).querySelector('.chat-bubble').innerHTML =
+          (result.answer || result.error || 'No response').replace(/\n/g,'<br>')
+      } catch(err) {
+        document.getElementById(lid).querySelector('.chat-bubble').textContent = `Error: ${err.message}`
+      }
+      btn.disabled = false
+      msgs.scrollTop = msgs.scrollHeight
+      saveChatHistory()
+    }
+
+    function buildPersonasPanel() {
+      const { mentions = [], promptDetail = [], personas: apiPersonas = [] } = data || {}
+      const llms = LLM_KEYS
+
+      // Group promptDetail by persona_name — each row is one query
+      const byPersona = {}
+      for (const r of promptDetail) {
+        const pn = r.persona_name || 'Unknown'
+        if (!byPersona[pn]) byPersona[pn] = []
+        byPersona[pn].push(r)
+      }
+
+      // Build mentions lookup by query_id for target brand
+      const targetByQuery = {}
+      for (const m of mentions) {
+        if (m.is_target) targetByQuery[m.query_id] = m
+      }
+
+      // Persona list: prefer all brand personas from API (so we show personas before their prompts return)
+      const personaEntries = apiPersonas.length > 0
+        ? apiPersonas.map(p => ({
+            displayName: (p.description ? `${p.name} (${p.description})` : p.name).trim(),
+            name: p.name,
+          }))
+        : Object.keys(byPersona).map(name => ({ displayName: name, name }))
+
+      // Build per-persona stats — include personas with no queries (placeholder metrics)
+      const personaStats = personaEntries.map(({ displayName, name }) => {
+        const queries = byPersona[name] || []
+        const totalQ = queries.length
+        const ranked = queries.filter(q => targetByQuery[q.query_id])
+        const ranks = ranked.map(q => targetByQuery[q.query_id].rank)
+        const avgRank = ranks.length > 0 ? ranks.reduce((s, r) => s + r, 0) / ranks.length : null
+        const top3Count = ranks.filter(r => r <= 3).length
+        const top3Rate = totalQ > 0 ? Math.round((top3Count / totalQ) * 100) : 0
+        const mentionRate = totalQ > 0 ? Math.round((ranked.length / totalQ) * 100) : 0
+
+        // By LLM top-3
+        const byLlm = {}
+        for (const llm of llms) {
+          const llmQueries = queries.filter(q => q.llm === llm)
+          const llmTop3 = llmQueries.filter(q => targetByQuery[q.query_id] && targetByQuery[q.query_id].rank <= 3).length
+          byLlm[llm] = { total: llmQueries.length, top3: llmTop3 }
+        }
+
+        return { name: displayName, totalQ, avgRank, top3Rate, mentionRate, byLlm, queries }
+      })
+
+      personaStats.sort((a, b) => (a.avgRank ?? 99) - (b.avgRank ?? 99))
+
+      // Comparison table
+      const tbody = document.getElementById('persona-comparison-table')
+      if (!personaStats.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No persona data available yet.</td></tr>'
+      } else {
+        tbody.innerHTML = personaStats.map(p => {
+          const llmCells = llms.map(l => {
+            const d = p.byLlm[l]
+            return d.total > 0 ? `${Math.round((d.top3 / d.total) * 100)}%` : '—'
+          })
+          return `<tr>
+            <td style="font-weight:600">${escHtml(p.name)}</td>
+            <td>${p.totalQ}</td>
+            <td>${p.avgRank != null ? '#' + p.avgRank.toFixed(1) : '—'}</td>
+            <td>${p.top3Rate}%</td>
+            <td>${p.mentionRate}%</td>
+            <td style="font-size:var(--text-xs);color:var(--text2)">C:${llmCells[0]} Ch:${llmCells[1]} G:${llmCells[2]}</td>
+          </tr>`
+        }).join('')
+      }
+
+      // Per-persona prompt breakdown
+      const breakdownEl = document.getElementById('persona-prompt-breakdown')
+      if (!personaStats.length) {
+        breakdownEl.innerHTML = '<div class="no-data">No persona data available yet.</div>'
+        return
+      }
+
+      breakdownEl.innerHTML = personaStats.map((p, pi) => {
+        // Group queries by prompt_text
+        const byPrompt = {}
+        for (const q of p.queries) {
+          if (!byPrompt[q.prompt_text]) byPrompt[q.prompt_text] = { funnel_stage: q.funnel_stage, queries: [] }
+          byPrompt[q.prompt_text].queries.push(q)
+        }
+
+        const promptRows = Object.entries(byPrompt).map(([text, { funnel_stage, queries }]) => {
+          const ranked = queries.filter(q => targetByQuery[q.query_id])
+          const ranks = ranked.map(q => targetByQuery[q.query_id].rank)
+          const avgNum = ranks.length > 0 ? ranks.reduce((s, r) => s + r, 0) / ranks.length : 99
+          const avg = avgNum !== 99 ? avgNum.toFixed(1) : '—'
+          const top3 = ranks.filter(r => r <= 3).length
+          const funnelBadge = funnel_stage ? stageBadge(funnel_stage) : ''
+          return { text, avg, top3, total: queries.length, funnelBadge, avgNum }
+        })
+
+        promptRows.sort((a, b) => a.avgNum - b.avgNum)
+
+        return `
+          <div style="margin-bottom:16px">
+            <div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)" onclick="document.getElementById('persona-bd-${pi}').style.display = document.getElementById('persona-bd-${pi}').style.display === 'none' ? 'block' : 'none'">
+              <span style="font-weight:600">${escHtml(p.name)}</span>
+              <span class="pg-count">${Object.keys(byPrompt).length} prompts</span>
+            </div>
+            <div id="persona-bd-${pi}" style="display:none">
+              <table style="width:100%;border-collapse:collapse;font-size:var(--text-sm)">
+                <thead><tr>
+                  <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">Prompt</th>
+                  <th style="padding:6px 8px;border-bottom:1px solid var(--border);font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">Avg Rank</th>
+                  <th style="padding:6px 8px;border-bottom:1px solid var(--border);font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">Top-3</th>
+                </tr></thead>
+                <tbody>${promptRows.map(r => `
+                  <tr>
+                    <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${r.funnelBadge}${escHtml(r.text)}</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:center">${r.avg === '—' ? '—' : '#' + r.avg}</td>
+                    <td style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:center">${r.top3}/${r.total}</td>
+                  </tr>
+                `).join('')}</tbody>
+              </table>
+            </div>
+          </div>`
+      }).join('')
+    }
+
+    function generateReportText(fmt) {
+      const { run, competitorRanks = [], competitorDetail = [], mentions = [], topDomains = [], sourceTypes = [], ownedPages = [], promptDetail = [] } = data || {}
+      const brandName = run?.brand_name || run?.brand_domain || 'Unknown'
+      const compsForReport = competitorDetail?.length ? competitorDetail : competitorRanks || []
+      const targetRank = compsForReport.find(r => r.is_target)
+      const totalCitations = sourceTypes.reduce((s, r) => s + Number(r.count), 0)
+      const ownedCitations = sourceTypes.find(s => s.source_type === 'owned')?.count ?? 0
+      const competitors = compsForReport.filter(r => !r.is_target)
+      const top3Pct = mentions.length > 0
+        ? Math.round((mentions.filter(m => m.is_target && m.rank <= 3).length / Math.max(run?.total_queries ?? 1, 1)) * 100)
+        : 0
+      const llms = LLM_KEYS
+      const llmVis = {}
+      llms.forEach(llm => {
+        const tot = mentions.filter(m => m.llm === llm).length
+        const top3 = mentions.filter(m => m.llm === llm && m.is_target && m.rank <= 3).length
+        llmVis[llm] = tot > 0 ? Math.round((top3 / tot) * 100) : 0
+      })
+
+      if (fmt === 'md') {
+        const lines = [
+          `# AEO Report — ${brandName}`,
+          `**Generated:** ${new Date().toLocaleString()}  `,
+          `**Run ID:** ${run?.id ?? '—'}`,
+          '',
+          '## Executive Summary',
+          `| Metric | Value |`,
+          `|--------|-------|`,
+          `| Queries Run | ${run?.total_queries ?? '—'} |`,
+          `| Brand Avg Rank | ${targetRank ? (+targetRank.avg_rank).toFixed(1) : '—'} |`,
+          `| Top-3 Visibility | ${top3Pct}% |`,
+          `| Total Citations | ${totalCitations} |`,
+          `| Competitors Found | ${competitors.length} |`,
+          `| Owned Pages Cited | ${ownedCitations} |`,
+          '',
+          '## Brand Visibility by LLM',
+          `| LLM | % in Top 3 |`,
+          `|-----|-----------|`,
+          ...llms.map(llm => `| ${llm.charAt(0).toUpperCase() + llm.slice(1)} | ${llmVis[llm]}% |`),
+          '',
+          '## Top Competitors',
+          `| Rank | Brand | Mentions | Avg Rank |`,
+          `|------|-------|----------|----------|`,
+          ...competitors.slice(0, 12).map((c, i) => `| ${i + 1} | ${c.brand_name} | ${totalMentions(c)} | ${(+c.avg_rank).toFixed(1)} |`),
+          '',
+          '## Top Citation Domains',
+          `| Rank | Domain | Type | Citations |`,
+          `|------|--------|------|-----------|`,
+          ...topDomains.slice(0, 15).map((d, i) => `| ${i + 1} | ${d.domain} | ${d.source_type || 'unknown'} | ${d.count} |`),
+          '',
+          '## Owned Pages Cited',
+          ...(ownedPages.length
+            ? [`| URL | Count |`, `|-----|-------|`, ...ownedPages.map(p => `| ${p.url} | ${p.count}× |`)]
+            : ['_No owned pages cited._']),
+          '',
+          '## Prompt Breakdown — First-Ranked Brands',
+          `| Stage | LLM | Brand | Prompt |`,
+          `|-------|-----|-------|--------|`,
+          ...promptDetail.slice(0, 30).map(r => `| ${r.funnel_stage} | ${r.llm} | ${r.brand_name} | ${(r.prompt_text || '').substring(0, 70)} |`),
+          '',
+          '---',
+          '_Report generated by AEO — Answer Engine Optimization_',
+        ]
+        return lines.join('\n')
+      }
+
+      // Plain text
+      const L = '─'.repeat(54)
+      const D = '═'.repeat(54)
+      const lines = [
+        `AEO REPORT — ${brandName.toUpperCase()}`,
+        `Generated: ${new Date().toLocaleString()}`,
+        `Run ID: ${run?.id ?? '—'}`,
+        D, '',
+        'EXECUTIVE SUMMARY', L,
+        `Total Queries Run:        ${run?.total_queries ?? '—'}`,
+        `Brand Avg Rank:           ${targetRank ? (+targetRank.avg_rank).toFixed(1) : '—'}`,
+        `Top-3 Visibility:         ${top3Pct}%`,
+        `Total Citations Found:    ${totalCitations}`,
+        `Competitors Identified:   ${competitors.length}`,
+        `Owned Pages Cited:        ${ownedCitations}`,
+        '', 'BRAND VISIBILITY BY LLM', L,
+        ...llms.map(llm => `${(llm.charAt(0).toUpperCase() + llm.slice(1)).padEnd(10)}  ${llmVis[llm]}% in top 3`),
+        '', 'TOP COMPETITORS', L,
+        ...competitors.slice(0, 12).map((c, i) =>
+          `${String(i + 1).padStart(2)}. ${(c?.brand_name ?? '').padEnd(30)} ${String(totalMentions(c)).padStart(3)} mentions  avg rank ${(+(c?.avg_rank ?? 0)).toFixed(1)}`
+        ),
+        '', 'TOP CITATION DOMAINS', L,
+        ...topDomains.slice(0, 15).map((d, i) =>
+          `${String(i + 1).padStart(2)}. ${(d?.domain ?? '').padEnd(34)} [${(d?.source_type || '?').padEnd(10)}] ${d?.count ?? 0}×`
+        ),
+        '', 'OWNED PAGES CITED', L,
+        ...(ownedPages.length
+          ? ownedPages.map(p => `${String(p.count).padStart(4)}×  ${p.url}`)
+          : ['No owned pages cited']),
+        '', 'PROMPT BREAKDOWN — FIRST-RANKED BRANDS', L,
+        `${'STAGE'.padEnd(6)}  ${'LLM'.padEnd(10)}  ${'BRAND'.padEnd(26)}  PROMPT`,
+        ...promptDetail.slice(0, 30).map(r =>
+          `${(r.funnel_stage || '').padEnd(6)}  ${(r.llm || '').padEnd(10)}  ${(r.brand_name || '').padEnd(26)}  ${(r.prompt_text || '').substring(0, 65)}`
+        ),
+        '', D,
+        'Report generated by AEO — Answer Engine Optimization',
+      ]
+      return lines.join('\n')
+    }
+
+    function buildReport() {
+      const preview = document.getElementById('report-preview')
+      if (preview) preview.textContent = generateReportText('txt')
+    }
+
+    function downloadReport(fmt) {
+      const text = generateReportText(fmt)
+      const ext = fmt === 'md' ? '.md' : '.txt'
+      const brand = (data?.run?.brand_name || data?.run?.brand_domain || 'report').replace(/[^a-z0-9]/gi, '-').toLowerCase()
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })),
+        download: `aeo-${brand}-${new Date().toISOString().slice(0, 10)}${ext}`,
+      })
+      a.click()
+    }
+
+    function buildAll() {
+      buildOverview()
+      buildRanking()
+      try { buildCitations() } catch (e) { console.error('[Citations]', e) }
+      buildCompetitors()
+      try { buildPersonasPanel() } catch (e) { console.error('[Personas]', e) }
+      buildAssistant()
+      buildReport()
+    }
+
+    async function loadPartial() {
+      const res = await fetch(API(`/api/runs/${runId}/partial`))
+      if (!res.ok) return
+      const partial = await safeJson(res)
+      // Merge partial into data
+      if (partial.competitorRanks?.length) data.competitorRanks = partial.competitorRanks
+      if (partial.topDomains?.length)     data.topDomains = partial.topDomains
+      if (partial.sourceTypes?.length)    data.sourceTypes = partial.sourceTypes
+      if (partial.mentions?.length)       data.mentions = partial.mentions
+      if (partial.ownedPages?.length)     data.ownedPages = partial.ownedPages
+      if (Array.isArray(partial.citationList)) {
+        data.citationList = partial.citationList.map(c => ({
+          url: c?.url ?? '',
+          domain: c?.domain ?? '',
+          count: c?.count != null ? Number(c.count) : 0
+        })).filter(c => c.url && c.url !== '_none_')
+      }
+      if (Array.isArray(partial.citationDetail)) data.citationDetail = partial.citationDetail
+      if (Array.isArray(partial.promptDetail)) data.promptDetail = partial.promptDetail
+      if (Array.isArray(partial.competitorDetail)) data.competitorDetail = partial.competitorDetail
+      if (Array.isArray(partial.personas)) data.personas = partial.personas
+      if (partial.run) data.run = { ...data.run, ...partial.run }
+      buildOverview()
+      buildRanking()
+      try { buildCitations() } catch (e) { console.error('[Citations]', e) }
+      try { buildCompetitors() } catch (e) { console.error('[Competitors]', e) }
+      try { buildPersonasPanel() } catch (e) { console.error('[Personas]', e) }
+    }
+
+    async function load() {
+      const res = await fetch(API(`/api/runs/${runId}/results`))
+      if (res.ok) {
+        data = await safeJson(res)
+        if (!data?.run) {
+          document.getElementById('loading').innerHTML = '<div style="color:var(--danger);font-size:var(--text-sm)">Invalid response — run data missing.</div>'
+          return
+        }
+        ;['mentions','topDomains','sourceTypes','ownedPages','citationList','citationDetail','competitorRanks','competitorDetail','promptDetail','personas'].forEach(k => {
+          if (data[k]?.results) data[k] = data[k].results
+          if (!Array.isArray(data[k])) data[k] = []
+        })
+        // Normalize citationList: ensure each item has url, domain, count
+        data.citationList = (data.citationList || []).map(c => ({
+          url: c?.url ?? '',
+          domain: c?.domain ?? '',
+          count: c?.count != null ? Number(c.count) : 0
+        })).filter(c => c.url && c.url !== '_none_')
+        // citationDetail: pass through as-is (per-row shape)
+        if (!Array.isArray(data.citationDetail)) data.citationDetail = []
+
+        document.getElementById('brand-tag').textContent = data.run.brand_name || data.run.brand_domain
+        document.getElementById('loading').style.display = 'none'
+        document.getElementById('content').style.display = 'flex'
+        buildAll()
+
+        // If run is still in progress, show live indicator and poll for updates
+        if (!['complete','failed'].includes(data.run.status)) {
+          document.getElementById('live-ind').style.display = 'inline-flex'
+          let driving = false
+          async function driveProcess() {
+            if (driving) return
+            driving = true
+            try { await fetch(API(`/api/runs/${runId}/process`), { method: 'POST' }) } catch {}
+            driving = false
+          }
+          liveInterval = setInterval(async () => {
+            try {
+              const statusRes = await fetch(API(`/api/runs/${runId}`))
+            if (statusRes.ok) {
+              const run = await safeJson(statusRes)
+              const done = run.completed_queries ?? 0
+              const total = run.total_queries ?? 0
+              const progEl = document.getElementById('live-progress')
+                if (total > 0 && progEl) {
+                const pct = Math.round((done / total) * 100)
+                progEl.textContent = `${done} / ${total} (${pct}%)`
+                progEl.style.display = ''
+              }
+              if (run.status === 'complete' || run.status === 'failed') {
+                clearInterval(liveInterval)
+                  const ind = document.getElementById('live-ind')
+                  if (ind) ind.style.display = 'none'
+                  if (progEl) progEl.style.display = 'none'
+                load()
+              } else {
+                driveProcess()
+                  try { await loadPartial() } catch (e) { console.warn('[Dashboard] loadPartial failed:', e) }
+              }
+            }
+            } catch (e) { console.warn('[Dashboard] poll failed:', e) }
+          }, 4000)
+        }
+      } else {
+        const errBody = await res.text()
+        let errDetail = ''
+        try {
+          const parsed = JSON.parse(errBody)
+          if (parsed?.error) errDetail = parsed.error
+        } catch {}
+        if (!errDetail) errDetail = (errBody || '').substring(0, 300)
+        const errMsg = res.status === 401 ? 'Session expired — please log in again' : res.status === 404 ? 'Run not found' : `Failed to load (${res.status})`
+        document.getElementById('loading').innerHTML = `<div style="color:var(--danger);font-size:var(--text-sm)">${errMsg}</div><div style="font-size:var(--text-xs);color:var(--text3);margin-top:8px;max-width:500px;line-height:1.5">${escHtml(errDetail)}</div>`
+      }
+    }
+
+    load()
+
+    // ── Runs sidebar ───────────────────────────────────────────────────────────
+    async function loadSidebar() {
+      const list = document.getElementById('sidebar-list')
+      if (!list) return
+      list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--text3)">Loading…</div>'
+      try {
+        const res = await fetch(API('/api/runs/list'))
+        const json = await safeJson(res)
+        if (!res.ok) {
+          list.innerHTML = `<div style="padding:16px;font-size:var(--text-xs);color:var(--danger)">${res.status === 401 ? 'Session expired' : 'Failed to load runs'}</div>`
+          return
+        }
+        const allRuns = json.runs || []
+        if (!allRuns.length) {
+          list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--text3)">No runs yet.</div>'
+          return
+        }
+        list.innerHTML = allRuns.map(r => {
+          const total = r.total_queries || 0
+          const done = r.completed_queries || 0
+          const pct = total > 0 ? Math.round((done / total) * 100) : (r.status === 'complete' ? 100 : 0)
+          const isCurrent = r.id === runId
+          const d = new Date(r.created_at)
+          const dateStr = d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
+          const brandLabel = r.brand_name || r.brand_domain || 'Brand'
+          const statusClass = `sidebar-status-${r.status || 'pending'}`
+          const inProgress = ['pending','querying','scraping','analyzing'].includes(r.status || '')
+          const delAttrs = inProgress ? ' disabled title="Wait for run to complete or fail before deleting"' : ''
+          return `<div class="sidebar-run${isCurrent ? ' current' : ''}" onclick="navigateRun('${r.id}')">
+            <div class="sidebar-run-meta">
+              <span class="sidebar-run-date" title="${brandLabel}">${dateStr}</span>
+              <span class="sidebar-run-status ${statusClass}">${r.status || 'pending'}</span>
+            </div>
+            <div class="sidebar-run-brand" style="font-size:var(--text-xs);color:var(--text3);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(brandLabel)}</div>
+            <div class="sidebar-run-bar"><div class="sidebar-run-fill" style="width:${pct}%"></div></div>
+            <div class="sidebar-run-footer">
+              <span class="sidebar-run-pct">${pct}%${isCurrent ? ' · current' : ''}</span>
+              <button class="sidebar-del-btn" onclick="deleteRun(event,'${r.id}')"${delAttrs}>Delete</button>
+            </div>
+          </div>`
+        }).join('')
+      } catch (err) {
+        list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--danger)">Failed to load runs.</div>'
+      }
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('runs-sidebar')
+      const btn = sidebar?.querySelector('.sidebar-toggle')
+      if (!sidebar || !btn) return
+      const isCollapsed = sidebar.classList.toggle('collapsed')
+      btn.textContent = isCollapsed ? '▶' : '◀'
+      btn.title = isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+      btn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar')
+    }
+
+    function navigateRun(id) {
+      if (id === runId) return
+      const base = location.pathname.replace(/\/[^/]*$/, '') || ''
+      location.href = `${base}/dashboard.html?runId=${id}`
+    }
+
+    async function deleteRun(event, id) {
+      event.stopPropagation()
+      if (!confirm('Delete this run? All queries, citations, and brand data will be removed. This cannot be undone.')) return
+      try {
+        const res = await fetch(API(`/api/runs/${id}`), { method: 'DELETE' })
+        if (res.ok) {
+          const base = location.pathname.replace(/\/[^/]*$/, '') || ''
+          if (id === runId) {
+            location.href = base || '/'
+          } else {
+            loadSidebar()
+          }
+        } else {
+          alert('Failed to delete run.')
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`)
+      }
+    }
+
+    loadSidebar()
+  </script>
+</body>
+</html>

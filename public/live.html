@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/assets/auth.js"></script>
+  <title>Live Responses — AEO</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <style>
+    .live-layout {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      height: calc(100vh - 49px);
+    }
+
+    .llm-column {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .llm-column:last-child { border-right: none; }
+
+    .col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .col-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .col-progress {
+      font-size: var(--text-xs);
+      color: var(--text2);
+      letter-spacing: 0.06em;
+    }
+
+    .col-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    .response-card {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .response-card:hover { background: var(--surface2); }
+    .response-card.new { background: rgba(255,255,255,0.03); }
+
+    .response-prompt {
+      font-size: var(--text-sm);
+      color: var(--text2);
+      margin-bottom: 6px;
+      line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .response-persona {
+      font-size: var(--text-xs);
+      color: var(--text3);
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .response-text {
+      font-size: var(--text-sm);
+      color: var(--text);
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .response-text.expanded {
+      display: block;
+      -webkit-line-clamp: unset;
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-row-label {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text3);
+      align-self: center;
+      margin-right: 4px;
+    }
+
+    .filter-btn {
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 1px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+      font-family: var(--font);
+      transition: all 0.15s;
+    }
+    .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .filter-btn:hover  { color: var(--text); border-color: var(--border2); }
+
+    .empty-col {
+      padding: 32px 16px;
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .live-layout { grid-template-columns: 1fr; height: auto; }
+      .llm-column  { border-right: none; border-bottom: 1px solid var(--border); max-height: 60vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="logo">A<em>.</em>E<em>.</em>O</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="live-indicator" id="live-ind" style="display:none">
+        <div class="live-dot"></div>LIVE
+      </div>
+      <span id="run-progress-badge" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2)"></span>
+      <span id="run-status-badge" style="font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;color:var(--text2)">–</span>
+      <span id="run-elapsed" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text3)"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button type="button" class="btn btn-ghost btn-sm" id="log-toggle" title="Show run progression log">Log</button>
+      <button type="button" class="btn btn-danger btn-sm" id="cancel-btn" title="Stop the run" style="display:none">Cancel Run</button>
+      <a id="dashboard-link" href="#" class="btn btn-primary btn-sm" title="View results (run continues in background)">Dashboard</a>
+      <a href="/" class="btn btn-ghost btn-sm">New</a>
+    </div>
+  </div>
+
+  <div id="log-panel" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;max-height:180px;overflow-y:auto;font-size:var(--text-xs);font-family:var(--font);line-height:1.5;color:var(--text2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)">Run progression</span>
+      <button type="button" class="btn btn-ghost btn-sm" style="font-size:var(--text-xs)" onclick="document.getElementById('log-panel').style.display='none'">×</button>
+    </div>
+    <pre id="log-body" style="margin:0;white-space:pre-wrap;word-break:break-word;font-family:inherit"></pre>
+  </div>
+
+  <div class="live-layout">
+    <div class="llm-column" id="col-claude">
+      <div class="col-header">
+        <div class="col-title"><span class="llm-badge llm-claude">Claude</span></div>
+        <span class="col-progress" id="prog-claude">– / –</span>
+      </div>
+      <div class="filter-bar" id="filter-claude"></div>
+      <div class="col-body" id="body-claude">
+        <div class="empty-col">Waiting for responses…</div>
+      </div>
+    </div>
+
+    <div class="llm-column" id="col-chatgpt">
+      <div class="col-header">
+        <div class="col-title"><span class="llm-badge llm-chatgpt">ChatGPT</span></div>
+        <span class="col-progress" id="prog-chatgpt">– / –</span>
+      </div>
+      <div class="filter-bar" id="filter-chatgpt"></div>
+      <div class="col-body" id="body-chatgpt">
+        <div class="empty-col">Waiting for responses…</div>
+      </div>
+    </div>
+
+    <div class="llm-column" id="col-gemini">
+      <div class="col-header">
+        <div class="col-title"><span class="llm-badge llm-gemini">Gemini</span></div>
+        <span class="col-progress" id="prog-gemini">– / –</span>
+      </div>
+      <div class="filter-bar" id="filter-gemini"></div>
+      <div class="col-body" id="body-gemini">
+        <div class="empty-col">Waiting for responses…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const runId = params.get('runId')
+    if (!runId) location.href = '/'
+
+    // ── Run log panel ────────────────────────────────────────────────────────
+    let lastLogCount = 0
+    async function fetchLogs() {
+      try {
+        const res = await fetch(`/api/runs/${runId}/logs`)
+        if (!res.ok) return []
+        const data = await res.json()
+        return data.logs || []
+      } catch { return [] }
+    }
+    function updateLogPanel(logs) {
+      const el = document.getElementById('log-body')
+      if (!el) return
+      el.textContent = logs.length ? logs.join('\n') : 'No logs yet…'
+    }
+    document.getElementById('log-toggle').addEventListener('click', async () => {
+      const panel = document.getElementById('log-panel')
+      const open = panel.style.display !== 'none'
+      panel.style.display = open ? 'none' : 'block'
+      if (!open) {
+        const logs = await fetchLogs()
+        updateLogPanel(logs)
+        lastLogCount = logs.length
+      }
+    })
+
+    // ── Error log ────────────────────────────────────────────────────────────
+    const errorLog = []
+    function logError(source, msg, detail = '') {
+      errorLog.push({ time: new Date().toISOString(), source, message: msg, detail: String(detail).substring(0, 600) })
+      let btn = document.getElementById('error-log-btn')
+      if (!btn) {
+        btn = document.createElement('button')
+        btn.id = 'error-log-btn'
+        btn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;font-family:var(--font);font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;padding:6px 12px;background:rgba(196,112,112,0.15);border:1px solid var(--danger);color:var(--danger);cursor:pointer;border-radius:2px'
+        btn.addEventListener('click', downloadErrorLog)
+        document.body.appendChild(btn)
+      }
+      btn.textContent = `⚠ ${errorLog.length} Error${errorLog.length > 1 ? 's' : ''} — Download Log`
+    }
+    function downloadErrorLog() {
+      const text = [
+        'AEO ERROR LOG',
+        `Generated: ${new Date().toISOString()}`,
+        `Run: ${runId || 'n/a'}`,
+        `URL: ${location.href}`,
+        '═'.repeat(60),
+        '',
+        ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '─'.repeat(40)].filter(Boolean).join('\n')),
+      ].join('\n')
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `aeo-errors-${Date.now()}.txt` })
+      a.click()
+    }
+
+    // ── Safe JSON parser ─────────────────────────────────────────────────────
+    async function safeJson(res) {
+      const text = await res.text()
+      try { return JSON.parse(text) }
+      catch {
+        const truncated = text.substring(0, 400)
+        logError('API', `Non-JSON response (HTTP ${res.status})`, truncated)
+        return { error: truncated }
+      }
+    }
+
+    document.getElementById('dashboard-link').href = `dashboard.html?runId=${runId}`
+
+    document.getElementById('cancel-btn').addEventListener('click', async () => {
+      if (!confirm('Stop this run? Pending queries will be marked failed.')) return
+      try {
+        const res = await fetch(`/api/runs/${runId}/cancel`, { method: 'POST' })
+        if (res.ok) {
+          document.getElementById('cancel-btn').style.display = 'none'
+          document.getElementById('run-status-badge').textContent = 'failed'
+        }
+      } catch {}
+    })
+
+    const LLMS = ['claude', 'chatgpt', 'gemini']
+    const seenIds = new Set()
+    const allData = { claude: [], chatgpt: [], gemini: [] }
+    const activeFilters = { claude: { stage: 'all', persona: 'all' }, chatgpt: { stage: 'all', persona: 'all' }, gemini: { stage: 'all', persona: 'all' } }
+
+    function escHtml(s) {
+      return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    }
+
+    function renderColumn(llm, items) {
+      const body = document.getElementById(`body-${llm}`)
+      const f = activeFilters[llm]
+
+      let filtered = items
+      if (f.stage !== 'all') filtered = filtered.filter(r => r.funnel_stage === f.stage)
+      if (f.persona !== 'all') filtered = filtered.filter(r => (r.persona_name || '') === f.persona)
+
+      if (filtered.length === 0) {
+        const waiting = f.stage === 'all' && f.persona === 'all'
+        body.innerHTML = `<div class="empty-col">${waiting ? 'Waiting for responses…' : 'No responses for this filter'}</div>`
+        return
+      }
+
+      body.innerHTML = filtered.map(r => {
+        const personaLabel = (r.persona_name || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || r.persona_name || '—'
+        const personaShort = personaLabel.length > 20 ? personaLabel.slice(0, 17) + '…' : personaLabel
+        return `
+        <div class="response-card" onclick="this.querySelector('.response-text').classList.toggle('expanded')">
+          <div class="response-prompt">
+            <span class="badge badge-${r.funnel_stage}">${r.funnel_stage}</span>
+            <span class="badge badge-persona" title="${escHtml(r.persona_name || '')}">${escHtml(personaShort)}</span>
+            ${escHtml(r.prompt_text)}
+          </div>
+          <div class="response-text">${escHtml(r.response_text || '')}</div>
+        </div>
+      `}).join('')
+    }
+
+    function buildFilters(llm, items) {
+      const stages = [...new Set(items.map(r => r.funnel_stage).filter(Boolean))]
+      const personas = [...new Set(items.map(r => r.persona_name || '').filter(Boolean))]
+      const f = activeFilters[llm]
+      const bar = document.getElementById(`filter-${llm}`)
+      bar.innerHTML = `
+        <div class="filter-row">
+          <span class="filter-row-label">Stage</span>
+          <button class="filter-btn ${f.stage === 'all' ? 'active' : ''}" onclick="setFilter('${llm}','stage','all')">All</button>
+          ${stages.map(s => `<button class="filter-btn ${f.stage === s ? 'active' : ''}" onclick="setFilter('${llm}','stage','${s}')">${s}</button>`).join('')}
+        </div>
+        <div class="filter-row">
+          <span class="filter-row-label">Persona</span>
+          <button class="filter-btn ${f.persona === 'all' ? 'active' : ''}" onclick="setFilter('${llm}','persona','all')">All</button>
+          ${personas.map(p => `<button class="filter-btn ${f.persona === p ? 'active' : ''}" onclick="setFilter('${llm}','persona',${JSON.stringify(p)})" title="${escHtml(p)}">${escHtml(p.length > 24 ? p.slice(0, 21) + '…' : p)}</button>`).join('')}
+        </div>
+      `
+    }
+
+    function setFilter(llm, type, value) {
+      activeFilters[llm][type] = value
+      buildFilters(llm, allData[llm])
+      renderColumn(llm, allData[llm])
+    }
+
+    async function fetchResponses() {
+      try {
+        const res = await fetch(`/api/runs/${runId}/live-responses`)
+        if (!res.ok) return
+        const data = await safeJson(res)
+        const { grouped, progress } = data
+
+        let hasNew = false
+        LLMS.forEach(llm => {
+          const items = grouped[llm] || []
+          const prog = progress[llm] || { done: 0, total: 0 }
+          document.getElementById(`prog-${llm}`).textContent = `${prog.done} / ${prog.total}`
+
+          const newItems = items.filter(r => !seenIds.has(r.id))
+          if (newItems.length > 0) {
+            hasNew = true
+            newItems.forEach(r => seenIds.add(r.id))
+            allData[llm] = [...newItems, ...allData[llm]] // newest first
+            buildFilters(llm, allData[llm])
+            renderColumn(llm, allData[llm])
+          }
+        })
+
+        return hasNew
+      } catch {}
+    }
+
+    async function pollStatus() {
+      try {
+        const res = await fetch(`/api/runs/${runId}`)
+        if (!res.ok) return null
+        const run = await safeJson(res)
+        document.getElementById('run-status-badge').textContent = run.status
+        const isLive = !['complete','failed'].includes(run.status)
+        document.getElementById('live-ind').style.display = isLive ? 'inline-flex' : 'none'
+        const cancelBtn = document.getElementById('cancel-btn')
+        if (cancelBtn) cancelBtn.style.display = isLive ? 'inline-flex' : 'none'
+        // Progress counter next to LIVE badge
+        const done = run.completed_queries ?? 0
+        const total = run.total_queries ?? 0
+        const progEl = document.getElementById('run-progress-badge')
+        if (total > 0) {
+          const pct = Math.round((done / total) * 100)
+          progEl.textContent = `${done} / ${total} (${pct}%)`
+        } else {
+          progEl.textContent = ''
+        }
+        return run.status
+      } catch {}
+    }
+
+    let interval = null
+    let processing = false
+
+    const runStart = Date.now()
+    const elapsedTimer = setInterval(() => {
+      const s = Math.floor((Date.now() - runStart) / 1000)
+      const m = Math.floor(s / 60)
+      const el = document.getElementById('run-elapsed')
+      if (el) el.textContent = m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+    }, 1000)
+
+    async function driveProcess(status) {
+      if (processing || !status || ['complete','failed'].includes(status)) return
+      if (!['pending','querying','scraping','analyzing'].includes(status)) return
+      processing = true
+      try {
+        await fetch(`/api/runs/${runId}/process`, { method: 'POST' })
+      } catch {}
+      processing = false
+    }
+
+    async function tick() {
+      await fetchResponses()
+      const status = await pollStatus()
+      const logPanel = document.getElementById('log-panel')
+      // Update log panel if visible
+      if (logPanel && logPanel.style.display !== 'none') {
+        const logs = await fetchLogs()
+        if (logs.length !== lastLogCount) {
+          lastLogCount = logs.length
+          updateLogPanel(logs)
+        }
+      }
+      if (status === 'complete' || status === 'failed') {
+        if (interval) clearInterval(interval)
+        clearInterval(elapsedTimer)
+        const el = document.getElementById('run-elapsed')
+        if (el) el.textContent = ''
+        return
+      }
+      driveProcess(status)
+    }
+
+    tick()
+    interval = setInterval(tick, 2500)
+  </script>
+</body>
+</html>

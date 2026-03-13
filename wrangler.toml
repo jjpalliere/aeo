@@ -1,0 +1,21 @@
+name = "aeo"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aeo-db"
+database_id = "c8328931-24a2-421c-a73a-e732c00b49a7"  # Replace after: npm run db:create
+
+[[kv_namespaces]]
+binding = "KV"
+id = "6f792aef4e41455f92397167aac95e9b"  # Replace after: npm run kv:create
+
+# Secrets — set via: wrangler secret put ANTHROPIC_API_KEY
+# wrangler secret put OPENAI_API_KEY
+# wrangler secret put GOOGLE_AI_API_KEY

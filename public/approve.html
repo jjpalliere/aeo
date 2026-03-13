@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/assets/auth.js"></script>
+  <title>Review — AEO</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <style>
+    /* Funnel columns — side-by-side */
+    .funnel-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    /* 4-column layout: Persona card | ToFu | MoFu | BoFu — wider persona col, horizontal scroll */
+    .persona-row {
+      display: grid;
+      grid-template-columns: 420px 1fr 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+      margin-bottom: 32px;
+      min-width: 1500px;
+    }
+    .persona-row:last-child { margin-bottom: 0; }
+    .persona-row-wrap { overflow-x: auto; }
+    .persona-card-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      min-height: 80px;
+      min-width: 0;
+    }
+    .persona-card-desc-wrap {
+      font-size: var(--text-xs);
+      line-height: 1.5;
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+    .persona-section-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border2);
+    }
+    .persona-row-generating { grid-template-columns: 420px 1fr; min-width: 900px; }
+    .persona-term-col { min-width: 0; }
+    @media (max-width: 1100px) {
+      .persona-row { grid-template-columns: 1fr 1fr 1fr; }
+      .persona-row .persona-card-col { grid-column: 1 / -1; }
+      .persona-row-generating { grid-template-columns: 1fr; }
+      .persona-row-generating .persona-term-col { grid-column: 1; }
+    }
+    .funnel-section { margin-bottom: 0; min-width: 0; }
+    .funnel-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .funnel-header h3 {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text2);
+    }
+    .prompt-list { display: flex; flex-direction: column; gap: 6px; }
+
+    /* Persona cards — max 3 per row */
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 900px) {
+      .persona-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .persona-grid { grid-template-columns: 1fr; }
+    }
+
+    .approve-check {
+      width: 16px; height: 16px;
+      border-radius: 2px;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      margin-top: 2px;
+    }
+    .approve-check.checked { background: var(--accent); border-color: var(--accent); }
+    .approve-check.checked::after { content: '✓'; color: #111010; font-size: var(--text-xs); font-weight: 700; }
+
+    .persona-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 12px;
+    }
+
+    .btn-xs { padding: 2px 6px; font-size: 10px; }
+    .count-tag {
+      font-size: var(--text-xs); letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text2);
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      padding: 2px 8px; border-radius: 1px;
+    }
+
+    #loading { display: flex; align-items: center; justify-content: center; height: 100vh; }
+    #content { display: none; }
+
+    .section-hdr {
+      font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    /* ICP supplement panel */
+    .supplement-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .supplement-panel.collapsed .supplement-body { display: none; }
+    .supplement-panel.collapsed .supplement-label { margin-bottom: 0; }
+    .supplement-panel.locked { opacity: 0.6; pointer-events: none; }
+    .supplement-panel.locked .supplement-label { text-decoration: line-through; color: var(--text3); cursor: default; }
+    .supplement-label {
+      font-size: var(--text-xs); letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text2); margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+    }
+    .supplement-caret { font-size: var(--text-xs); color: var(--text3); transition: transform 0.2s; }
+    .supplement-panel.collapsed .supplement-caret { transform: rotate(-90deg); }
+    .supplement-hint { font-size: var(--text-xs); color: var(--text3); line-height: 1.5; margin-bottom: 12px; }
+    #supplement-status { font-size: var(--text-xs); color: var(--text2); margin-top: 8px; min-height: 14px; display: flex; align-items: center; gap: 6px; }
+
+    /* Persona regen overlay */
+    .persona-regen-overlay {
+      position: relative;
+    }
+    .persona-regen-overlay::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(17,16,16,0.65);
+      backdrop-filter: blur(2px);
+      border-radius: var(--radius);
+      z-index: 10;
+      pointer-events: none;
+    }
+    .persona-regen-banner {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: var(--text-sm);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+
+    /* Import prompt cards */
+    .import-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      user-select: none;
+    }
+    .import-card:hover { border-color: var(--border2); }
+    .import-card.selected { border-color: rgba(255,255,255,0.2); }
+
+    /* Persona prompt sections */
+    .persona-prompt-section {
+      margin-bottom: 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .persona-prompt-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border2);
+    }
+    .persona-prompt-name {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--text);
+    }
+    .persona-prompt-count {
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      color: var(--text3);
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="term-win">
+      <div class="term-titlebar">
+        <span class="live-dot"></span>
+        <span class="term-title-text">PROCESS LOG</span>
+        <span class="term-elapsed" style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text3)"></span>
+      </div>
+      <div class="term-body" id="term-body">
+        <span class="term-line">Connecting…<span class="term-cursor"></span></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="content">
+    <div class="top-bar">
+      <div class="logo">A<em>.</em>E<em>.</em>O</div>
+      <div style="font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">
+        Review › <span id="brand-name-top" style="color:var(--text)">–</span>
+      </div>
+      <button class="btn btn-primary" id="launch-btn" disabled>Launch Run →</button>
+    </div>
+
+    <div class="page-wide" style="max-width:1400px">
+
+      <!-- ICP Supplement -->
+      <div class="supplement-panel" id="icp-supplement-panel">
+        <div class="supplement-label" id="icp-supplement-label">
+          <span>ICP Supplement <span style="font-size:var(--text-xs);color:var(--text3)">Optional — enriches persona generation</span></span>
+          <span class="supplement-caret" id="icp-supplement-caret" style="display:none">▼</span>
+        </div>
+        <div class="supplement-body" id="icp-supplement-body">
+          <div class="supplement-hint">
+            Drop a .txt file or paste text describing your ideal customer profile. If your site doesn't fully reflect your target ICP, this closes the gap — personas will be regenerated with this context.
+          </div>
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+            DROP .TXT FILE HERE OR CLICK TO UPLOAD
+          </div>
+          <input type="file" id="file-input" accept=".txt,text/plain" style="display:none" />
+          <div id="supplement-status"></div>
+        </div>
+      </div>
+
+      <!-- Source Material -->
+      <div class="supplement-panel" style="margin-bottom:24px">
+        <div class="supplement-label" style="cursor:pointer;user-select:none" onclick="toggleSourceMaterial()">
+          Source Material
+          <span id="source-toggle-label" style="font-size:var(--text-xs);color:var(--text3)">▶ Show pages crawled</span>
+        </div>
+        <div id="source-material" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <!-- Personas — approve triggers per-persona prompt generation -->
+      <div class="section-hdr" id="personas-section-hdr">
+        Personas <span class="count-tag" id="persona-count">0</span>
+      </div>
+      <div style="position:relative" id="persona-grid-wrap">
+        <div class="persona-grid" id="persona-grid"></div>
+        <div class="persona-regen-banner" id="persona-regen-banner" style="display:none">
+          <span class="spinner"></span>
+          <span>Regenerating personas…</span>
+        </div>
+      </div>
+
+      <!-- Inline status while generating prompts -->
+      <div id="prompts-gen-status" style="display:none;margin:24px 0"></div>
+
+      <div class="sep" style="margin-top:24px"></div>
+
+      <!-- Prompts — Step 2: revealed after personas, generate or import -->
+      <div id="prompts-section" style="display:none">
+        <div class="section-hdr" style="margin-top:24px">
+          Questions <span class="count-tag" id="prompt-count">0</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-ghost btn-sm" onclick="approveAllPrompts()">Select All</button>
+            <button class="btn btn-primary btn-sm" id="gen-questions-btn" onclick="generateQuestions()" style="display:none">Generate Questions →</button>
+            <button class="btn btn-ghost btn-sm" id="regenerate-btn" onclick="generateQuestions()" style="display:none;font-size:var(--text-xs);letter-spacing:0.06em">↺ Regenerate All</button>
+            <button class="btn btn-ghost btn-sm" id="import-toggle-btn" onclick="toggleImportPanel()">Import →</button>
+          </div>
+        </div>
+
+        <!-- Import prompts panel -->
+        <div id="import-panel" style="display:none;margin-bottom:20px">
+          <div class="supplement-panel">
+            <div class="supplement-label">Import Prompts</div>
+            <div style="font-size:var(--text-sm);color:var(--text2);line-height:1.6;margin-bottom:12px">
+              Paste prompts one per line — from competitors, research, or your own curation.
+              Claude will classify each into TOFU / MOFU / BOFU before you add them.
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <label style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2);text-transform:uppercase;flex-shrink:0">Assign to persona</label>
+              <select id="import-persona-select" style="flex:1;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:var(--text-sm);border-radius:2px;outline:none">
+                <option value="">Unassigned</option>
+              </select>
+            </div>
+            <textarea
+              id="import-textarea"
+              placeholder="What is the best content strategy for B2B SaaS?&#10;How do I measure content ROI?&#10;Best tools for editorial planning…"
+              style="width:100%;height:130px;resize:vertical;background:var(--surface2);border:1px solid var(--border2);
+                     color:var(--text);font-family:inherit;font-size:var(--text-sm);padding:10px 12px;line-height:1.6;
+                     outline:none;border-radius:0;box-sizing:border-box;margin-bottom:10px"
+            ></textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div id="import-status" style="font-size:var(--text-xs);color:var(--text2);display:flex;align-items:center;gap:6px;min-height:14px"></div>
+              <button class="btn btn-primary btn-sm" id="import-classify-btn" onclick="classifyImportedPrompts()">Classify & Preview →</button>
+            </div>
+            <div id="import-results"></div>
+            <div id="import-actions" style="display:none;justify-content:flex-end;margin-top:12px">
+              <button class="btn btn-primary btn-sm" id="import-add-btn" onclick="addSelectedImports()">Add Selected (0) →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Persona-grouped prompts container (rendered dynamically) -->
+        <div id="persona-prompts-container"></div>
+      </div>
+
+      <div style="height:60px"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const brandId = params.get('brandId')
+    if (!brandId) location.href = '/'
+
+    let brand = null
+    let pollTimer = null
+    let pollInterval = null
+    let loadInProgress = false
+    let continueFired = false
+    let lastLoadedStatus = null
+    let lastLogCount = 0
+    let termElapsedTimer = null
+    let importClassified = []
+    let importSelected = new Set()
+    let generatingPersonaIds = new Set()  // Personas we've triggered generation for, awaiting prompts
+
+    // ── Terminal log helper ─────────────────────────────────────────────────────
+    // Renders brand.logs into the #term-body element, keeping track of how many
+    // lines were already shown so we only append new ones.
+    function termLine(text) {
+      const cls = text.includes('✓') ? 'ok' : text.includes('✗') || text.includes('⚠') ? 'err' : 'hl'
+      return `<span class="term-line ${cls}">${escHtml(text)}</span>`
+    }
+
+    function updatePersonaTerminals(logs) {
+      document.querySelectorAll('.persona-term-body').forEach(body => {
+        if (!logs || !logs.length) {
+          body.innerHTML = '<span class="term-line">Starting…<span class="term-cursor"></span></span>'
+          return
+        }
+        body.innerHTML = logs.map(line => termLine(line)).join('') + '<span class="term-cursor"></span>'
+        body.scrollTop = body.scrollHeight
+      })
+    }
+
+    function updateTerminal(logs) {
+      const body = document.getElementById('term-body')
+      if (!body) return
+      if (!logs || !logs.length) return
+      const newLines = logs.slice(lastLogCount)
+      if (!newLines.length) return
+      // Remove initial "Connecting…" placeholder on first real log
+      if (lastLogCount === 0) body.innerHTML = ''
+      newLines.forEach(line => {
+        body.insertAdjacentHTML('beforeend', termLine(line))
+      })
+      lastLogCount = logs.length
+      // Add blinking cursor at end
+      const cursor = body.querySelector('.term-cursor')
+      if (cursor) cursor.remove()
+      body.insertAdjacentHTML('beforeend', '<span class="term-cursor"></span>')
+      body.scrollTop = body.scrollHeight
+    }
+
+    function startTermElapsed() {
+      if (termElapsedTimer) return
+      const start = Date.now()
+      function update() {
+        const s = Math.floor((Date.now() - start) / 1000)
+        const m = Math.floor(s / 60)
+        const t = m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+        document.querySelectorAll('.term-elapsed').forEach(el => el.textContent = t)
+      }
+      update()
+      termElapsedTimer = setInterval(update, 1000)
+    }
+    function stopTermElapsed() {
+      clearInterval(termElapsedTimer)
+      termElapsedTimer = null
+      document.querySelectorAll('.term-elapsed').forEach(el => el.textContent = '')
+    }
+
+    async function safeJson(res) {
+      const text = await res.text()
+      try { return JSON.parse(text) }
+      catch { return { error: text.substring(0, 300) } }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast')
+      t.textContent = msg
+      t.classList.add('show')
+      setTimeout(() => t.classList.remove('show'), 2400)
+    }
+
+    function escHtml(s) {
+      return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    }
+
+    function updateLaunchBtn() {
+      if (!brand) return
+      const approvedPrompts = brand.prompts.filter(p => p.approved)
+      const personaPrompts = approvedPrompts.filter(p => p.persona_id)
+      const legacyPrompts = approvedPrompts.filter(p => !p.persona_id)
+      const personaCount = Math.max(brand.personas.filter(p => p.approved).length, 1)
+      const totalQueries = (personaPrompts.length * 3) + (legacyPrompts.length * personaCount * 3)
+      const btn = document.getElementById('launch-btn')
+      btn.disabled = approvedPrompts.length === 0
+      btn.textContent = totalQueries > 0
+        ? `Launch Run (${totalQueries} queries) →`
+        : 'Launch Run →'
+    }
+
+    function renderPromptCard(p) {
+      const card = document.createElement('div')
+      card.className = `prompt-card${p.approved ? ' approved' : ''}`
+      card.dataset.id = p.id
+
+      const rationale = p.rationale
+        ? `<span class="rationale-wrap">
+            <i class="rationale-icon">i</i>
+            <span class="rationale-tooltip">${escHtml(p.rationale)}</span>
+           </span>`
+        : ''
+
+      card.innerHTML = `
+        <div class="approve-check${p.approved ? ' checked' : ''}" data-pid="${p.id}"></div>
+        <div class="prompt-card-body">
+          <div class="prompt-text" contenteditable="false">${escHtml(p.text)}</div>
+        </div>
+        <div class="prompt-actions">
+          ${rationale}
+          <button class="btn btn-ghost btn-xs" onclick="editPrompt('${p.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePrompt('${p.id}')">✕</button>
+        </div>
+      `
+      card.querySelector('.approve-check').addEventListener('click', () => toggleApprovePrompt(p.id))
+      return card
+    }
+
+    function renderPersonaCard(p, idx) {
+      const card = document.createElement('div')
+      card.className = `persona-card${p.approved ? ' approved' : ''}`
+      card.dataset.id = p.id
+
+      const num = String(idx + 1).padStart(2, '0')
+      const rationale = p.rationale
+        ? `<span class="rationale-wrap" style="margin-left:4px">
+            <i class="rationale-icon">i</i>
+            <span class="rationale-tooltip" style="left:auto;right:0;top:24px">${escHtml(p.rationale)}</span>
+           </span>`
+        : ''
+
+      // Goals and pain_points stored as JSON arrays in DB
+      let goals = []
+      let pains = []
+      try { goals = typeof p.goals === 'string' ? JSON.parse(p.goals) : (p.goals ?? []) } catch {}
+      try { pains = typeof p.pain_points === 'string' ? JSON.parse(p.pain_points) : (p.pain_points ?? []) } catch {}
+
+      const goalItems  = goals.map(g => `<li>${escHtml(g)}</li>`).join('')
+      const painItems  = pains.map(g => `<li>${escHtml(g)}</li>`).join('')
+
+      const goalsBlock = goalItems
+        ? `<div class="persona-section">
+             <div class="persona-section-label">Goals</div>
+             <ul class="persona-list">${goalItems}</ul>
+           </div>`
+        : ''
+
+      const painsBlock = painItems
+        ? `<div class="persona-section">
+             <div class="persona-section-label">Pain Points</div>
+             <ul class="persona-list">${painItems}</ul>
+           </div>`
+        : ''
+
+      card.innerHTML = `
+        <div class="persona-footer" style="margin-bottom:10px;margin-top:0;align-items:flex-start">
+          <div>
+            <div class="persona-id" style="margin-bottom:6px">PERSONA ${num} ${rationale}</div>
+            <div class="persona-name">${escHtml(p.name)}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-danger btn-sm" onclick="deletePersona('${p.id}')">Remove</button>
+            <button class="btn ${p.approved ? 'btn-ghost' : 'btn-primary'} btn-sm"
+              onclick="toggleApprovePersona('${p.id}')">
+              ${p.approved ? '✓ Approved' : 'Approve'}
+            </button>
+          </div>
+        </div>
+        <div class="persona-desc">${escHtml(p.description)}</div>
+        ${goalsBlock}
+        ${painsBlock}
+        <div class="persona-system">${escHtml(p.system_message)}</div>
+      `
+      return card
+    }
+
+    function renderPersonaCardCol(persona, idx) {
+      const num = String(idx + 1).padStart(2, '0')
+      let goals = []
+      try { goals = typeof persona.goals === 'string' ? JSON.parse(persona.goals) : (persona.goals ?? []) } catch {}
+      const goalItems = goals.slice(0, 2).map(g => `<li>${escHtml(g)}</li>`).join('')
+      const rationale = persona.rationale
+        ? `<span class="rationale-wrap" style="margin-left:4px"><i class="rationale-icon">i</i><span class="rationale-tooltip" style="left:auto;right:0;top:24px">${escHtml(persona.rationale)}</span></span>`
+        : ''
+      return `
+          <div class="persona-id" style="margin-bottom:6px">PERSONA ${num} ${rationale}</div>
+          <div class="persona-name" style="font-weight:600;margin-bottom:6px">${escHtml(persona.name)}</div>
+          <div class="persona-card-desc-wrap">${escHtml(persona.description || '')}</div>
+          ${goalItems ? `<ul class="persona-list" style="margin:0 0 8px;padding-left:16px;font-size:var(--text-xs)">${goalItems}</ul>` : ''}
+      `
+    }
+
+    function renderPersonaGeneratingRow(persona) {
+      const idx = brand.personas.indexOf(persona)
+      const cardCol = renderPersonaCardCol(persona, idx)
+      const section = document.createElement('div')
+      section.className = 'persona-prompt-section persona-generating'
+      section.dataset.personaId = persona.id
+      section.innerHTML = `
+        <div class="persona-section-actions">
+          <button class="btn btn-ghost btn-sm" disabled title="Generating…">↺ Regenerate</button>
+          <button class="btn btn-danger btn-sm" disabled title="Wait for generation to finish">Delete</button>
+        </div>
+        <div class="persona-row-wrap">
+        <div class="persona-row persona-row-generating">
+          <div class="persona-card-col">${cardCol}</div>
+          <div class="persona-term-col">
+            <div class="term-win" style="flex:1;min-width:0">
+              <div class="term-titlebar">
+                <span class="live-dot"></span>
+                <span class="term-title-text">GENERATING QUESTIONS</span>
+                <span class="term-elapsed" style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text3)"></span>
+              </div>
+              <div class="term-body persona-term-body" style="height:140px"></div>
+            </div>
+          </div>
+        </div>
+        </div>
+      `
+      return section
+    }
+
+    function renderPersonaPromptSection(personaOrNull, prompts) {
+      const personaId = personaOrNull?.id || null
+      const section = document.createElement('div')
+      section.className = 'persona-prompt-section'
+      section.dataset.personaId = personaId || '_legacy'
+
+      const cardCol = personaOrNull
+        ? renderPersonaCardCol(personaOrNull, brand.personas.indexOf(personaOrNull))
+        : '<div class="persona-name" style="font-weight:600">Unassigned</div>'
+
+      const actionsRow = personaOrNull
+        ? `<div class="persona-section-actions">
+             <button class="btn btn-ghost btn-sm" onclick="regenerateForPersona('${personaOrNull.id}')">↺ Regenerate</button>
+             <button class="btn btn-danger btn-sm" onclick="deletePersona('${personaOrNull.id}')">Delete</button>
+           </div>`
+        : ''
+
+      section.innerHTML = `
+        ${actionsRow}
+        <div class="persona-row-wrap">
+        <div class="persona-row">
+          <div class="persona-card-col">${cardCol}</div>
+          <div class="funnel-section">
+            <div class="funnel-header"><span class="badge badge-tofu">ToFu</span><h3>Awareness</h3></div>
+            <div class="prompt-list" data-stage="tofu"></div>
+          </div>
+          <div class="funnel-section">
+            <div class="funnel-header"><span class="badge badge-mofu">MoFu</span><h3>Consideration</h3></div>
+            <div class="prompt-list" data-stage="mofu"></div>
+          </div>
+          <div class="funnel-section">
+            <div class="funnel-header"><span class="badge badge-bofu">BoFu</span><h3>Decision</h3></div>
+            <div class="prompt-list" data-stage="bofu"></div>
+          </div>
+        </div>
+        </div>
+      `
+
+      ;['tofu', 'mofu', 'bofu'].forEach(stage => {
+        const list = section.querySelector(`[data-stage="${stage}"]`)
+        prompts.filter(p => p.funnel_stage === stage).forEach(p => list.appendChild(renderPromptCard(p)))
+      })
+
+      return section
+    }
+
+    function renderAll() {
+      // Auto-approve the sole persona so the launch button isn't silently blocked
+      if (brand.personas.length === 1 && !brand.personas[0].approved) {
+        const p = brand.personas[0]
+        p.approved = 1
+        fetch(`/api/personas/${p.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ approved: 1 }),
+        }).then(() => {
+          if (brand.status === 'personas_ready') generateQuestionsForPersona(p.id)
+        })
+      }
+
+      // Group prompts by persona_id
+      const byPersona = {}
+      brand.prompts.forEach(p => {
+        const key = p.persona_id || '_legacy'
+        if (!byPersona[key]) byPersona[key] = []
+        byPersona[key].push(p)
+      })
+
+      const container = document.getElementById('persona-prompts-container')
+      container.innerHTML = ''
+
+      // Personas WITHOUT prompts (and not generating): show in grid above
+      const grid = document.getElementById('persona-grid')
+      grid.innerHTML = ''
+      const personasWithoutPrompts = brand.personas.filter(p =>
+        (!byPersona[p.id] || byPersona[p.id].length === 0) && !generatingPersonaIds.has(p.id)
+      )
+      const showPersonasBlock = personasWithoutPrompts.length > 0
+      const personasHdr = document.getElementById('personas-section-hdr')
+      const gridWrap = document.getElementById('persona-grid-wrap')
+      if (personasHdr) personasHdr.style.display = showPersonasBlock ? '' : 'none'
+      if (gridWrap) gridWrap.style.display = showPersonasBlock ? '' : 'none'
+      personasWithoutPrompts.forEach((p, i) => grid.appendChild(renderPersonaCard(p, brand.personas.indexOf(p))))
+
+      // Personas WITH prompts: 4-col layout (Card | ToFu | MoFu | BoFu)
+      brand.personas.forEach(persona => {
+        if (generatingPersonaIds.has(persona.id)) return
+        const prompts = byPersona[persona.id]
+        if (!prompts || prompts.length === 0) return
+        container.appendChild(renderPersonaPromptSection(persona, prompts))
+      })
+
+      // Legacy/unassigned prompts if any
+      if (byPersona['_legacy'] && byPersona['_legacy'].length > 0) {
+        container.appendChild(renderPersonaPromptSection(null, byPersona['_legacy']))
+      }
+
+      // Personas currently generating: show card + terminal row at bottom
+      generatingPersonaIds.forEach(id => {
+        const persona = brand.personas.find(p => p.id === id)
+        if (persona) container.appendChild(renderPersonaGeneratingRow(persona))
+      })
+
+      // Import persona selector
+      const importSelect = document.getElementById('import-persona-select')
+      if (importSelect) {
+        const currentVal = importSelect.value
+        importSelect.innerHTML = '<option value="">Unassigned</option>'
+        brand.personas.forEach(p => {
+          importSelect.insertAdjacentHTML('beforeend', `<option value="${p.id}">${escHtml(p.name)}</option>`)
+        })
+        importSelect.value = currentVal || ''
+      }
+
+      document.getElementById('prompt-count').textContent = brand.prompts.length
+      document.getElementById('persona-count').textContent = brand.personas.length
+      document.getElementById('brand-name-top').textContent = brand.name || brand.url
+      updateLaunchBtn()
+      applySupplementUI()
+    }
+
+    function applySupplementUI() {
+      const panel = document.getElementById('icp-supplement-panel')
+      const body = document.getElementById('icp-supplement-body')
+      const label = document.getElementById('icp-supplement-label')
+      const caret = document.getElementById('icp-supplement-caret')
+      if (!panel || !brand) return
+
+      const anyApproved = brand.personas.some(p => p.approved)
+      const isGenerating = brand.status === 'generating_prompts'
+      const hasPrompts = brand.prompts && brand.prompts.length > 0
+      const shouldCollapse = anyApproved && (isGenerating || hasPrompts)
+
+      const hasSupplement = !!(brand.supplement && String(brand.supplement).trim())
+
+      panel.classList.toggle('collapsed', shouldCollapse)
+      panel.classList.toggle('locked', shouldCollapse && !hasSupplement)
+
+      if (shouldCollapse && hasSupplement) {
+        label.onclick = (e) => { e.preventDefault(); panel.classList.toggle('collapsed'); caret.textContent = panel.classList.contains('collapsed') ? '▼' : '▲' }
+        caret.textContent = panel.classList.contains('collapsed') ? '▼' : '▲'
+        if (caret) caret.style.display = ''
+      } else if (shouldCollapse && !hasSupplement) {
+        label.onclick = null
+        if (caret) caret.style.display = 'none'  // locked: no expand, hide caret
+      } else {
+        label.onclick = null
+        if (caret) caret.style.display = 'none'
+      }
+    }
+
+    async function toggleApprovePrompt(id) {
+      const p = brand.prompts.find(x => x.id === id)
+      if (!p) return
+      const newVal = p.approved ? 0 : 1
+      await fetch(`/api/prompts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: newVal }),
+      })
+      p.approved = newVal
+      renderAll()
+    }
+
+    async function toggleApprovePersona(id) {
+      const p = brand.personas.find(x => x.id === id)
+      if (!p) return
+      const newVal = p.approved ? 0 : 1
+      await fetch(`/api/personas/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: newVal }),
+      })
+      p.approved = newVal
+      renderAll()
+      applySupplementUI()
+      // Generate whenever we approve a persona that has no prompts yet (fixes 2nd+ persona bug)
+      const hasNoPrompts = !brand.prompts?.some(p => p.persona_id === id)
+      if (newVal === 1 && hasNoPrompts) {
+        showToast('Generating questions for this persona…')
+        generateQuestionsForPersona(id)
+      }
+    }
+
+    async function approveAllPrompts() {
+      await fetch(`/api/prompts/approve-all/${brandId}`, { method: 'POST' })
+      brand.prompts.forEach(p => p.approved = 1)
+      renderAll()
+      showToast('All prompts approved — ready to launch')
+      // Scroll launch button into view
+      setTimeout(() => {
+        document.getElementById('launch-btn')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 300)
+    }
+
+    async function approveAllPersonas() {
+      await fetch(`/api/personas/approve-all/${brandId}`, { method: 'POST' })
+      brand.personas.forEach(p => p.approved = 1)
+      renderAll()
+
+      // Only auto-generate if we're in the right state (personas approved, questions not yet generated)
+      if (brand.status === 'personas_ready') {
+        showToast('All personas approved — generating questions…')
+        // Small delay so the user sees the approval state before the transition
+        setTimeout(async () => {
+          await generateQuestions()
+          // Smooth-scroll to bottom of page so the user sees question generation start
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+        }, 400)
+      } else {
+        showToast('All personas approved')
+      }
+    }
+
+    function editPrompt(id) {
+      const card = document.querySelector(`[data-id="${id}"]`)
+      const textEl = card.querySelector('.prompt-text')
+      const editBtn = card.querySelector('.btn-ghost')
+      if (textEl.contentEditable === 'true') {
+        const newText = textEl.textContent.trim()
+        if (newText) {
+          fetch(`/api/prompts/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: newText }),
+          })
+          const p = brand.prompts.find(x => x.id === id)
+          if (p) p.text = newText
+        }
+        textEl.contentEditable = 'false'
+        editBtn.textContent = 'Edit'
+      } else {
+        textEl.contentEditable = 'true'
+        textEl.focus()
+        editBtn.textContent = 'Save'
+      }
+    }
+
+    async function deletePrompt(id) {
+      await fetch(`/api/prompts/${id}`, { method: 'DELETE' })
+      brand.prompts = brand.prompts.filter(p => p.id !== id)
+      renderAll()
+    }
+
+    async function deletePersona(id) {
+      await fetch(`/api/personas/${id}`, { method: 'DELETE' })
+      brand.personas = brand.personas.filter(p => p.id !== id)
+      brand.prompts = brand.prompts.filter(p => p.persona_id !== id)
+      generatingPersonaIds.delete(id)
+      renderAll()
+    }
+
+    // ICP supplement upload
+    async function uploadSupplement(text) {
+      const status = document.getElementById('supplement-status')
+      const wrap = document.getElementById('persona-grid-wrap')
+      const banner = document.getElementById('persona-regen-banner')
+
+      // Show prominent overlay on the persona grid
+      if (wrap) wrap.classList.add('persona-regen-overlay')
+      if (banner) banner.style.display = 'flex'
+      status.innerHTML = '<span class="spinner"></span><span>Regenerating personas with ICP context…</span>'
+
+      try {
+        const res = await fetch(`/api/brands/${brandId}/supplement`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        brand.personas = data.personas
+        brand.supplement = text
+        renderAll()
+        applySupplementUI()
+        status.innerHTML = '<span style="color:var(--success)">✓ Personas regenerated with ICP context</span>'
+      } catch (err) {
+        status.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`
+      } finally {
+        if (wrap) wrap.classList.remove('persona-regen-overlay')
+        if (banner) banner.style.display = 'none'
+      }
+    }
+
+    const dropZone = document.getElementById('drop-zone')
+    const fileInput = document.getElementById('file-input')
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over') })
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'))
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault()
+      dropZone.classList.remove('drag-over')
+      const file = e.dataTransfer.files[0]
+      if (file) readFile(file)
+    })
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) readFile(fileInput.files[0])
+    })
+
+    function readFile(file) {
+      const reader = new FileReader()
+      reader.onload = e => {
+        const text = e.target.result
+        dropZone.textContent = `✓ ${file.name} loaded`
+        uploadSupplement(text)
+      }
+      reader.readAsText(file)
+    }
+
+    document.getElementById('launch-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('launch-btn')
+      btn.disabled = true
+      btn.innerHTML = '<span class="spinner"></span> Launching…'
+      const res = await fetch('/api/runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand_id: brandId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        showToast('Error: ' + (data.error || 'Could not start run'))
+        btn.disabled = false
+        btn.textContent = 'Launch Run →'
+        return
+      }
+      window.location.href = `/live.html?runId=${data.id}`
+    })
+
+    const STATUS_LABELS = {
+      scraping:           'Scraping site…',
+      generating:         'Generating personas…',
+      generating_prompts: 'Generating questions…',
+    }
+
+    function applyStatusUI() {
+      const genBtn       = document.getElementById('gen-questions-btn')
+      const regenerateBtn = document.getElementById('regenerate-btn')
+      const genStatus    = document.getElementById('prompts-gen-status')
+      const promptsSec   = document.getElementById('prompts-section')
+      const launchBtn    = document.getElementById('launch-btn')
+
+      if (brand.status === 'personas_ready') {
+        if (genBtn) genBtn.style.display = 'none'
+        if (regenerateBtn) regenerateBtn.style.display = 'none'
+        genStatus.style.display = 'none'
+        promptsSec.style.display = ''
+        launchBtn.disabled = true
+        launchBtn.textContent = 'Launch Run →'
+
+      } else if (brand.status === 'generating_prompts') {
+        if (genBtn) genBtn.style.display = 'none'
+        if (regenerateBtn) regenerateBtn.style.display = 'none'
+        const hasPromptsOrGenerating = (brand.prompts && brand.prompts.length > 0) || generatingPersonaIds.size > 0
+        promptsSec.style.display = hasPromptsOrGenerating ? '' : 'none'
+        launchBtn.disabled = true
+        if (generatingPersonaIds.size > 0) {
+          genStatus.style.display = 'none'
+          startTermElapsed()
+          updatePersonaTerminals(brand.logs || [])
+        } else {
+          if (!document.getElementById('inline-term-body')) {
+            genStatus.style.display = 'block'
+            startTermElapsed()
+            genStatus.innerHTML = `
+              <div class="term-win" style="width:100%">
+                <div class="term-titlebar">
+                  <span class="live-dot"></span>
+                  <span class="term-title-text">GENERATING QUESTIONS</span>
+                  <span class="term-elapsed" style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text3)"></span>
+                </div>
+                <div class="term-body" id="inline-term-body" style="height:140px"></div>
+              </div>
+            `
+          }
+          const body = document.getElementById('inline-term-body')
+          if (body && brand.logs) {
+            const existing = body.querySelectorAll('.term-line').length
+            const newLines = brand.logs.slice(existing)
+            if (existing === 0 && newLines.length === 0) {
+              body.innerHTML = '<span class="term-line">Starting…<span class="term-cursor"></span></span>'
+            } else {
+              newLines.forEach(line => { body.insertAdjacentHTML('beforeend', termLine(line)) })
+              if (newLines.length) {
+                const cursor = body.querySelector('.term-cursor')
+                if (cursor) cursor.remove()
+                body.insertAdjacentHTML('beforeend', '<span class="term-cursor"></span>')
+                body.scrollTop = body.scrollHeight
+              }
+            }
+          }
+        }
+      } else if (brand.status === 'ready') {
+        if (genBtn) genBtn.style.display = 'none'
+        if (regenerateBtn) regenerateBtn.style.display = ''
+        genStatus.style.display = 'none'
+        promptsSec.style.display = ''
+        updateLaunchBtn()
+        if (generatingPersonaIds.size > 0) {
+          startTermElapsed()
+          updatePersonaTerminals(brand.logs || [])
+        }
+      }
+      applySupplementUI()
+    }
+
+    async function generateQuestions() {
+      const genBtn = document.getElementById('gen-questions-btn')
+      const regenBtn = document.getElementById('regenerate-btn')
+      if (genBtn) { genBtn.disabled = true; genBtn.innerHTML = '<span class="spinner"></span>' }
+      if (regenBtn) { regenBtn.disabled = true }
+      // Clear inline terminal so applyStatusUI rebuilds it fresh; reset log cursor
+      document.getElementById('inline-term-body')?.closest('.term-win')?.remove()
+      lastLogCount = 0
+      stopTermElapsed()
+      try {
+        const res = await fetch(`/api/brands/${brandId}/generate-prompts`, { method: 'POST' })
+        const data = await safeJson(res)
+        if (!res.ok) {
+          showToast('Error: ' + (data.error || 'Could not generate questions'))
+          if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Generate Questions →' }
+          if (regenBtn) { regenBtn.disabled = false }
+          return
+        }
+        brand.status = 'generating_prompts'
+        applyStatusUI()
+        pollForPrompts()
+      } catch (err) {
+        showToast(`Error: ${err.message}`)
+        if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Generate Questions →' }
+        if (regenBtn) { regenBtn.disabled = false }
+      }
+    }
+
+    async function generateQuestionsForPersona(personaId) {
+      try {
+        const res = await fetch(`/api/brands/${brandId}/generate-prompts?persona_id=${personaId}`, { method: 'POST' })
+        const data = await safeJson(res)
+        if (!res.ok) {
+          showToast('Error: ' + (data.error || 'Could not generate questions'))
+          return
+        }
+        generatingPersonaIds.add(personaId)
+        brand.status = 'generating_prompts'
+        renderAll()
+        applyStatusUI()
+        applySupplementUI()
+        pollForPrompts()
+      } catch (err) {
+        showToast(`Error: ${err.message}`)
+      }
+    }
+
+    async function regenerateForPersona(personaId) {
+      const persona = brand.personas.find(p => p.id === personaId)
+      if (!persona) return
+      const section = document.querySelector(`[data-persona-id="${personaId}"]`)
+      const regenBtn = section?.querySelector('.btn-ghost')
+      if (regenBtn) { regenBtn.disabled = true; regenBtn.innerHTML = '<span class="spinner"></span>' }
+      document.getElementById('inline-term-body')?.closest('.term-win')?.remove()
+      lastLogCount = 0
+      stopTermElapsed()
+      try {
+        const res = await fetch(`/api/brands/${brandId}/generate-prompts?persona_id=${personaId}`, { method: 'POST' })
+        const data = await safeJson(res)
+        if (!res.ok) {
+          showToast('Error: ' + (data.error || 'Could not regenerate questions'))
+          if (regenBtn) { regenBtn.disabled = false; regenBtn.textContent = '↺ Regenerate' }
+          return
+        }
+        generatingPersonaIds.add(personaId)
+        brand.status = 'generating_prompts'
+        renderAll()
+        applyStatusUI()
+        applySupplementUI()
+        pollForPrompts()
+      } catch (err) {
+        showToast(`Error: ${err.message}`)
+        if (regenBtn) { regenBtn.disabled = false; regenBtn.textContent = '↺ Regenerate' }
+      }
+    }
+
+    async function pollForPrompts() {
+      const res = await fetch(`/api/brands/${brandId}`)
+      if (!res.ok) { pollTimer = setTimeout(pollForPrompts, 5000); return }
+      const updated = await safeJson(res)
+      brand = { ...brand, ...updated }
+
+      if (brand.status === 'ready') {
+        // Only remove personas that now have prompts (don't clear all — 2nd persona may still be generating)
+        generatingPersonaIds.forEach(id => {
+          if (brand.prompts?.some(p => p.persona_id === id)) {
+            generatingPersonaIds.delete(id)
+          }
+        })
+        renderAll()
+        applyStatusUI()
+        if (generatingPersonaIds.size > 0) {
+          pollTimer = setTimeout(pollForPrompts, 4000)
+        }
+      } else if (brand.status === 'generating_prompts') {
+        applyStatusUI()
+        pollTimer = setTimeout(pollForPrompts, 4000)
+      } else if (brand.status === 'personas_ready') {
+        generatingPersonaIds.clear()
+        applyStatusUI()
+        showToast('Question generation failed. Try again.')
+      }
+    }
+
+    const POLL_MS = 2000
+
+    function stopPolling() {
+      if (pollTimer) { clearTimeout(pollTimer); pollTimer = null }
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+    }
+
+    function scheduleNextPoll(immediate = false) {
+      stopPolling()
+      if (immediate) load()
+      else pollTimer = setTimeout(load, POLL_MS)
+    }
+
+    async function load() {
+      if (loadInProgress) return
+      loadInProgress = true
+      try {
+        const res = await fetch(`/api/brands/${brandId}`)
+        if (!res.ok) { location.href = '/'; return }
+        brand = await safeJson(res)
+
+        // Full-screen loading states — show real-time terminal log
+        if (['scraping', 'generating'].includes(brand.status)) {
+          // Kick off scrape+personas (runs in long-lived request, avoids 30s waitUntil limit)
+          if (brand.status === 'scraping' && !continueFired) {
+            continueFired = true
+            fetch(`/api/brands/${brandId}/continue`, { method: 'POST' }).catch(() => {})
+          }
+          // Race-condition fallback: personas inserted before status update — treat as ready
+          const hasPersonas = Array.isArray(brand.personas) && brand.personas.length > 0
+          if (brand.status === 'generating' && hasPersonas) {
+            brand.status = 'personas_ready'
+            // Fall through to show content (don't return)
+          } else {
+            startTermElapsed()
+            updateTerminal(brand.logs || [])
+            // Use setInterval for reliable polling; also poll on tab visibility
+            if (!pollInterval) {
+              pollInterval = setInterval(load, POLL_MS)
+            }
+            const logs = (brand.logs || []).join('\n')
+            if (/Personas ready|submit_personas done/i.test(logs)) {
+              stopPolling()
+              load() // immediate re-fetch — status should be committed by now
+            }
+            return
+          }
+        }
+      } catch (err) {
+        console.error('[approve] load error:', err)
+        if (!brand || ['scraping', 'generating'].includes(brand?.status)) {
+          scheduleNextPoll()
+        }
+        return
+      } finally {
+        loadInProgress = false
+      }
+
+      if (brand.status === 'scrape_blocked') {
+        showScrapeBlockedUI()
+        return
+      }
+
+      if (brand.status === 'failed') {
+        const errDetail = brand.lastError
+          ? `<div style="margin-top:8px;font-size:var(--text-xs);color:var(--text3);max-width:480px;line-height:1.5;font-family:monospace;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:8px 10px">${escHtml(brand.lastError)}</div>`
+          : ''
+        document.getElementById('loading').innerHTML =
+          `<div style="text-align:center">
+            <div style="color:var(--danger);font-size:var(--text-sm);font-weight:600">Analysis failed</div>
+            ${errDetail}
+            <div style="margin-top:12px"><a href="/" style="color:var(--accent);font-size:var(--text-sm)">Try again</a></div>
+          </div>`
+        return
+      }
+
+      // personas_ready, generating_prompts, or ready — show the review page
+      stopPolling()
+      document.getElementById('loading').style.display = 'none'
+      document.getElementById('content').style.display = 'block'
+      stopTermElapsed()
+      renderAll()
+      renderSourceMaterial()
+      applyStatusUI()
+
+      // Keep polling if we landed mid-generation
+      if (brand.status === 'generating_prompts') {
+        pollTimer = setTimeout(pollForPrompts, 4000)
+      }
+    }
+
+    // Poll immediately when user returns to tab (handles background tab throttling)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && brand && ['scraping', 'generating'].includes(brand.status)) {
+        load()
+      }
+    })
+
+    function showScrapeBlockedUI() {
+      document.getElementById('loading').innerHTML = `
+        <div style="max-width:500px;padding:32px 24px">
+          <div style="text-align:center">
+            <div style="font-size:var(--text-xs);letter-spacing:0.14em;text-transform:uppercase;color:var(--danger);margin-bottom:14px">
+              Access Blocked
+            </div>
+            <div style="font-size:var(--text-lg);font-weight:700;line-height:1.3;color:var(--text);margin-bottom:14px">
+              This site blocked our scraper
+            </div>
+            <div style="font-size:var(--text-sm);color:var(--text2);line-height:1.9;margin-bottom:24px">
+              The site rejected our request before we could read any content.<br><br>
+              You can proceed using the AI's existing knowledge of this domain.
+              This works well for established, well-known companies — but may produce
+              generic or inaccurate results for smaller or lesser-known ones.<br><br>
+              Either way, you can provide context manually via the
+              <strong style="color:var(--text)">ICP Supplement</strong> on the next screen.
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:24px">
+              <a href="/" class="btn btn-ghost">← Try a different URL</a>
+              <button class="btn btn-primary" id="proceed-blocked-btn" onclick="proceedWithDomainKnowledge()">
+                Proceed with AI Knowledge →
+              </button>
+            </div>
+          </div>
+
+          <!-- Paste your own content as an alternative -->
+          <div style="border-top:1px solid var(--border);padding-top:20px">
+            <div
+              onclick="toggleBlockedPaste()"
+              style="font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;
+                     color:var(--text3);cursor:pointer;user-select:none;
+                     display:flex;align-items:center;justify-content:space-between;margin-bottom:0"
+            >
+              <span>Or paste your site content</span>
+              <span id="blocked-paste-caret" style="color:var(--accent)">▶</span>
+            </div>
+            <div id="blocked-paste-section" style="display:none;margin-top:12px">
+              <textarea
+                id="blocked-paste-text"
+                placeholder="Paste your site copy, product descriptions, or any content you want analysed…"
+                style="width:100%;height:140px;resize:vertical;
+                       background:var(--surface);border:1px solid var(--border2);
+                       color:var(--text);font-family:inherit;font-size:var(--text-sm);
+                       padding:10px 12px;line-height:1.6;outline:none;
+                       border-radius:0;box-sizing:border-box"
+              ></textarea>
+              <button
+                class="btn btn-primary"
+                id="paste-analyze-btn"
+                onclick="proceedWithPastedContent()"
+                style="margin-top:8px;width:100%"
+              >
+                Analyze Pasted Content →
+              </button>
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    function toggleBlockedPaste() {
+      const section = document.getElementById('blocked-paste-section')
+      const caret = document.getElementById('blocked-paste-caret')
+      const open = section.style.display === 'none'
+      section.style.display = open ? 'block' : 'none'
+      caret.textContent = open ? '▼' : '▶'
+    }
+
+    async function proceedWithPastedContent() {
+      const text = document.getElementById('blocked-paste-text')?.value?.trim()
+      if (!text) { showToast('Please paste some content first'); return }
+      const btn = document.getElementById('paste-analyze-btn')
+      btn.disabled = true
+      btn.innerHTML = '<span class="spinner"></span> Analyzing…'
+      try {
+        const res = await fetch(`/api/brands/${brandId}/proceed-blocked`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        })
+        const data = await safeJson(res)
+        if (!res.ok) {
+          btn.disabled = false
+          btn.textContent = 'Analyze Pasted Content →'
+          showToast('Error: ' + (data.error || 'Something went wrong'))
+          return
+        }
+        brand.status = 'generating'
+        lastLoadedStatus = null
+        pollTimer = setTimeout(load, 500)
+      } catch (err) {
+        btn.disabled = false
+        btn.textContent = 'Analyze Pasted Content →'
+        showToast(`Error: ${err.message}`)
+      }
+    }
+
+    async function proceedWithDomainKnowledge() {
+      const btn = document.getElementById('proceed-blocked-btn')
+      btn.disabled = true
+      btn.innerHTML = '<span class="spinner"></span> Starting…'
+      try {
+        const res = await fetch(`/api/brands/${brandId}/proceed-blocked`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        const data = await safeJson(res)
+        if (!res.ok) {
+          btn.disabled = false
+          btn.textContent = 'Proceed with AI Knowledge →'
+          showToast('Error: ' + (data.error || 'Something went wrong'))
+          return
+        }
+        brand.status = 'generating'
+        lastLoadedStatus = null // force load() to rebuild the step track
+        pollTimer = setTimeout(load, 500)
+      } catch (err) {
+        btn.disabled = false
+        btn.textContent = 'Proceed with AI Knowledge →'
+        showToast(`Error: ${err.message}`)
+      }
+    }
+
+    // ── Import prompts ────────────────────────────────────────────────────────
+
+    function toggleImportPanel() {
+      const panel = document.getElementById('import-panel')
+      const btn = document.getElementById('import-toggle-btn')
+      const open = panel.style.display === 'none'
+      panel.style.display = open ? 'block' : 'none'
+      btn.textContent = open ? 'Close ↑' : 'Import →'
+    }
+
+    async function classifyImportedPrompts() {
+      const raw = document.getElementById('import-textarea').value
+      const texts = raw.split('\n').map(s => s.trim()).filter(Boolean)
+      if (!texts.length) { showToast('Paste some prompts first'); return }
+
+      const btn = document.getElementById('import-classify-btn')
+      const status = document.getElementById('import-status')
+      btn.disabled = true
+      btn.innerHTML = '<span class="spinner"></span>'
+      status.innerHTML = '<span class="spinner"></span><span style="letter-spacing:0.04em">Classifying…</span>'
+      document.getElementById('import-results').innerHTML = ''
+      document.getElementById('import-actions').style.display = 'none'
+
+      try {
+        const res = await fetch(`/api/brands/${brandId}/classify-prompts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texts }),
+        })
+        const data = await safeJson(res)
+        if (!res.ok) throw new Error(data.error || 'Classification failed')
+
+        importClassified = data.prompts
+        // Only pre-select prompts Claude said to keep
+        importSelected = new Set(
+          importClassified
+            .map((_, i) => i)
+            .filter(i => importClassified[i].keep !== false)
+        )
+        renderImportResults()
+        const kept = importClassified.filter(p => p.keep !== false).length
+        const filtered = importClassified.length - kept
+        const filteredNote = filtered > 0 ? `, <span style="color:var(--text2)">${filtered} filtered</span>` : ''
+        status.innerHTML = `<span style="color:var(--success)">✓ ${kept} kept${filteredNote}</span>`
+      } catch (err) {
+        status.innerHTML = `<span style="color:var(--danger)">${err.message}</span>`
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Reclassify →'
+      }
+    }
+
+    function renderImportResults() {
+      const container = document.getElementById('import-results')
+      const actions = document.getElementById('import-actions')
+      if (!importClassified.length) { container.innerHTML = ''; actions.style.display = 'none'; return }
+
+      container.innerHTML = `
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="btn btn-ghost btn-sm" onclick="selectAllImports(true)">Select All</button>
+          <button class="btn btn-ghost btn-sm" onclick="selectAllImports(false)">Deselect All</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          ${importClassified.map((p, i) => {
+            const filtered = p.keep === false
+            return `
+            <div class="import-card${importSelected.has(i) ? ' selected' : ''}${filtered ? ' import-filtered' : ''}"
+                 id="import-card-${i}" onclick="toggleImportCard(${i})">
+              <div class="approve-check${importSelected.has(i) ? ' checked' : ''}"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:var(--text-sm);color:${filtered ? 'var(--text3)' : 'var(--text)'};line-height:1.5;${filtered ? 'text-decoration:line-through' : ''}">${escHtml(p.text)}</div>
+                ${filtered && p.filter_reason ? `<div style="font-size:var(--text-xs);color:var(--text3);margin-top:2px">${escHtml(p.filter_reason)}</div>` : ''}
+              </div>
+              <span class="badge badge-${p.funnel_stage}" style="flex-shrink:0;opacity:${filtered ? '0.4' : '1'}">${p.funnel_stage.toUpperCase()}</span>
+            </div>`
+          }).join('')}
+        </div>
+      `
+      actions.style.display = 'flex'
+      updateImportAddBtn()
+    }
+
+    function toggleImportCard(i) {
+      if (importSelected.has(i)) importSelected.delete(i)
+      else importSelected.add(i)
+      const card = document.getElementById(`import-card-${i}`)
+      card.className = `import-card${importSelected.has(i) ? ' selected' : ''}`
+      card.querySelector('.approve-check').className = `approve-check${importSelected.has(i) ? ' checked' : ''}`
+      updateImportAddBtn()
+    }
+
+    function selectAllImports(val) {
+      if (val) importClassified.forEach((_, i) => importSelected.add(i))
+      else importSelected.clear()
+      renderImportResults()
+    }
+
+    function updateImportAddBtn() {
+      const btn = document.getElementById('import-add-btn')
+      if (btn) btn.textContent = `Add Selected (${importSelected.size}) →`
+    }
+
+    async function addSelectedImports() {
+      const toAdd = [...importSelected].map(i => importClassified[i]).filter(Boolean)
+      if (!toAdd.length) { showToast('Select at least one prompt'); return }
+
+      const btn = document.getElementById('import-add-btn')
+      btn.disabled = true
+      btn.innerHTML = '<span class="spinner"></span>'
+
+      try {
+        const res = await fetch(`/api/brands/${brandId}/import-prompts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompts: toAdd, persona_id: document.getElementById('import-persona-select').value || null }),
+        })
+        const data = await safeJson(res)
+        if (!res.ok) throw new Error(data.error || 'Import failed')
+
+        brand.prompts = data.prompts
+        renderAll()
+
+        // Reset panel
+        document.getElementById('import-panel').style.display = 'none'
+        document.getElementById('import-toggle-btn').textContent = 'Import →'
+        document.getElementById('import-textarea').value = ''
+        document.getElementById('import-results').innerHTML = ''
+        document.getElementById('import-actions').style.display = 'none'
+        document.getElementById('import-status').innerHTML = ''
+        importClassified = []
+        importSelected = new Set()
+
+        showToast(`✓ ${toAdd.length} prompt${toAdd.length !== 1 ? 's' : ''} added`)
+      } catch (err) {
+        showToast(`Error: ${err.message}`)
+        btn.disabled = false
+        btn.textContent = `Add Selected (${importSelected.size}) →`
+      }
+    }
+
+    // ── Source material ───────────────────────────────────────────────────────
+
+    function toggleSourceMaterial() {
+      const panel = document.getElementById('source-material')
+      const label = document.getElementById('source-toggle-label')
+      const open = panel.style.display === 'none'
+      panel.style.display = open ? 'block' : 'none'
+      label.textContent = open ? '▼ Hide' : '▶ Show pages crawled'
+    }
+
+    function togglePageText(i) {
+      const el = document.getElementById(`src-page-${i}`)
+      el.style.display = el.style.display === 'none' ? 'block' : 'none'
+    }
+
+    function renderSourceMaterial() {
+      if (!brand.scraped_content) return
+      let scraped
+      try { scraped = JSON.parse(brand.scraped_content) } catch { return }
+      const pages = scraped.pages || []
+      if (!pages.length) return
+
+      const totalChars = pages.reduce((s, p) => s + (p.text || '').length, 0)
+      const container = document.getElementById('source-material')
+
+      container.innerHTML = `
+        <div style="font-size:var(--text-xs);color:var(--text3);margin-bottom:10px;letter-spacing:0.04em">
+          ${pages.length} page${pages.length !== 1 ? 's' : ''} crawled
+          · ~${totalChars.toLocaleString()} chars extracted
+          · first ${Math.min(pages.length, 20)} pages × up to 1,500 chars sent to Claude
+        </div>
+        ${pages.map((p, i) => `
+          <div style="margin-bottom:6px;border:1px solid var(--border)">
+            <div onclick="togglePageText(${i})"
+              style="padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--surface2)">
+              <div>
+                <div style="font-size:var(--text-sm);font-weight:600;color:var(--text)">${escHtml(p.title || p.url)}</div>
+                <div style="font-size:var(--text-xs);color:var(--text3);margin-top:2px;word-break:break-all">${escHtml(p.url)}</div>
+              </div>
+              <span style="font-size:var(--text-xs);color:var(--text3);flex-shrink:0;margin-left:12px">${(p.text||'').length.toLocaleString()} chars</span>
+            </div>
+            <div id="src-page-${i}" style="display:none;padding:10px 12px;font-size:var(--text-xs);color:var(--text2);
+              line-height:1.7;max-height:220px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
+              border-top:1px solid var(--border);background:var(--bg)">
+              ${p.description ? `<em style="color:var(--text3)">${escHtml(p.description)}</em>\n\n` : ''}${escHtml((p.text||'').substring(0, 1500))}${(p.text||'').length > 1500 ? '\n…' : ''}
+            </div>
+          </div>`).join('')}
+      `
+    }
+
+    load()
+  </script>
+</body>
+</html>

@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/assets/auth.js"></script>
+  <title>AEO</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <style>
+    body { display: flex; min-height: 100vh; margin: 0; }
+    .index-layout { display: flex; flex: 1; min-width: 0; }
+    #runs-sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-width);
+      background: rgba(17,17,17,0.92); border-right: 1px solid var(--border);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      display: flex; flex-direction: column; overflow: hidden;
+      z-index: 50;
+      transition: width 0.2s ease;
+    }
+    #runs-sidebar.collapsed { width: 48px; }
+    #runs-sidebar.collapsed .sidebar-header-text,
+    #runs-sidebar.collapsed #sidebar-list { display: none; }
+    .sidebar-toggle {
+      background: none; border: none; color: var(--text2); cursor: pointer;
+      padding: 4px; font-size: 14px; line-height: 1; flex-shrink: 0;
+    }
+    .sidebar-toggle:hover { color: var(--accent); }
+    .sidebar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px; border-bottom: 1px solid var(--border);
+      font-size: var(--text-xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text2);
+      flex-shrink: 0;
+    }
+    #runs-sidebar.collapsed .sidebar-header { justify-content: center; padding: 13px 0; }
+    #sidebar-list { flex:1; overflow-y:auto; }
+    .sidebar-run { padding:11px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.1s; }
+    .sidebar-run:hover { background:var(--bg); }
+    .sidebar-run-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+    .sidebar-run-date { font-size:var(--text-xs); color:var(--text3); }
+    .sidebar-run-status { font-size:var(--text-xs); letter-spacing:0.1em; text-transform:uppercase; padding:2px 7px; border-radius:1px; }
+    .sidebar-status-complete { background:rgba(74,222,128,0.15); color:var(--success); }
+    .sidebar-status-querying, .sidebar-status-scraping, .sidebar-status-analyzing, .sidebar-status-pending { background:rgba(251,191,36,0.12); color:var(--accent); }
+    .sidebar-status-failed { background:rgba(248,113,113,0.12); color:var(--danger); }
+    .sidebar-run-bar { height:2px; background:var(--surface2); border-radius:1px; margin:5px 0; }
+    .sidebar-run-fill { height:100%; border-radius:1px; background:var(--accent); transition:width 0.3s; }
+    .sidebar-run-footer { display:flex; align-items:center; justify-content:space-between; }
+    .sidebar-run-pct { font-size:var(--text-xs); color:var(--text3); }
+    .sidebar-run-brand { font-size:var(--text-xs); color:var(--text3); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sidebar-del-btn { background:none; border:none; color:var(--text3); cursor:pointer; font-size:var(--text-xs); letter-spacing:0.06em; padding:2px 0; opacity:0; transition:opacity 0.15s, color 0.15s; }
+    .sidebar-run:hover .sidebar-del-btn { opacity:1; }
+    .sidebar-del-btn:hover { color:var(--danger); }
+    .sidebar-del-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .sidebar-del-btn:disabled:hover { color:var(--text3); }
+    .index-main {
+      margin-left: var(--sidebar-width);
+      width: calc(100vw - var(--sidebar-width));
+      flex: 1; display: flex; align-items: flex-start; justify-content: center; min-width: 0;
+      overflow-y: auto;
+      padding: 40px 0 64px;
+      transition: margin-left 0.2s ease, width 0.2s ease;
+    }
+    #runs-sidebar.collapsed ~ .index-main {
+      margin-left: 48px;
+      width: calc(100vw - 48px);
+    }
+    .setup-wrap { width: 100%; max-width: 720px; padding: 32px 24px; }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .tagline {
+      font-size: var(--text-xs);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text2);
+    }
+
+    .hero-title {
+      font-size: clamp(22px, 4vw, 34px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 28px;
+    }
+
+    .url-wrap {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .url-wrap input { flex: 1; font-size: var(--text-sm); }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: var(--text3);
+      border-color: var(--text3);
+    }
+
+    #status-msg {
+      min-height: 18px;
+      font-size: var(--text-sm);
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+
+    .predict-toggle {
+      font-size: var(--text-xs);
+      color: var(--text3);
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .predict-toggle:hover { color: var(--text2); }
+
+    .predict-panel {
+      display: none;
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-top: 12px;
+      margin-bottom: 32px;
+    }
+    .predict-panel-label {
+      font-size: var(--text-xs); letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text2); margin-bottom: 10px;
+    }
+    .predict-panel-hint {
+      font-size: var(--text-sm); color: var(--text2); line-height: 1.6; margin-bottom: 14px;
+    }
+    .predict-textarea {
+      width: 100%; height: 140px; resize: vertical;
+      background: var(--surface); border: 1px solid var(--border2);
+      color: var(--text); font-family: inherit; font-size: var(--text-sm);
+      padding: 10px 12px; line-height: 1.6; outline: none;
+      border-radius: 0; box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+    .predict-textarea:focus { border-color: var(--accent); }
+    #predict-status { font-size: var(--text-sm); color: var(--text2); min-height: 18px; display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+
+    .quick-run-panel { display: none; border: 1px solid var(--border); padding: 20px; margin-top: 12px; margin-bottom: 32px; }
+    .quick-run-panel .qr-field { margin-bottom: 14px; }
+    .quick-run-panel .qr-label { font-size: var(--text-xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text2); margin-bottom: 6px; display: block; }
+    .quick-run-panel input, .quick-run-panel textarea {
+      width: 100%; font-size: var(--text-sm); padding: 10px 12px; background: var(--surface); border: 1px solid var(--border2);
+      color: var(--text); font-family: inherit; border-radius: 0; box-sizing: border-box;
+    }
+    .quick-run-panel input:focus, .quick-run-panel textarea:focus { border-color: var(--accent); outline: none; }
+    .quick-run-panel textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+    .qr-persona-card { border: 1px solid var(--border2); padding: 14px; margin-bottom: 12px; background: var(--surface); position: relative; }
+    .qr-persona-card .qr-remove-persona { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text3); cursor: pointer; font-size: var(--text-sm); }
+    .qr-persona-card .qr-remove-persona:hover { color: var(--danger); }
+    .qr-add-persona { font-size: var(--text-sm); color: var(--accent); cursor: pointer; margin-bottom: 16px; }
+    .qr-add-persona:hover { text-decoration: underline; }
+
+    /* AEO Strategy Brief — manifesto */
+    .strategy-brief {
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      max-width: 640px;
+    }
+    .strategy-brief-title {
+      font-size: var(--text-xs);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 20px;
+    }
+    .strategy-brief-content {
+      font-size: var(--text-sm);
+      line-height: 1.9;
+      color: var(--text2);
+    }
+    .strategy-brief-content p { margin-bottom: 1.2em; }
+    .strategy-brief-content p:last-child { margin-bottom: 0; }
+    .strategy-brief-content strong { color: var(--text); }
+    .strategy-brief-content h3 { font-size: 1em; font-weight: 600; color: var(--text); margin: 1.8em 0 0.6em; }
+    .strategy-brief-content h3:first-child { margin-top: 0; }
+
+    /* Above-the-fold: exactly one viewport; arrows pinned to bottom so always visible */
+    .above-fold {
+      height: 100vh;
+      max-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .above-fold-content {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding-bottom: 16px;
+    }
+    /* Scroll hint: pinned to bottom of above-fold viewport */
+    .scroll-hint {
+      flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 16px 0 24px;
+      cursor: pointer;
+    }
+    .scroll-hint:hover .scroll-arrows span { color: var(--accent); }
+    .scroll-arrows {
+      display: flex; gap: 4px; font-size: 18px; color: var(--text2);
+    }
+    .scroll-arrows span {
+      display: inline-block;
+      animation: arrow-drip 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    .scroll-arrows span:nth-child(1) { animation-delay: 0s; }
+    .scroll-arrows span:nth-child(2) { animation-delay: 0.12s; }
+    .scroll-arrows span:nth-child(3) { animation-delay: 0.24s; }
+    .scroll-arrows span:nth-child(4) { animation-delay: 0.36s; }
+    .scroll-arrows span:nth-child(5) { animation-delay: 0.48s; }
+    @keyframes arrow-drip {
+      0%, 100% { transform: translateY(0) scale(0.9); opacity: 0.4; }
+      30% { transform: translateY(-10px) scale(1.15); opacity: 1; }
+      60% { transform: translateY(-2px) scale(1.05); opacity: 0.8; }
+    }
+    .scroll-hint-label {
+      font-size: var(--text-xs); letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text3); margin-top: 4px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="index-layout">
+    <aside id="runs-sidebar" class="collapsed">
+      <div class="sidebar-header">
+        <span class="sidebar-header-text">Runs</span>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar">▶</button>
+      </div>
+      <div id="sidebar-list"></div>
+    </aside>
+    <main class="index-main">
+  <div class="setup-wrap">
+    <div class="above-fold">
+      <div class="above-fold-content">
+      <div class="header-row">
+        <div class="logo">A<em>.</em>E<em>.</em>O</div>
+      </div>
+
+      <h1 class="hero-title">How does AI<br>describe your brand?</h1>
+
+      <form id="setup-form">
+        <div class="url-wrap">
+          <input
+            type="text"
+            id="url-input"
+            placeholder="yoursite.com"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            required
+          />
+          <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+            Analyze →
+          </button>
+        </div>
+        <div id="status-msg"></div>
+      </form>
+
+      <!-- Predict mode toggle (sidebar runs list loaded below) -->
+      <div class="predict-toggle" onclick="togglePredict()">
+        <span>Working with an unpublished site?</span>
+        <span id="predict-caret" style="color:var(--accent);font-weight:600">Predict →</span>
+      </div>
+
+      <!-- Predict panel (expanded on demand) -->
+      <div class="predict-panel" id="predict-panel">
+      <div class="predict-panel-label">Predict — No Live URL Required</div>
+      <div class="predict-panel-hint">
+        Paste draft copy, wireframe text, or any site content. We'll generate personas
+        and AEO questions without scraping a live site.
+      </div>
+      <input
+        type="text"
+        id="predict-name"
+        placeholder="Brand or project name"
+        style="width:100%;margin-bottom:8px"
+      />
+      <textarea
+        id="predict-text"
+        class="predict-textarea"
+        placeholder="Paste your site copy here…"
+      ></textarea>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" id="predict-btn" onclick="submitPredict()">
+          Generate Personas →
+        </button>
+      </div>
+      <div id="predict-status"></div>
+    </div>
+
+      <!-- Quick run toggle (Skip setup / Quick Start) -->
+      <div class="predict-toggle" onclick="toggleQuickRun()">
+        <span>Ready with prompts and personas?</span>
+        <span id="qr-caret" style="color:var(--accent);font-weight:600">Skip setup →</span>
+      </div>
+
+      <!-- Quick run panel (expanded on demand) -->
+      <div class="quick-run-panel" id="quick-run-panel">
+        <div class="predict-panel-label">Skip setup — Run directly</div>
+        <div class="predict-panel-hint" style="margin-bottom:20px">
+          Enter brand info, prompts, and personas. We'll create a run and fire queries across Claude, ChatGPT, and Gemini.
+        </div>
+        <div class="qr-field">
+          <label class="qr-label">Brand name</label>
+          <input type="text" id="qr-brand-name" placeholder="Acme Corp" />
+        </div>
+        <div class="qr-field">
+          <label class="qr-label">Brand domain (optional)</label>
+          <input type="text" id="qr-brand-domain" placeholder="example.com" />
+        </div>
+        <div class="qr-field">
+          <label class="qr-label">Prompts (one per line)</label>
+          <textarea id="qr-prompts" placeholder="What are the best tools for nonprofit project management?&#10;[tofu] What is content marketing?&#10;[bofu] How do I compare CRM vendors?"></textarea>
+          <div class="predict-panel-hint" style="margin-top:6px">Optional prefix: [tofu], [mofu], or [bofu] — e.g. [tofu] What is X?</div>
+        </div>
+        <div class="qr-field">
+          <label class="qr-label">Personas <span style="font-size:var(--text-xs);color:var(--text3);font-weight:400">(optional)</span></label>
+          <div class="predict-panel-hint" style="margin-bottom:8px">Add personas to frame the AI with different buyer contexts. If none, a default assistant is used.</div>
+          <div id="qr-personas-list"></div>
+          <span class="qr-add-persona" onclick="addPersona()">+ Add persona</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:20px">
+          <button class="btn btn-primary" id="qr-btn" onclick="submitQuickRun()">Run Now →</button>
+        </div>
+        <div id="qr-status" style="font-size:var(--text-sm);color:var(--text2);min-height:18px;margin-top:10px"></div>
+      </div>
+      </div><!-- /above-fold-content -->
+
+    <!-- Scroll hint: pinned to bottom of above-fold viewport -->
+    <div class="scroll-hint" onclick="document.querySelector('.below-fold').scrollIntoView({behavior:'smooth'})" title="Scroll to see more">
+      <div class="scroll-arrows">
+        <span>▼</span><span>▼</span><span>▼</span><span>▼</span><span>▼</span>
+      </div>
+      <span class="scroll-hint-label">Scroll for more</span>
+    </div>
+  </div><!-- /above-fold -->
+
+    <div class="below-fold" style="scroll-margin-top: 16px; padding-top: 0;">
+    <!-- AEO Strategy Brief (below the fold) -->
+    <section class="strategy-brief">
+      <h2 class="strategy-brief-title">AEO Strategy Brief</h2>
+      <div class="strategy-brief-content" id="strategy-brief-content">
+        <p><strong>92% of searches that show an AI summary never result in a website click.</strong> LLMs are being asked questions about your brand every day. AEO is how you understand what they're saying — and influence it.</p>
+        <p>AEO stands for Answer Engine Optimization. It's a set of analyses that show how AI assistants like ChatGPT, Claude, and Gemini are representing a brand when buyers ask them questions, and what to do to improve that representation.</p>
+        <h3>Measuring LLM visibility</h3>
+        <p>The tool queries programmatically. It submits prompts to each LLM via API and analyzes responses across hundreds of calls: which brands get mentioned, in what rank order, which URLs get cited. Persona scoring, channel analysis, and format recommendations all start from this data.</p>
+        <h3>Persona scoring</h3>
+        <p>Performance is scored per persona, not just in aggregate. Every prompt is mapped to a specific persona. The output shows how a brand is performing for each buyer type: where it's well-represented, and where it's absent.</p>
+        <h3>Channel analysis</h3>
+        <p>LLMs cite a brand's website, but they give more weight to third-party sources. The channel analysis classifies every cited URL: owned pages, competitor pages, news outlets, industry sites, review platforms. Outlets that appear in a category but haven't covered a brand are PR targets.</p>
+        <h3>Format analysis</h3>
+        <p>How content is structured affects whether LLMs can use it. Headers written as questions create direct matches to user queries. FAQ sections mirror the format LLMs use. Schema markup and updated metadata give the AI an immediate read on what a page is about.</p>
+        <h3>Gap analysis</h3>
+        <p>The right prompts to track come from mapping what a brand covers, what competitors cover, and what buyers actually need to know. Where those three don't overlap is where the content strategy has room to go.</p>
+        <p><strong>Every audit starts with the gap analysis, building the right prompt set before running anything.</strong> From there, the tool queries at scale, scores results by persona, maps the citation footprint, and identifies format improvements from what the data shows.</p>
+      </div>
+    </section>
+    </div><!-- /below-fold -->
+
+  </div><!-- /setup-wrap -->
+    </main>
+  </div>
+
+  <script>
+    const form = document.getElementById('setup-form')
+    const input = document.getElementById('url-input')
+    const btn = document.getElementById('submit-btn')
+    const statusMsg = document.getElementById('status-msg')
+
+    function setStatus(msg, loading = false) {
+      statusMsg.innerHTML = loading
+        ? `<span class="spinner"></span><span>${msg}</span>`
+        : msg
+    }
+
+    async function safeJson(res) {
+      const text = await res.text()
+      try { return JSON.parse(text) }
+      catch { return { error: text.substring(0, 300) } }
+    }
+
+    function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    const API = (path) => {
+      const base = location.pathname.replace(/\/[^/]*$/, '') || ''
+      return base + (path.startsWith('/') ? path : '/' + path)
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('runs-sidebar')
+      const btn = sidebar?.querySelector('.sidebar-toggle')
+      if (!sidebar || !btn) return
+      const isCollapsed = sidebar.classList.toggle('collapsed')
+      btn.textContent = isCollapsed ? '▶' : '◀'
+      btn.title = isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+      btn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar')
+    }
+
+    async function loadSidebar() {
+      const list = document.getElementById('sidebar-list')
+      if (!list) return
+      list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--text3)">Loading…</div>'
+      try {
+        const res = await fetch(API('/api/runs/list'))
+        const json = await safeJson(res)
+        if (!res.ok) {
+          list.innerHTML = `<div style="padding:16px;font-size:var(--text-xs);color:var(--danger)">${res.status === 401 ? 'Session expired' : 'Failed to load runs'}</div>`
+          return
+        }
+        const allRuns = json.runs || []
+        if (!allRuns.length) {
+          list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--text3)">No runs yet.</div>'
+          return
+        }
+        list.innerHTML = allRuns.map(r => {
+          const total = r.total_queries || 0
+          const done = r.completed_queries || 0
+          const pct = total > 0 ? Math.round((done / total) * 100) : (r.status === 'complete' ? 100 : 0)
+          const d = new Date(r.created_at)
+          const dateStr = d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
+          const brandLabel = r.brand_name || r.brand_domain || 'Brand'
+          const statusClass = `sidebar-status-${r.status || 'pending'}`
+          const inProgress = ['pending','querying','scraping','analyzing'].includes(r.status || '')
+          const delAttrs = inProgress ? ' disabled title="Wait for run to complete or fail before deleting"' : ''
+          return `<div class="sidebar-run" onclick="navigateToRun('${r.id}')">
+            <div class="sidebar-run-meta">
+              <span class="sidebar-run-date">${dateStr}</span>
+              <span class="sidebar-run-status ${statusClass}">${r.status || 'pending'}</span>
+            </div>
+            <div class="sidebar-run-brand">${escHtml(brandLabel)}</div>
+            <div class="sidebar-run-bar"><div class="sidebar-run-fill" style="width:${pct}%"></div></div>
+            <div class="sidebar-run-footer">
+              <span class="sidebar-run-pct">${pct}%</span>
+              <button class="sidebar-del-btn" onclick="deleteRun(event,'${r.id}')"${delAttrs}>Delete</button>
+            </div>
+          </div>`
+        }).join('')
+      } catch (err) {
+        list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--danger)">Failed to load runs.</div>'
+      }
+    }
+
+    function navigateToRun(id) {
+      const base = location.pathname.replace(/\/[^/]*$/, '') || ''
+      location.href = `${base}/dashboard.html?runId=${id}`
+    }
+
+    async function deleteRun(event, id) {
+      event.stopPropagation()
+      if (!confirm('Delete this run? All queries, citations, and brand data will be removed. This cannot be undone.')) return
+      try {
+        const API = (path) => { const base = location.pathname.replace(/\/[^/]*$/, '') || ''; return base + (path.startsWith('/') ? path : '/' + path) }
+        const res = await fetch(API(`/api/runs/${id}`), { method: 'DELETE' })
+        if (res.ok) {
+          loadSidebar()
+        } else {
+          alert('Failed to delete run.')
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`)
+      }
+    }
+
+    loadSidebar()
+
+    function isValidUrl(val) {
+      const s = (val || '').trim()
+      if (!s) return false
+      // Accept: example.com, www.example.com, sub.example.co.uk, https://example.com
+      try {
+        const hasProtocol = /^https?:\/\//i.test(s)
+        const toTest = hasProtocol ? s : 'https://' + s
+        const u = new URL(toTest)
+        const host = u.hostname || ''
+        if (!host) return false
+        const parts = host.split('.')
+        if (parts.length < 2) return false
+        const tld = parts[parts.length - 1]
+        if (tld.length < 2) return false
+        return true
+      } catch {
+        return false
+      }
+    }
+
+    function updateAnalyzeButton() {
+      btn.disabled = !isValidUrl(input.value)
+    }
+
+    input.addEventListener('input', updateAnalyzeButton)
+    input.addEventListener('paste', () => setTimeout(updateAnalyzeButton, 0))
+    updateAnalyzeButton()
+
+    function togglePredict() {
+      const panel = document.getElementById('predict-panel')
+      const caret = document.getElementById('predict-caret')
+      const open = panel.style.display === 'none' || panel.style.display === ''
+      panel.style.display = open ? 'block' : 'none'
+      caret.textContent = open ? 'Close ↑' : 'Predict →'
+      if (open) document.getElementById('quick-run-panel').style.display = 'none'
+    }
+
+    let personaCount = 0
+    let nextPersonaId = 0  // Monotonically increasing; never decremented (avoids ID collision on add/remove)
+    function toggleQuickRun() {
+      const panel = document.getElementById('quick-run-panel')
+      const caret = document.getElementById('qr-caret')
+      const open = panel.style.display === 'none' || panel.style.display === ''
+      panel.style.display = open ? 'block' : 'none'
+      caret.textContent = open ? 'Close ↑' : 'Skip setup →'
+      console.log('[quick-run] toggle', open ? 'open' : 'close')
+      if (open) {
+        document.getElementById('predict-panel').style.display = 'none'
+      }
+    }
+
+    function addPersona() {
+      personaCount++
+      nextPersonaId++
+      const i = nextPersonaId
+      console.log('[quick-run] addPersona', { personaCount, nextPersonaId, id: i })
+      const card = document.createElement('div')
+      card.className = 'qr-persona-card'
+      card.id = `qr-persona-${i}`
+      card.innerHTML = `
+        <button type="button" class="qr-remove-persona" onclick="removePersona(${i})">×</button>
+        <div class="qr-field">
+          <label class="qr-label">Name</label>
+          <input type="text" id="qr-persona-name-${i}" placeholder="Emily Rodriguez" />
+        </div>
+        <div class="qr-field">
+          <label class="qr-label">System message</label>
+          <textarea id="qr-persona-msg-${i}" placeholder="You are a helpful AI assistant. The user is a Program Director at a nonprofit..." style="min-height:100px"></textarea>
+        </div>
+      `
+      document.getElementById('qr-personas-list').appendChild(card)
+    }
+
+    function removePersona(i) {
+      const el = document.getElementById(`qr-persona-${i}`)
+      if (el) {
+        el.remove()
+        personaCount = Math.max(0, personaCount - 1)
+      }
+      console.log('[quick-run] removePersona', { id: i, personaCount })
+    }
+
+    function parsePromptLine(line) {
+      const trimmed = line.trim()
+      if (!trimmed) return null
+      const tofu = trimmed.match(/^\[tofu\]\s*(.*)$/i)
+      const mofu = trimmed.match(/^\[mofu\]\s*(.*)$/i)
+      const bofu = trimmed.match(/^\[bofu\]\s*(.*)$/i)
+      if (tofu) { const t = tofu[1].trim(); return t ? { text: t, funnel_stage: 'tofu' } : null }
+      if (mofu) { const t = mofu[1].trim(); return t ? { text: t, funnel_stage: 'mofu' } : null }
+      if (bofu) { const t = bofu[1].trim(); return t ? { text: t, funnel_stage: 'bofu' } : null }
+      return { text: trimmed, funnel_stage: 'mofu' }
+    }
+
+    async function submitQuickRun() {
+      const brandName = document.getElementById('qr-brand-name').value.trim()
+      const brandDomain = document.getElementById('qr-brand-domain').value.trim()
+      const promptsRaw = document.getElementById('qr-prompts').value.split('\n')
+      const prompts = promptsRaw.map(parsePromptLine).filter(Boolean)
+      const personas = []
+      document.querySelectorAll('.qr-persona-card').forEach(card => {
+        const nameEl = card.querySelector('input[type="text"]')
+        const msgEl = card.querySelector('textarea')
+        if (nameEl && msgEl) {
+          const name = nameEl.value.trim()
+          const system_message = msgEl.value.trim()
+          if (name && system_message) personas.push({ name, system_message })
+        }
+      })
+      console.log('[quick-run] submitQuickRun parsed', { brandName, brandDomain: brandDomain || '(empty)', prompts: prompts.length, personas: personas.length })
+
+      const statusEl = document.getElementById('qr-status')
+      const btn = document.getElementById('qr-btn')
+
+      if (!brandName) {
+        console.log('[quick-run] validation failed: brand name required')
+        statusEl.innerHTML = '<span style="color:var(--danger)">Brand name is required</span>'
+        return
+      }
+      if (prompts.length === 0) {
+        console.log('[quick-run] validation failed: prompts required')
+        statusEl.innerHTML = '<span style="color:var(--danger)">At least one prompt is required</span>'
+        return
+      }
+      btn.disabled = true
+      statusEl.innerHTML = '<span class="spinner"></span><span>Creating run…</span>'
+      console.log('[quick-run] POST /api/brands/quick-start')
+
+      try {
+        const res1 = await fetch('/api/brands/quick-start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brand_name: brandName, brand_domain: brandDomain || undefined, prompts, personas }),
+        })
+        const data1 = await safeJson(res1)
+        if (!res1.ok) {
+          console.log('[quick-run] quick-start failed', res1.status, data1)
+          statusEl.innerHTML = `<span style="color:var(--danger)">Error: ${data1.error || 'Quick-start failed'}</span>`
+          btn.disabled = false
+          return
+        }
+        console.log('[quick-run] quick-start ok, brandId:', data1.brandId?.slice(0, 8))
+
+        statusEl.innerHTML = '<span class="spinner"></span><span>Starting run…</span>'
+        console.log('[quick-run] POST /api/runs')
+        const res2 = await fetch('/api/runs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brand_id: data1.brandId }),
+        })
+        const data2 = await safeJson(res2)
+        if (!res2.ok) {
+          console.log('[quick-run] run creation failed', res2.status, data2)
+          statusEl.innerHTML = `<span style="color:var(--danger)">Error: ${data2.error || 'Run creation failed'}. <a href="/approve.html?brandId=${encodeURIComponent(data1.brandId)}" style="color:var(--accent)">Go to brand →</a></span>`
+          btn.disabled = false
+          return
+        }
+        console.log('[quick-run] run created, redirecting to live.html?runId=', data2.id?.slice(0, 8))
+
+        statusEl.innerHTML = '<span class="spinner"></span><span>Redirecting…</span>'
+        window.location.href = `/live.html?runId=${data2.id}`
+      } catch (err) {
+        console.error('[quick-run] submitQuickRun error:', err)
+        statusEl.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`
+        btn.disabled = false
+      }
+    }
+
+    async function submitPredict() {
+      const name = document.getElementById('predict-name').value.trim()
+      const text = document.getElementById('predict-text').value.trim()
+      const statusEl = document.getElementById('predict-status')
+      const predictBtn = document.getElementById('predict-btn')
+
+      if (!name) {
+        statusEl.innerHTML = '<span style="color:var(--danger)">Please enter a brand or project name</span>'
+        return
+      }
+      if (!text) {
+        statusEl.innerHTML = '<span style="color:var(--danger)">Please paste some site content</span>'
+        return
+      }
+
+      predictBtn.disabled = true
+      statusEl.innerHTML = '<span class="spinner"></span><span>Starting…</span>'
+
+      try {
+        const res = await fetch('/api/brands', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, pastedText: text }),
+        })
+        const data = await safeJson(res)
+        if (!res.ok) {
+          statusEl.innerHTML = `<span style="color:var(--danger)">Error: ${data.error || 'Something went wrong'}</span>`
+          predictBtn.disabled = false
+          return
+        }
+        statusEl.innerHTML = '<span class="spinner"></span><span>Redirecting…</span>'
+        window.location.href = `/approve.html?brandId=${data.id}`
+      } catch (err) {
+        statusEl.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`
+        predictBtn.disabled = false
+      }
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault()
+      const url = input.value.trim()
+      if (!isValidUrl(url)) return
+
+      btn.disabled = true
+      setStatus('Starting analysis…', true)
+
+      try {
+        const res = await fetch('/api/brands', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        })
+        const data = await safeJson(res)
+
+        if (!res.ok) {
+          setStatus(`Error: ${data.error || 'Something went wrong'}`)
+          btn.disabled = false
+          return
+        }
+
+        setStatus('Redirecting…')
+        window.location.href = `/approve.html?brandId=${data.id}`
+      } catch (err) {
+        setStatus(`Error: ${err.message}`)
+        btn.disabled = false
+      }
+    })
+  </script>
+</body>
+</html>
