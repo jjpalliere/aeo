@@ -7,7 +7,14 @@
   <title>Running — AEO</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
+    html, body { background: #0a0a0a !important; overflow-x: hidden; }
     body { min-height: 100vh; display: flex; flex-direction: column; }
+    #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .frost-overlay {
+      position: fixed; inset: 0; z-index: 0;
+      backdrop-filter: blur(2.25px); -webkit-backdrop-filter: blur(2.25px);
+      background: rgba(10,10,10,0.09); pointer-events: none;
+    }
 
     .run-layout {
       flex: 1;
@@ -15,6 +22,8 @@
       grid-template-columns: 340px 1fr;
       gap: 0;
       height: calc(100vh - 49px);
+      position: relative;
+      z-index: 1;
     }
 
     /* ── Left panel ── */
@@ -25,6 +34,8 @@
       flex-direction: column;
       gap: 20px;
       overflow-y: auto;
+      background: rgba(10,10,10,0.35);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     }
 
     .run-label {
@@ -106,8 +117,8 @@
     }
 
     .error-box {
-      background: rgba(196,112,112,0.08);
-      border: 1px solid rgba(196,112,112,0.25);
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.25);
       border-radius: var(--radius);
       padding: 10px 14px;
       font-size: var(--text-sm);
@@ -122,7 +133,9 @@
   </style>
 </head>
 <body>
-  <div class="top-bar">
+  <canvas id="bg-canvas"></canvas>
+  <div class="frost-overlay"></div>
+  <div class="top-bar" style="position:relative;z-index:1;">
     <div class="logo">A<em>.</em>E<em>.</em>O</div>
     <div id="live-ind"></div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -204,7 +217,7 @@
       if (!btn) {
         btn = document.createElement('button')
         btn.id = 'error-log-btn'
-        btn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;font-family:var(--font);font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;padding:6px 12px;background:rgba(196,112,112,0.15);border:1px solid var(--danger);color:var(--danger);cursor:pointer;border-radius:2px'
+        btn.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;font-family:var(--font);font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;padding:6px 12px;background:rgba(248,113,113,0.15);border:1px solid var(--danger);color:var(--danger);cursor:pointer;border-radius:2px'
         btn.addEventListener('click', downloadErrorLog)
         document.body.appendChild(btn)
       }
@@ -410,5 +423,7 @@
 
     process()
   </script>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="/assets/background.js"></script>
 </body>
 </html>

@@ -7,6 +7,17 @@
   <title>AEO</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
+    html, body { background: #0a0a0a !important; overflow-x: hidden; }
+    #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .frost-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      backdrop-filter: blur(2.25px);
+      -webkit-backdrop-filter: blur(2.25px);
+      background: rgba(10,10,10,0.09);
+      pointer-events: none;
+    }
     body { display: flex; min-height: 100vh; margin: 0; }
     .index-layout { display: flex; flex: 1; min-width: 0; }
     #runs-sidebar {
@@ -59,12 +70,23 @@
       overflow-y: auto;
       padding: 40px 0 64px;
       transition: margin-left 0.2s ease, width 0.2s ease;
+      background: transparent;
+      position: relative;
+      z-index: 1;
     }
     #runs-sidebar.collapsed ~ .index-main {
       margin-left: 48px;
       width: calc(100vw - 48px);
     }
-    .setup-wrap { width: 100%; max-width: 720px; padding: 32px 24px; }
+    .setup-wrap {
+      width: 100%; max-width: 720px; padding: 32px 24px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      margin-top: 24px;
+      position: relative;
+      z-index: 1;
+    }
 
     .header-row {
       display: flex;
@@ -192,10 +214,10 @@
     .strategy-brief-content h3 { font-size: 1em; font-weight: 600; color: var(--text); margin: 1.8em 0 0.6em; }
     .strategy-brief-content h3:first-child { margin-top: 0; }
 
-    /* Above-the-fold: exactly one viewport; arrows pinned to bottom so always visible */
+    /* Above-the-fold: exactly one viewport minus padding; arrows pinned to bottom */
     .above-fold {
-      height: 100vh;
-      max-height: 100vh;
+      height: calc(100vh - 104px);
+      max-height: calc(100vh - 104px);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -204,41 +226,43 @@
       flex: 1;
       min-height: 0;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
       padding-bottom: 16px;
     }
     /* Scroll hint: pinned to bottom of above-fold viewport */
     .scroll-hint {
       flex-shrink: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      padding: 16px 0 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 16px 0 28px;
       cursor: pointer;
     }
-    .scroll-hint:hover .scroll-arrows span { color: var(--accent); }
-    .scroll-arrows {
-      display: flex; gap: 4px; font-size: 18px; color: var(--text2);
+    .scroll-arrow-btn {
+      background: none;
+      border: 1px solid var(--w-08);
+      color: var(--w-20);
+      font-family: var(--font);
+      font-size: 20px;
+      line-height: 1;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
     }
-    .scroll-arrows span {
-      display: inline-block;
-      animation: arrow-drip 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    }
-    .scroll-arrows span:nth-child(1) { animation-delay: 0s; }
-    .scroll-arrows span:nth-child(2) { animation-delay: 0.12s; }
-    .scroll-arrows span:nth-child(3) { animation-delay: 0.24s; }
-    .scroll-arrows span:nth-child(4) { animation-delay: 0.36s; }
-    .scroll-arrows span:nth-child(5) { animation-delay: 0.48s; }
-    @keyframes arrow-drip {
-      0%, 100% { transform: translateY(0) scale(0.9); opacity: 0.4; }
-      30% { transform: translateY(-10px) scale(1.15); opacity: 1; }
-      60% { transform: translateY(-2px) scale(1.05); opacity: 0.8; }
+    .scroll-arrow-btn:hover {
+      color: var(--w-50);
+      border-color: var(--w-20);
     }
     .scroll-hint-label {
       font-size: var(--text-xs); letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--text3); margin-top: 4px;
+      color: var(--text3);
     }
 
   </style>
 </head>
 <body>
+  <canvas id="bg-canvas"></canvas>
+  <div class="frost-overlay"></div>
   <div class="index-layout">
     <aside id="runs-sidebar" class="collapsed">
       <div class="sidebar-header">
@@ -251,10 +275,6 @@
   <div class="setup-wrap">
     <div class="above-fold">
       <div class="above-fold-content">
-      <div class="header-row">
-        <div class="logo">A<em>.</em>E<em>.</em>O</div>
-      </div>
-
       <h1 class="hero-title">How does AI<br>describe your brand?</h1>
 
       <form id="setup-form">
@@ -347,10 +367,8 @@
 
     <!-- Scroll hint: pinned to bottom of above-fold viewport -->
     <div class="scroll-hint" onclick="document.querySelector('.below-fold').scrollIntoView({behavior:'smooth'})" title="Scroll to see more">
-      <div class="scroll-arrows">
-        <span>▼</span><span>▼</span><span>▼</span><span>▼</span><span>▼</span>
-      </div>
-      <span class="scroll-hint-label">Scroll for more</span>
+      <span class="scroll-hint-label">More</span>
+      <button class="scroll-arrow-btn">↓</button>
     </div>
   </div><!-- /above-fold -->
 
@@ -380,6 +398,8 @@
     </main>
   </div>
 
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="/assets/background.js"></script>
   <script>
     const form = document.getElementById('setup-form')
     const input = document.getElementById('url-input')

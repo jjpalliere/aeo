@@ -155,7 +155,8 @@
     #runs-sidebar {
       position: fixed; left: 0; top: 0; bottom: 0;
       width: var(--sidebar-width);
-      background: var(--surface); border-right: 1px solid var(--border);
+      background: rgba(17,17,17,0.92); border-right: 1px solid var(--border);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       display: flex; flex-direction: column; overflow: hidden;
       z-index: 50;
       transition: width 0.2s ease;
@@ -517,7 +518,7 @@
       }
     }
 
-    const COLORS = ['#c8a96e','#7dba84','#7a9cc8','#a07abf','#c47070','#c8956e','#6b9e8a','#9e8a6b']
+    const COLORS = ['#fbbf24','#4ade80','#60a5fa','#c084fc','#f87171','#fb923c','#14b8a6','#06b6d4']
 
     Chart.defaults.color = '#6b6660'
     Chart.defaults.borderColor = '#2c2a27'
@@ -607,7 +608,7 @@
       const emptyCites = totalCitations === 0 || onlyUnknown
       const sourceLabels = emptyCites ? ['none'] : sourceTypes.map(s=>s.source_type)
       const sourceData = emptyCites ? [1] : sourceTypes.map(s=>s.count)
-      const sourceColors = emptyCites ? ['#5c5850'] : COLORS
+      const sourceColors = emptyCites ? ['#666666'] : COLORS
       charts.sourceTypes = new Chart(document.getElementById('chart-source-types'), {
         type: 'doughnut',
         data: { labels: sourceLabels, datasets:[{ data: sourceData, backgroundColor: sourceColors, borderWidth:0 }] },

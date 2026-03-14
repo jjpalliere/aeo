@@ -102,6 +102,32 @@
   --chatgpt:   #4ade80;
   --gemini:    #60a5fa;
 
+  /* 3D backdrop blink — period (secs per cycle), duty (flash fraction of cycle) */
+  --blink-period-1: 3.0;   --blink-duty-1: 0.12;  /* slow, brief */
+  --blink-period-2: 4.5;   --blink-duty-2: 0.10;  /* very slow */
+  --blink-period-3: 2.2;   --blink-duty-3: 0.18;  /* medium */
+  --blink-period-4: 5.5;   --blink-duty-4: 0.08;  /* glacial */
+  --blink-period-5: 1.8;   --blink-duty-5: 0.15;  /* quicker */
+  --blink-period-6: 7.0;   --blink-duty-6: 0.06;  /* barely there */
+  --blink-intensity: 0.3;   /* 0 = no blink, 1 = full white flash */
+
+  /* 3D backdrop cluster colors */
+  --cluster-1:  #6366f1;
+  --cluster-2:  #ec4899;
+  --cluster-3:  #14b8a6;
+  --cluster-4:  #f59e0b;
+  --cluster-5:  #8b5cf6;
+  --cluster-6:  #ef4444;
+  --cluster-7:  #22c55e;
+  --cluster-8:  #3b82f6;
+  --cluster-9:  #f97316;
+  --cluster-10: #a855f7;
+  --cluster-11: #06b6d4;
+  --cluster-12: #e11d48;
+  --cluster-13: #84cc16;
+  --cluster-14: #0ea5e9;
+  --cluster-15: #d946ef;
+
   --radius:    2px;
   --font:      'JetBrains Mono', 'Courier New', monospace;
 }
