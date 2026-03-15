@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   AEO — Decorative 3D scatter plot backdrop
+   terrain.run — Decorative 3D scatter plot backdrop
    Requires Three.js loaded globally (via CDN script tag).
    Looks for <canvas id="bg-canvas"> — no-ops if not found.
    Uses InstancedMesh for performance (single draw call for all dots).
@@ -19,7 +19,7 @@
   const MOUSE_INFLUENCE = 0.3;
   const MOUSE_LERP = 0.05;
   const NUM_CLUSTERS = 8;
-  const LINE_OPACITY = 0.375;
+  const LINE_OPACITY = 0.2;
 
   // Read cluster colors from CSS custom properties (--cluster-1 … --cluster-15)
   var styles = getComputedStyle(document.documentElement);
@@ -32,9 +32,9 @@
   }
   // Fallback if no CSS vars found
   if (CLUSTER_COLORS.length === 0) {
-    CLUSTER_COLORS = [0x6366f1, 0xec4899, 0x14b8a6, 0xf59e0b, 0x8b5cf6,
-      0xef4444, 0x22c55e, 0x3b82f6, 0xf97316, 0xa855f7,
-      0x06b6d4, 0xe11d48, 0x84cc16, 0x0ea5e9, 0xd946ef].map(function(h) { return new THREE.Color(h); });
+    CLUSTER_COLORS = [0x6366f1, 0x7a9cc8, 0x14b8a6, 0xc8a96e, 0x8b5cf6,
+      0x4a90d9, 0x6dbf8b, 0x3b82f6, 0xa07abf, 0x88b4d0,
+      0x06b6d4, 0x5c9eca, 0x7dba84, 0x0ea5e9, 0x9b7ec8].map(function(h) { return new THREE.Color(h); });
   }
 
   /* ── Scene setup ────────────────────────────────────────────────────────── */
@@ -44,7 +44,7 @@
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0a0a);
-  scene.fog = new THREE.FogExp2(0x0a0a0a, 0.15);
+  scene.fog = new THREE.FogExp2(0x0a0a0a, 0.14);
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 100);
   camera.position.set(1.5, 1.0, 2.5);
@@ -146,6 +146,11 @@
 
   var white = new THREE.Color(1, 1, 1);
   var blinkTmp = new THREE.Color();
+  var dotPos = new THREE.Vector3();
+  var DIST_FALLOFF = 0.18;   // far dots (less dark = brighter bg overall)
+  var DIST_SCALE = 0.24;     // distance multiplier
+  var DIST_POWER = 1.5;      // power curve
+  var FRONT_WHITE_WASH = 0.45;  // closest dots lerp toward white (flash overexposure)
 
   /* ── Connector lines (point → cluster centroid) ─────────────────────────── */
   var lineVerts = [];
@@ -229,6 +234,17 @@
         bright = 0;
       }
       blinkTmp.copy(baseColors[i]).lerp(white, bright);
+
+      // Camera flash: front white-washed (overexposed), back recedes
+      dotPos.set(pointData[i].x, pointData[i].y, pointData[i].z);
+      var dist = camera.position.distanceTo(dotPos);
+      var nearT = Math.max(0, 1 - dist * DIST_SCALE);
+      var distFactor = DIST_FALLOFF + (1 - DIST_FALLOFF) * Math.pow(nearT, DIST_POWER);
+      blinkTmp.multiplyScalar(distFactor);
+      // White-wash: closest dots lerp toward white (flash overexposure)
+      var wash = nearT > 0.5 ? (nearT - 0.5) * 2 * FRONT_WHITE_WASH : 0;
+      blinkTmp.lerp(white, wash);
+
       dots.setColorAt(i, blinkTmp);
     }
     dots.instanceColor.needsUpdate = true;

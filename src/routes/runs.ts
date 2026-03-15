@@ -72,7 +72,7 @@ function scheduleNextProcess(
 // GET /api/runs/list — list all runs across all brands (for sidebar)
 runs.get('/list', async c => {
   const { results } = await c.env.DB.prepare(
-    `SELECT r.id, r.brand_id, r.status, r.created_at, r.total_queries, r.completed_queries, b.name as brand_name, b.domain as brand_domain
+    `SELECT r.id, r.brand_id, r.status, r.error, r.created_at, r.total_queries, r.completed_queries, b.name as brand_name, b.domain as brand_domain
      FROM runs r JOIN brands b ON b.id = r.brand_id
      ORDER BY r.created_at DESC`
   ).all()

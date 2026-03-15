@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AEO</title>
+  <title>terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
     html, body {
-      background: #0a0a0a !important; overflow-x: hidden;
+      background: #080807 !important;
+      overflow: hidden;
+      margin: 0;
     }
     body {
       display: flex;
@@ -20,68 +22,147 @@
       position: fixed;
       inset: 0;
       z-index: 0;
-      backdrop-filter: blur(2.25px);
-      -webkit-backdrop-filter: blur(2.25px);
-      background: rgba(10,10,10,0.09);
+      backdrop-filter: blur(2.5px);
+      -webkit-backdrop-filter: blur(2.5px);
+      background: rgba(8,8,28,0.2);
       pointer-events: none;
     }
-    .login-box {
-      width: 280px;
+
+    .login-container {
+      position: relative;
+      z-index: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: rgba(10,10,10,0.35);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      padding: 48px 32px;
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 4px;
-      position: relative;
-      z-index: 1;
+      width: 100%;
+      max-width: 380px;
+      padding: 0 24px;
     }
-    .login-logo {
-      font-size: var(--text-md);
-      font-weight: 600;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--text2);
+
+    /* Brand — clean inline wordmark */
+    .login-brand {
+      font-family: var(--font-display);
+      text-align: center;
+      margin-bottom: 56px;
+      line-height: 1;
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    .login-brand .tld {
+      color: var(--text3);
+    }
+
+    /* Horizontal rule accent */
+    .login-rule {
+      width: 48px;
+      height: 1px;
+      background: var(--border2);
       margin-bottom: 48px;
     }
-    .login-logo em { font-style: normal; color: var(--text); }
-    #pwd {
+
+    /* Input — just a line */
+    .login-input-wrap {
       width: 100%;
-      text-align: center;
-      letter-spacing: 0.12em;
-      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 32px;
+    }
+    .login-prefix {
       font-size: var(--text-sm);
+      color: var(--text3);
+      padding-right: 10px;
+      user-select: none;
     }
-    #submit-btn {
-      width: 100%;
-      justify-content: center;
+    #pwd {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border2);
+      border-radius: 0;
+      padding: 10px 0;
+      font-family: var(--font);
+      font-size: var(--text-sm);
+      letter-spacing: 0.2em;
+      color: var(--text);
+      text-align: left;
+      outline: none;
+      -webkit-text-security: disc;
     }
+    #pwd::placeholder {
+      color: var(--text3);
+      letter-spacing: 0.08em;
+      -webkit-text-security: none;
+    }
+    #pwd:focus { border-bottom-color: var(--text2); }
+
+    /* Submit — ghost, minimal */
+    .login-submit {
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-family: var(--font);
+      font-size: var(--text-xs);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 10px 0 10px 14px;
+      transition: color 0.2s;
+    }
+    .login-submit:hover { color: var(--text); }
+
+    /* Error */
     #err {
-      margin-top: 14px;
       font-size: var(--text-xs);
       letter-spacing: 0.08em;
       color: var(--danger);
       min-height: 14px;
       text-align: center;
       text-transform: uppercase;
+      opacity: 0.8;
     }
+
+    /* Corner details — brutalist grid coordinates */
+    .corner-detail {
+      position: fixed;
+      font-family: var(--font);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--text3);
+      opacity: 0.35;
+      z-index: 2;
+    }
+    .corner-tl { top: 16px; left: 20px; }
+    .corner-tr { top: 16px; right: 20px; }
+    .corner-br { bottom: 16px; right: 20px; }
+    .corner-bl { bottom: 16px; left: 20px; }
   </style>
 </head>
 <body>
   <canvas id="bg-canvas"></canvas>
   <div class="frost-overlay"></div>
-  <div class="login-box">
-    <input
-      type="password"
-      id="pwd"
-      placeholder="password"
-      autocomplete="current-password"
-      autofocus
-    />
-    <button class="btn btn-primary" id="submit-btn" onclick="submit()">Enter →</button>
+
+  <div class="corner-detail corner-tl">TERRAIN.RUN</div>
+  <div class="corner-detail corner-tr">SYS.AUTH</div>
+  <div class="corner-detail corner-bl">2026.03</div>
+  <div class="corner-detail corner-br">v0.5</div>
+
+  <div class="login-container">
+    <a href="/" class="login-brand" style="text-decoration:none;color:inherit;cursor:pointer">terrain<span class="tld">.run</span></a>
+    <div class="login-rule"></div>
+    <div class="login-input-wrap">
+      <span class="login-prefix">›</span>
+      <input
+        type="password"
+        id="pwd"
+        placeholder="enter"
+        autocomplete="current-password"
+        autofocus
+      />
+      <button class="login-submit" onclick="submit()">→</button>
+    </div>
     <div id="err"></div>
   </div>
 
@@ -95,10 +176,10 @@
     async function submit() {
       const pwd = document.getElementById('pwd').value
       if (!pwd) return
-      const btn = document.getElementById('submit-btn')
+      const btn = document.querySelector('.login-submit')
       const err = document.getElementById('err')
-      btn.disabled = true
-      btn.innerHTML = '<span class="spinner"></span>'
+      btn.style.opacity = '0.3'
+      btn.style.pointerEvents = 'none'
       err.textContent = ''
       try {
         const res = await fetch('/api/auth', {
@@ -109,17 +190,17 @@
         if (res.ok) {
           window.location.href = '/'
         } else {
-          err.textContent = 'incorrect password'
-          btn.disabled = false
-          btn.textContent = 'Enter →'
+          err.textContent = 'no'
+          btn.style.opacity = '1'
+          btn.style.pointerEvents = 'auto'
           const input = document.getElementById('pwd')
           input.value = ''
           input.focus()
         }
       } catch {
         err.textContent = 'connection error'
-        btn.disabled = false
-        btn.textContent = 'Enter →'
+        btn.style.opacity = '1'
+        btn.style.pointerEvents = 'auto'
       }
     }
   </script>

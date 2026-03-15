@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>Dashboard — AEO</title>
+  <title>Dashboard — terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -22,7 +22,7 @@
       width: 22px; height: 22px; border-radius: 2px;
       font-size: var(--text-sm); font-weight: 700;
     }
-    .rank-1 { background: rgba(74,222,128,0.15); color: var(--success); }
+    .rank-1 { background: rgba(160,190,130,0.15); color: var(--success); }
     .rank-2 { background: rgba(251,191,36,0.15); color: var(--warning); }
     .rank-3 { background: rgba(96,165,250,0.15); color: var(--tofu); }
     .rank-other { background: var(--surface2); color: var(--text2); }
@@ -75,7 +75,7 @@
       font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase;
       padding: 2px 6px; border-radius: 2px;
     }
-    .source-type-owned { background: rgba(74,222,128,0.15); color: var(--success); }
+    .source-type-owned { background: rgba(160,190,130,0.15); color: var(--success); }
     .source-type-competitor { background: rgba(248,113,113,0.15); color: var(--danger); }
     .source-type-news { background: rgba(96,165,250,0.15); color: var(--tofu); }
     .source-type-industry { background: rgba(251,191,36,0.15); color: var(--warning); }
@@ -95,6 +95,7 @@
     /* Citations panel: fixed width, prevent filter-dependent layout shift */
     #panel-citations { width: 100%; min-width: 0; overflow: hidden; }
     #panel-citations .card { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+    #panel-citations .card-title::before, #panel-citations .card-title::after { display: none; }
     #panel-citations .table-wrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
     .citation-output-btn {
       background: none; border: 1px solid var(--border2); color: var(--text2); cursor: pointer;
@@ -119,6 +120,16 @@
     .citation-filter-popover .cf-check { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
     .citation-filter-popover .cf-check:hover { color: var(--accent); }
     .citation-filter-popover .cf-check input[type="checkbox"] { width: auto; margin: 0; }
+    .cf-llm-toggle {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 6px 10px; margin-bottom: 4px; border-radius: 3px; cursor: pointer;
+      border: 1px solid var(--border2); background: transparent; transition: all 0.15s;
+      font-family: var(--font); font-size: var(--text-xs); letter-spacing: 0.04em; color: var(--text2);
+      width: 100%; box-sizing: border-box;
+    }
+    .cf-llm-toggle:hover { border-color: var(--text3); color: var(--text); }
+    .cf-llm-toggle.active { border-color: var(--text2); color: var(--text); background: var(--surface2); }
+    .cf-llm-toggle .cf-llm-count { font-size: var(--text-xs); color: var(--text3); }
     /* Page title search row */
     .citation-filter-row th { padding: 4px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-weight: 400; text-transform: none; letter-spacing: 0; }
     .citation-page-title-search-cell { padding: 6px 12px !important; }
@@ -194,24 +205,27 @@
     .sidebar-run {
       padding:11px 16px; border-bottom:1px solid var(--border);
       cursor:pointer; transition:background 0.1s; position:relative;
+      min-height: 76px; display: flex; flex-direction: column; justify-content: center;
     }
     .sidebar-run:hover { background:var(--bg); }
     .sidebar-run.current { background:var(--w-04); border-left:3px solid var(--accent); }
-    .sidebar-run-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
-    .sidebar-run-date { font-size:var(--text-xs); color:var(--text3); }
+    .sidebar-run-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px; min-height:20px; }
+    .sidebar-run-date { font-size:var(--text-xs); color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
     .sidebar-run-status {
       font-size:var(--text-xs); letter-spacing:0.1em; text-transform:uppercase;
       padding:2px 7px; border-radius:1px;
+      min-width:78px; text-align:center; flex-shrink:0;
     }
-    .sidebar-status-complete  { background:rgba(74,222,128,0.15); color:var(--success); }
+    .sidebar-status-complete  { background:rgba(160,190,130,0.15); color:var(--success); }
     .sidebar-status-querying,
     .sidebar-status-scraping,
     .sidebar-status-analyzing,
     .sidebar-status-pending   { background:rgba(251,191,36,0.12); color:var(--accent); }
     .sidebar-status-failed    { background:rgba(248,113,113,0.12); color:var(--danger); }
-    .sidebar-run-bar  { height:2px; background:var(--surface2); border-radius:1px; margin:5px 0; }
+    .sidebar-run-brand { min-height:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sidebar-run-bar  { height:2px; background:var(--surface2); border-radius:1px; margin:5px 0; flex-shrink:0; }
     .sidebar-run-fill { height:100%; border-radius:1px; background:var(--accent); transition:width 0.3s; }
-    .sidebar-run-footer { display:flex; align-items:center; justify-content:space-between; }
+    .sidebar-run-footer { display:flex; align-items:center; justify-content:space-between; min-height:20px; flex-shrink:0; }
     .sidebar-run-pct  { font-size:var(--text-xs); color:var(--text3); }
     .sidebar-del-btn  {
       background:none; border:none; color:var(--text3); cursor:pointer;
@@ -229,16 +243,17 @@
     .top-bar-logo-row { flex-shrink: 0; }
     .top-bar-nav-row { border-top: 1px solid var(--border2); padding-top: 10px; }
 
-    /* Report panel: match AI Chat width and height */
+    /* Report panel */
     .report-panel-card { width: 100%; }
     .report-preview {
-      font-size: var(--text-xs); line-height: 1.8; color: var(--text);
-      padding: 8px 0; overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+      font-size: var(--text-sm); line-height: 2; color: var(--text);
+      padding: 20px 0; overflow-x: auto; white-space: pre-wrap; word-break: break-word;
       min-height: 500px; max-height: 70vh; overflow-y: auto;
     }
   </style>
 </head>
 <body>
+  <div class="grain-overlay" aria-hidden="true"></div>
   <div id="loading"><span class="spinner"></span><span>Loading results…</span></div>
 
   <div id="content">
@@ -252,7 +267,7 @@
     <main class="dash-main">
     <div class="top-bar">
       <div class="top-bar-row top-bar-logo-row">
-        <div class="logo">A<em>.</em>E<em>.</em>O</div>
+        <a href="/" class="logo">terrain<em>.run</em></a>
         <div class="brand-tag" id="brand-tag">–</div>
       </div>
       <div class="top-bar-row top-bar-nav-row">
@@ -320,7 +335,8 @@
           <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
             <div style="display:flex;align-items:center;gap:12px">
-            Citations
+            <span>Citations</span>
+            <span id="citation-count" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2);font-weight:400"></span>
               <label class="citation-brand-filter-label">
                 <input type="checkbox" id="citation-brand-toggle" onchange="toggleCitationBrandFilter(this.checked)" /> Brand mentioned only
               </label>
@@ -384,10 +400,7 @@
       <!-- PERSONAS -->
       <div id="panel-personas" class="dash-panel">
         <div class="card" style="margin-bottom:12px">
-          <div class="card-title">Persona Performance Comparison</div>
-          <div style="font-size:var(--text-xs);color:var(--text2);margin-bottom:10px;line-height:1.5">
-            Compares how each persona performs across AI models. Shows average rank, top-3 rate, mention rate, and per-LLM breakdown. Personas with no completed queries yet appear with placeholder metrics.
-          </div>
+          <div class="card-title">Persona Performance</div>
           <div class="table-wrap">
             <table>
               <thead><tr>
@@ -403,10 +416,7 @@
           </div>
         </div>
         <div class="card" style="margin-bottom:12px">
-          <div class="card-title">Per-Persona Prompt Performance</div>
-          <div style="font-size:var(--text-xs);color:var(--text2);margin-bottom:10px;line-height:1.5">
-            Per-prompt performance for each persona. Expand a persona to see how each question performs for that persona across models. Personas without completed prompts show an empty breakdown.
-          </div>
+          <div class="card-title">Per-Persona Prompts</div>
           <div id="persona-prompt-breakdown"></div>
         </div>
       </div>
@@ -415,7 +425,7 @@
       <div id="panel-report" class="dash-panel">
         <div class="card report-panel-card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-            AEO Report
+            Report
             <div style="display:flex;gap:6px">
               <button class="btn btn-ghost btn-sm" onclick="downloadReport('txt')">Download .txt</button>
               <button class="btn btn-primary btn-sm" onclick="downloadReport('md')">Download .md</button>
@@ -432,7 +442,7 @@
             <div class="chat-messages" id="chat-messages">
               <div class="chat-message assistant">
                 <div class="chat-bubble">
-                  I have access to your full AEO dataset. Ask me anything — "Which LLM ranks us worst?", "What pages should we create?", "What are competitors doing better?"
+                  I have access to your full dataset. Ask me anything — "Which LLM ranks us worst?", "What pages should we create?", "What are competitors doing better?"
                 </div>
               </div>
             </div>
@@ -495,7 +505,7 @@
     }
     function downloadErrorLog() {
       const text = [
-        'AEO ERROR LOG',
+        'TERRAIN.RUN ERROR LOG',
         `Generated: ${new Date().toISOString()}`,
         `Run: ${runId || 'n/a'}`,
         `URL: ${location.href}`,
@@ -503,7 +513,7 @@
         '',
         ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '─'.repeat(40)].filter(Boolean).join('\n')),
       ].join('\n')
-      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `aeo-errors-${Date.now()}.txt` })
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `terrain-errors-${Date.now()}.txt` })
       a.click()
     }
 
@@ -518,7 +528,7 @@
       }
     }
 
-    const COLORS = ['#fbbf24','#4ade80','#60a5fa','#c084fc','#f87171','#fb923c','#14b8a6','#06b6d4']
+    const COLORS = ['#fbbf24','#a0be82','#60a5fa','#c084fc','#f87171','#fb923c','#14b8a6','#06b6d4']
 
     Chart.defaults.color = '#6b6660'
     Chart.defaults.borderColor = '#2c2a27'
@@ -698,6 +708,9 @@
       let filtered = promptGroups
       if (rankFilter === 'multi')      filtered = promptGroups.filter(g => g.max_brand_count > 1)
       else if (rankFilter === 'mentioned') filtered = promptGroups.filter(g => g.subs.some(s => s.target))
+
+      // Sort by avg rank (best first), unranked at bottom
+      filtered = [...filtered].sort((a, b) => (a.avg_rank ?? 999) - (b.avg_rank ?? 999))
 
       console.log(`[ranking] ${filtered.length} groups visible after filter`)
 
@@ -921,10 +934,12 @@
         }, 0)
       } else if (col === 'llm') {
         const sel = citationLLMFilters || []
+        const allCitations = (data && data.citationDetail) || []
         pop.innerHTML = llms.map(l => {
-          const checked = sel.includes(l) ? ' checked' : ''
+          const active = sel.includes(l) ? ' active' : ''
           const label = l.charAt(0).toUpperCase() + l.slice(1)
-          return `<label class="cf-check"><input type="checkbox" data-llm="${escHtml(l)}"${checked} onchange="toggleCitationLLMFilter(this.dataset.llm, this.checked)">${label}</label>`
+          const count = allCitations.filter(c => String(c.llm || '').toLowerCase() === l).length
+          return `<button class="cf-llm-toggle${active}" data-llm="${escHtml(l)}" onclick="toggleCitationLLMFilter('${escHtml(l)}', !this.classList.contains('active'))">${label}<span class="cf-llm-count">${count}</span></button>`
         }).join('')
       } else if (col === 'source') {
         const sel = citationSourceFilters || []
@@ -949,6 +964,10 @@
       if (checked) citationLLMFilters = [...citationLLMFilters, llm]
       else citationLLMFilters = citationLLMFilters.filter(l => l !== llm)
       if (citationLLMFilters.length === 0) citationLLMFilters = null
+      // Update button active state
+      document.querySelectorAll('.cf-llm-toggle').forEach(btn => {
+        btn.classList.toggle('active', (citationLLMFilters || []).includes(btn.dataset.llm))
+      })
       buildCitationDomainFilters()
       renderCitationsList()
     }
@@ -995,7 +1014,10 @@
         filtered = filtered.filter(c => c.mentions_target === 1 || c.mentions_target === true)
       }
 
+      const total = list.filter(c => c).length
       const hasFilters = citationDomainFilter || citationDomainKeywordFilter || (citationLLMFilters && citationLLMFilters.length) || citationSourceFilters?.length || citationMentionsFilter || (citationQueryFilter && citationQueryFilter.trim()) || (citationPageTitleFilter && citationPageTitleFilter.trim())
+      const countEl = document.getElementById('citation-count')
+      if (countEl) countEl.textContent = hasFilters ? `${filtered.length} of ${total} links` : `${total} links`
       if (filtered.length === 0) {
         tbody.innerHTML = ''
         if (emptyEl) {
@@ -1252,7 +1274,7 @@
     }
 
     // ── Chat persistence ─────────────────────────────────────────────────────
-    const CHAT_KEY = `aeo-chat-${runId}`
+    const CHAT_KEY = `terrain-chat-${runId}`
     let assistantReady = false
 
     function saveChatHistory() {
@@ -1341,6 +1363,33 @@
       saveChatHistory()
     }
 
+    const PERSONA_COLORS = ['#7a9cc8', '#c8956e', '#7dba84', '#a07abf', '#c8a96e', '#c47070', '#6db5b0', '#b07aaa']
+
+    const ROLE_ABBREVS = [
+      [/\bChief Marketing Officer\b/i, 'CMO'],
+      [/\bChief Technology Officer\b/i, 'CTO'],
+      [/\bChief Financial Officer\b/i, 'CFO'],
+      [/\bChief Executive Officer\b/i, 'CEO'],
+      [/\bChief Operating Officer\b/i, 'COO'],
+      [/\bChief Information Officer\b/i, 'CIO'],
+      [/\bChief Revenue Officer\b/i, 'CRO'],
+      [/\bChief Product Officer\b/i, 'CPO'],
+      [/\bChief Information Security Officer\b/i, 'CISO'],
+      [/\bVice President\b/i, 'VP'],
+      [/\bSenior Vice President\b/i, 'SVP'],
+      [/\bExecutive Vice President\b/i, 'EVP'],
+      [/\bDirector of Operations\b/i, 'Dir. Ops'],
+      [/\bDirector of Engineering\b/i, 'Dir. Eng'],
+      [/\bDirector of Marketing\b/i, 'Marketing Director'],
+    ]
+    function abbreviateRole(name) {
+      let s = name
+      for (const [rx, abbr] of ROLE_ABBREVS) s = s.replace(rx, abbr)
+      return s
+    }
+
+    const FUNNEL_ORDER = { tofu: 0, mofu: 1, bofu: 2 }
+
     function buildPersonasPanel() {
       const { mentions = [], promptDetail = [], personas: apiPersonas = [] } = data || {}
       const llms = LLM_KEYS
@@ -1359,16 +1408,21 @@
         if (m.is_target) targetByQuery[m.query_id] = m
       }
 
-      // Persona list: prefer all brand personas from API (so we show personas before their prompts return)
-      const personaEntries = apiPersonas.length > 0
-        ? apiPersonas.map(p => ({
-            displayName: (p.description ? `${p.name} (${p.description})` : p.name).trim(),
-            name: p.name,
-          }))
-        : Object.keys(byPersona).map(name => ({ displayName: name, name }))
+      // Build all mentions by query_id for winner lookup
+      const allMentionsByQuery = {}
+      for (const m of mentions) {
+        if (!allMentionsByQuery[m.query_id]) allMentionsByQuery[m.query_id] = []
+        allMentionsByQuery[m.query_id].push(m)
+      }
 
-      // Build per-persona stats — include personas with no queries (placeholder metrics)
-      const personaStats = personaEntries.map(({ displayName, name }) => {
+      // Persona list: prefer all brand personas from API
+      // shortName = abbreviated role for headers; description starts with full context
+      const personaEntries = apiPersonas.length > 0
+        ? apiPersonas.map(p => ({ name: p.name, shortName: abbreviateRole(p.name), description: p.description || '' }))
+        : Object.keys(byPersona).map(name => ({ name, shortName: abbreviateRole(name), description: '' }))
+
+      // Build per-persona stats
+      const personaStats = personaEntries.map(({ name, shortName, description }, idx) => {
         const queries = byPersona[name] || []
         const totalQ = queries.length
         const ranked = queries.filter(q => targetByQuery[q.query_id])
@@ -1377,8 +1431,8 @@
         const top3Count = ranks.filter(r => r <= 3).length
         const top3Rate = totalQ > 0 ? Math.round((top3Count / totalQ) * 100) : 0
         const mentionRate = totalQ > 0 ? Math.round((ranked.length / totalQ) * 100) : 0
+        const color = PERSONA_COLORS[idx % PERSONA_COLORS.length]
 
-        // By LLM top-3
         const byLlm = {}
         for (const llm of llms) {
           const llmQueries = queries.filter(q => q.llm === llm)
@@ -1386,7 +1440,7 @@
           byLlm[llm] = { total: llmQueries.length, top3: llmTop3 }
         }
 
-        return { name: displayName, totalQ, avgRank, top3Rate, mentionRate, byLlm, queries }
+        return { name, shortName, description, totalQ, avgRank, top3Rate, mentionRate, byLlm, queries, color }
       })
 
       personaStats.sort((a, b) => (a.avgRank ?? 99) - (b.avgRank ?? 99))
@@ -1402,7 +1456,10 @@
             return d.total > 0 ? `${Math.round((d.top3 / d.total) * 100)}%` : '—'
           })
           return `<tr>
-            <td style="font-weight:600">${escHtml(p.name)}</td>
+            <td style="border-left:3px solid ${p.color};padding-left:10px">
+              <div style="font-weight:600">${escHtml(p.shortName)}</div>
+              ${p.description ? `<div style="font-size:var(--text-xs);color:var(--text3);line-height:1.4;margin-top:2px">${escHtml(p.description)}</div>` : ''}
+            </td>
             <td>${p.totalQ}</td>
             <td>${p.avgRank != null ? '#' + p.avgRank.toFixed(1) : '—'}</td>
             <td>${p.top3Rate}%</td>
@@ -1434,29 +1491,44 @@
           const avg = avgNum !== 99 ? avgNum.toFixed(1) : '—'
           const top3 = ranks.filter(r => r <= 3).length
           const funnelBadge = funnel_stage ? stageBadge(funnel_stage) : ''
-          return { text, avg, top3, total: queries.length, funnelBadge, avgNum }
+
+          // Find top competitor (rank 1 non-target brand across this prompt's queries)
+          let winner = '—'
+          for (const q of queries) {
+            const qMentions = allMentionsByQuery[q.query_id] || []
+            const topNonTarget = qMentions.filter(m => !m.is_target).sort((a, b) => a.rank - b.rank)[0]
+            if (topNonTarget) { winner = topNonTarget.brand_name; break }
+          }
+
+          return { text, avg, top3, total: queries.length, funnelBadge, avgNum, winner, funnel: funnel_stage }
         })
 
-        promptRows.sort((a, b) => a.avgNum - b.avgNum)
+        promptRows.sort((a, b) => {
+          const fa = FUNNEL_ORDER[a.funnel] ?? 9
+          const fb = FUNNEL_ORDER[b.funnel] ?? 9
+          return fa !== fb ? fa - fb : a.avgNum - b.avgNum
+        })
 
         return `
-          <div style="margin-bottom:16px">
-            <div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)" onclick="document.getElementById('persona-bd-${pi}').style.display = document.getElementById('persona-bd-${pi}').style.display === 'none' ? 'block' : 'none'">
-              <span style="font-weight:600">${escHtml(p.name)}</span>
+          <div style="margin-bottom:4px">
+            <div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);border-left:3px solid ${p.color};padding-left:10px" onclick="document.getElementById('persona-bd-${pi}').style.display = document.getElementById('persona-bd-${pi}').style.display === 'none' ? 'block' : 'none'">
+              <span style="font-weight:600">${escHtml(p.shortName)}</span>
               <span class="pg-count">${Object.keys(byPrompt).length} prompts</span>
             </div>
             <div id="persona-bd-${pi}" style="display:none">
-              <table style="width:100%;border-collapse:collapse;font-size:var(--text-sm)">
+              <table class="citation-detail-table" style="table-layout:auto">
                 <thead><tr>
-                  <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">Prompt</th>
-                  <th style="padding:6px 8px;border-bottom:1px solid var(--border);font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">Avg Rank</th>
-                  <th style="padding:6px 8px;border-bottom:1px solid var(--border);font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">Top-3</th>
+                  <th style="text-align:left">Prompt</th>
+                  <th style="width:80px">Avg Rank</th>
+                  <th style="width:60px">Top-3</th>
+                  <th style="width:120px">Winner</th>
                 </tr></thead>
                 <tbody>${promptRows.map(r => `
                   <tr>
-                    <td style="padding:6px 8px;border-bottom:1px solid var(--border)">${r.funnelBadge}${escHtml(r.text)}</td>
-                    <td style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:center">${r.avg === '—' ? '—' : '#' + r.avg}</td>
-                    <td style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:center">${r.top3}/${r.total}</td>
+                    <td>${r.funnelBadge}${escHtml(r.text)}</td>
+                    <td style="text-align:center">${r.avg === '—' ? '—' : '#' + r.avg}</td>
+                    <td style="text-align:center">${r.top3}/${r.total}</td>
+                    <td style="font-size:var(--text-xs);color:var(--text2)">${escHtml(r.winner)}</td>
                   </tr>
                 `).join('')}</tbody>
               </table>
@@ -1486,7 +1558,7 @@
 
       if (fmt === 'md') {
         const lines = [
-          `# AEO Report — ${brandName}`,
+          `# terrain.run Report — ${brandName}`,
           `**Generated:** ${new Date().toLocaleString()}  `,
           `**Run ID:** ${run?.id ?? '—'}`,
           '',
@@ -1526,7 +1598,7 @@
           ...promptDetail.slice(0, 30).map(r => `| ${r.funnel_stage} | ${r.llm} | ${r.brand_name} | ${(r.prompt_text || '').substring(0, 70)} |`),
           '',
           '---',
-          '_Report generated by AEO — Answer Engine Optimization_',
+          '_Report generated by terrain.run_',
         ]
         return lines.join('\n')
       }
@@ -1535,7 +1607,7 @@
       const L = '─'.repeat(54)
       const D = '═'.repeat(54)
       const lines = [
-        `AEO REPORT — ${brandName.toUpperCase()}`,
+        `TERRAIN.RUN REPORT — ${brandName.toUpperCase()}`,
         `Generated: ${new Date().toLocaleString()}`,
         `Run ID: ${run?.id ?? '—'}`,
         D, '',
@@ -1566,7 +1638,7 @@
           `${(r.funnel_stage || '').padEnd(6)}  ${(r.llm || '').padEnd(10)}  ${(r.brand_name || '').padEnd(26)}  ${(r.prompt_text || '').substring(0, 65)}`
         ),
         '', D,
-        'Report generated by AEO — Answer Engine Optimization',
+        'Report generated by terrain.run',
       ]
       return lines.join('\n')
     }
@@ -1582,7 +1654,7 @@
       const brand = (data?.run?.brand_name || data?.run?.brand_domain || 'report').replace(/[^a-z0-9]/gi, '-').toLowerCase()
       const a = Object.assign(document.createElement('a'), {
         href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })),
-        download: `aeo-${brand}-${new Date().toISOString().slice(0, 10)}${ext}`,
+        download: `terrain-${brand}-${new Date().toISOString().slice(0, 10)}${ext}`,
       })
       a.click()
     }
@@ -1730,12 +1802,13 @@
           const dateStr = d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
           const brandLabel = r.brand_name || r.brand_domain || 'Brand'
           const statusClass = `sidebar-status-${r.status || 'pending'}`
+          const statusLabel = (r.status === 'failed' && (r.error || '').toLowerCase().includes('cancelled')) ? 'canceled' : (r.status || 'pending')
           const inProgress = ['pending','querying','scraping','analyzing'].includes(r.status || '')
           const delAttrs = inProgress ? ' disabled title="Wait for run to complete or fail before deleting"' : ''
           return `<div class="sidebar-run${isCurrent ? ' current' : ''}" onclick="navigateRun('${r.id}')">
             <div class="sidebar-run-meta">
               <span class="sidebar-run-date" title="${brandLabel}">${dateStr}</span>
-              <span class="sidebar-run-status ${statusClass}">${r.status || 'pending'}</span>
+              <span class="sidebar-run-status ${statusClass}">${statusLabel}</span>
             </div>
             <div class="sidebar-run-brand" style="font-size:var(--text-xs);color:var(--text3);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(brandLabel)}</div>
             <div class="sidebar-run-bar"><div class="sidebar-run-fill" style="width:${pct}%"></div></div>

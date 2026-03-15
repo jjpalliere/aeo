@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>Review — AEO</title>
+  <title>Review — terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
     /* Funnel columns — side-by-side */
@@ -38,6 +38,7 @@
       line-height: 1.5;
       margin-bottom: 8px;
       word-break: break-word;
+      color: var(--text2);
     }
     .persona-section-actions {
       display: flex;
@@ -227,6 +228,7 @@
   </style>
 </head>
 <body>
+  <div class="grain-overlay" aria-hidden="true"></div>
   <div id="loading">
     <div class="term-win">
       <div class="term-titlebar">
@@ -242,7 +244,7 @@
 
   <div id="content">
     <div class="top-bar">
-      <div class="logo">A<em>.</em>E<em>.</em>O</div>
+      <a href="/" class="logo">terrain<em>.run</em></a>
       <div style="font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">
         Review › <span id="brand-name-top" style="color:var(--text)">–</span>
       </div>
@@ -258,14 +260,14 @@
           <span class="supplement-caret" id="icp-supplement-caret" style="display:none">▼</span>
         </div>
         <div class="supplement-body" id="icp-supplement-body">
-          <div class="supplement-hint">
-            Drop a .txt file or paste text describing your ideal customer profile. If your site doesn't fully reflect your target ICP, this closes the gap — personas will be regenerated with this context.
-          </div>
-          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-            DROP .TXT FILE HERE OR CLICK TO UPLOAD
-          </div>
-          <input type="file" id="file-input" accept=".txt,text/plain" style="display:none" />
-          <div id="supplement-status"></div>
+        <div class="supplement-hint">
+          Drop a .txt file or paste text describing your ideal customer profile. If your site doesn't fully reflect your target ICP, this closes the gap — personas will be regenerated with this context.
+        </div>
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+          DROP .TXT FILE HERE OR CLICK TO UPLOAD
+        </div>
+        <input type="file" id="file-input" accept=".txt,text/plain" style="display:none" />
+        <div id="supplement-status"></div>
         </div>
       </div>
 
@@ -945,36 +947,36 @@
           startTermElapsed()
           updatePersonaTerminals(brand.logs || [])
         } else {
-          if (!document.getElementById('inline-term-body')) {
-            genStatus.style.display = 'block'
-            startTermElapsed()
-            genStatus.innerHTML = `
-              <div class="term-win" style="width:100%">
-                <div class="term-titlebar">
-                  <span class="live-dot"></span>
-                  <span class="term-title-text">GENERATING QUESTIONS</span>
-                  <span class="term-elapsed" style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text3)"></span>
-                </div>
-                <div class="term-body" id="inline-term-body" style="height:140px"></div>
+        if (!document.getElementById('inline-term-body')) {
+          genStatus.style.display = 'block'
+          startTermElapsed()
+          genStatus.innerHTML = `
+            <div class="term-win" style="width:100%">
+              <div class="term-titlebar">
+                <span class="live-dot"></span>
+                <span class="term-title-text">GENERATING QUESTIONS</span>
+                <span class="term-elapsed" style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text3)"></span>
               </div>
-            `
-          }
-          const body = document.getElementById('inline-term-body')
-          if (body && brand.logs) {
-            const existing = body.querySelectorAll('.term-line').length
-            const newLines = brand.logs.slice(existing)
-            if (existing === 0 && newLines.length === 0) {
-              body.innerHTML = '<span class="term-line">Starting…<span class="term-cursor"></span></span>'
-            } else {
-              newLines.forEach(line => { body.insertAdjacentHTML('beforeend', termLine(line)) })
-              if (newLines.length) {
-                const cursor = body.querySelector('.term-cursor')
-                if (cursor) cursor.remove()
-                body.insertAdjacentHTML('beforeend', '<span class="term-cursor"></span>')
-                body.scrollTop = body.scrollHeight
-              }
+              <div class="term-body" id="inline-term-body" style="height:140px"></div>
+            </div>
+          `
+        }
+        const body = document.getElementById('inline-term-body')
+        if (body && brand.logs) {
+          const existing = body.querySelectorAll('.term-line').length
+          const newLines = brand.logs.slice(existing)
+          if (existing === 0 && newLines.length === 0) {
+            body.innerHTML = '<span class="term-line">Starting…<span class="term-cursor"></span></span>'
+          } else {
+            newLines.forEach(line => { body.insertAdjacentHTML('beforeend', termLine(line)) })
+            if (newLines.length) {
+              const cursor = body.querySelector('.term-cursor')
+              if (cursor) cursor.remove()
+              body.insertAdjacentHTML('beforeend', '<span class="term-cursor"></span>')
+              body.scrollTop = body.scrollHeight
             }
           }
+        }
         }
       } else if (brand.status === 'ready') {
         if (genBtn) genBtn.style.display = 'none'
@@ -985,7 +987,7 @@
         if (generatingPersonaIds.size > 0) {
           startTermElapsed()
           updatePersonaTerminals(brand.logs || [])
-        }
+      }
       }
       applySupplementUI()
     }
@@ -1387,7 +1389,7 @@
                  id="import-card-${i}" onclick="toggleImportCard(${i})">
               <div class="approve-check${importSelected.has(i) ? ' checked' : ''}"></div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:var(--text-sm);color:${filtered ? 'var(--text3)' : 'var(--text)'};line-height:1.5;${filtered ? 'text-decoration:line-through' : ''}">${escHtml(p.text)}</div>
+                <div style="font-size:var(--text-sm);color:${filtered ? 'var(--text3)' : 'var(--text2)'};line-height:1.5;${filtered ? 'text-decoration:line-through' : ''}">${escHtml(p.text)}</div>
                 ${filtered && p.filter_reason ? `<div style="font-size:var(--text-xs);color:var(--text3);margin-top:2px">${escHtml(p.filter_reason)}</div>` : ''}
               </div>
               <span class="badge badge-${p.funnel_stage}" style="flex-shrink:0;opacity:${filtered ? '0.4' : '1'}">${p.funnel_stage.toUpperCase()}</span>

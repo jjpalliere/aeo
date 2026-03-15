@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>Live Responses — AEO</title>
+  <title>Live Responses — terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
     .live-layout {
@@ -147,8 +147,10 @@
   </style>
 </head>
 <body>
+  <div class="grain-overlay" aria-hidden="true"></div>
+
   <div class="top-bar">
-    <div class="logo">A<em>.</em>E<em>.</em>O</div>
+    <a href="/" class="logo">terrain<em>.run</em></a>
     <div style="display:flex;align-items:center;gap:10px">
       <div class="live-indicator" id="live-ind" style="display:none">
         <div class="live-dot"></div>LIVE
@@ -255,7 +257,7 @@
     }
     function downloadErrorLog() {
       const text = [
-        'AEO ERROR LOG',
+        'TERRAIN.RUN ERROR LOG',
         `Generated: ${new Date().toISOString()}`,
         `Run: ${runId || 'n/a'}`,
         `URL: ${location.href}`,
@@ -263,7 +265,7 @@
         '',
         ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '─'.repeat(40)].filter(Boolean).join('\n')),
       ].join('\n')
-      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `aeo-errors-${Date.now()}.txt` })
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `terrain-errors-${Date.now()}.txt` })
       a.click()
     }
 
@@ -286,7 +288,7 @@
         const res = await fetch(`/api/runs/${runId}/cancel`, { method: 'POST' })
         if (res.ok) {
           document.getElementById('cancel-btn').style.display = 'none'
-          document.getElementById('run-status-badge').textContent = 'failed'
+          document.getElementById('run-status-badge').textContent = 'canceled'
         }
       } catch {}
     })

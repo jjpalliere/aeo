@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>Running — AEO</title>
+  <title>Running — terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
     html, body { background: #0a0a0a !important; overflow-x: hidden; }
@@ -12,8 +12,8 @@
     #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
     .frost-overlay {
       position: fixed; inset: 0; z-index: 0;
-      backdrop-filter: blur(2.25px); -webkit-backdrop-filter: blur(2.25px);
-      background: rgba(10,10,10,0.09); pointer-events: none;
+      backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px);
+      background: var(--frost-bg); pointer-events: none;
     }
 
     .run-layout {
@@ -136,7 +136,7 @@
   <canvas id="bg-canvas"></canvas>
   <div class="frost-overlay"></div>
   <div class="top-bar" style="position:relative;z-index:1;">
-    <div class="logo">A<em>.</em>E<em>.</em>O</div>
+    <a href="/" class="logo">terrain<em>.run</em></a>
     <div id="live-ind"></div>
     <div style="display:flex;gap:8px;align-items:center">
       <a id="live-link" href="#" class="btn btn-ghost btn-sm" style="display:none">View Live Responses ↗</a>
@@ -225,7 +225,7 @@
     }
     function downloadErrorLog() {
       const text = [
-        'AEO ERROR LOG',
+        'TERRAIN.RUN ERROR LOG',
         `Generated: ${new Date().toISOString()}`,
         `Run: ${runId || 'n/a'}`,
         `URL: ${location.href}`,
@@ -233,7 +233,7 @@
         '',
         ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '─'.repeat(40)].filter(Boolean).join('\n')),
       ].join('\n')
-      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `aeo-errors-${Date.now()}.txt` })
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `terrain-errors-${Date.now()}.txt` })
       a.click()
     }
 
@@ -257,7 +257,7 @@
       scraping: 'Analyzing', // legacy; runs transition immediately to analyzing
       analyzing: 'Analyzing',
       complete: 'Complete',
-      failed: 'Cancelled',
+      failed: 'Canceled',
     }
     const LLM_ORDER = ['claude', 'chatgpt', 'gemini']
 
@@ -415,7 +415,7 @@
       cancelled = true
       polling = false
       await fetch(`/api/runs/${runId}/cancel`, { method: 'POST' })
-      document.getElementById('run-status-text').textContent = 'Cancelled'
+      document.getElementById('run-status-text').textContent = 'Canceled'
       document.getElementById('cancel-btn').style.display = 'none'
       document.getElementById('live-indicator').style.display = 'none'
       setStep('querying')
