@@ -436,7 +436,7 @@
   </div>
 
   <script src="/assets/tr-logo-anim.js"></script>
-  <script>initTRLogo('#tr-logo-corner', { size: 124 });</script>
+  <script>initTRLogo('#tr-logo-corner', { size: window.innerWidth <= 768 ? 96 : 186 });</script>
 
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>

@@ -9,7 +9,6 @@ import { assistant } from './routes/assistant'
 
 const AUTH_COOKIE = 'aeo_auth'
 const AUTH_TOKEN  = 'aeo_ok'
-const PASSWORD    = ':blob_with_it:'
 
 function getCookie(header: string | undefined, name: string): string | null {
   if (!header) return null
@@ -29,7 +28,8 @@ app.use('/api/*', async (c, next) => {
 // Login endpoint — sets session cookie on correct password
 app.post('/api/auth', async c => {
   const body = await c.req.json<{ password: string }>().catch(() => ({ password: '' }))
-  if (body.password === PASSWORD) {
+  const pwd = c.env.AEO_PASSWORD || ':blob_with_it:'
+  if (body.password === pwd) {
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: {

@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database
   KV: KVNamespace
+  AEO_PASSWORD?: string
   ANTHROPIC_API_KEY: string
   OPENAI_API_KEY: string
   GOOGLE_AI_API_KEY: string

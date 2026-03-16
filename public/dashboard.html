@@ -248,7 +248,7 @@
     .dash-nav-row .dash-nav-item { flex: 0 0 auto; }
 
     /* Consistent content width across all panels — page-wide fills main, panels fill page-wide */
-    .dash-main .page-wide { width: 100%; max-width: 100%; min-width: 0; flex: 1 1 0; overflow: hidden; box-sizing: border-box; }
+    .dash-main .page-wide { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
     .dash-panel { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
     .dash-panel .card { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
     .dash-panel .table-wrap { max-width: 100%; overflow-x: auto; }
@@ -306,7 +306,7 @@
       <div class="card" style="margin-bottom:12px">
         <div class="card-title">Overview</div>
         <div id="stats-row" class="stats-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin-bottom:16px"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="grid-2" style="gap:16px">
           <div><div class="card-title" style="font-size:var(--text-xs);margin-bottom:8px">LLM Top-3 Visibility</div><div class="chart-wrap" style="height:180px"><canvas id="chart-visibility"></canvas></div></div>
           <div><div class="card-title" style="font-size:var(--text-xs);margin-bottom:8px">Citation Sources</div><div class="chart-wrap" style="height:180px"><canvas id="chart-source-types"></canvas></div></div>
         </div>

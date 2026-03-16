@@ -1031,8 +1031,92 @@ tr:hover td { background: var(--surface2); }
 .chart-wrap { position: relative; height: 220px; }
 .chart-wrap-sm { position: relative; height: 170px; }
 
-@media (max-width: 640px) {
+/* ─── Responsive — 768px breakpoint ─────────────────────────────────────────
+   Single unified breakpoint for all pages. Page-specific selectors use classes
+   defined in each page's <style> block but responsive overrides live here.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  /* approve.html — persona generation layout */
+  .persona-row { grid-template-columns: 1fr 1fr 1fr; }
+  .persona-row .persona-card-col { grid-column: 1 / -1; }
+  .persona-row-generating { grid-template-columns: 1fr; }
+  .persona-row-generating .persona-term-col { grid-column: 1; }
+}
+
+@media (max-width: 768px) {
+  /* Prevent horizontal overflow — body only (html overflow-x:hidden breaks iOS touch scroll) */
+  body { overflow-x: clip; }
+
+  /* Global grids */
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
+
+  /* login.html */
+  .login-container { max-width: 300px; }
+  .login-brand { margin-bottom: 40px; }
+
+  /* Sidebar — hide on mobile (all pages that use it) */
+  #runs-sidebar { display: none !important; }
+  .index-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  .setup-wrap { padding: 24px 16px; }
+  .header-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  #tr-logo-corner { top: 12px; right: 12px; }
+
+  /* dashboard.html — sidebar + main */
+  .dash-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow-y: visible !important;
+  }
+  .dash-main .page-wide { padding: 16px 12px; overflow: visible !important; }
+
+  /* dashboard.html — tab nav: horizontally scrollable on mobile */
+  .dash-nav-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .dash-nav-row > div {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .dash-nav {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    gap: 4px !important;
+    padding-bottom: 4px;
+  }
+  .dash-nav::-webkit-scrollbar { display: none; }
+  .dash-nav-item {
+    flex: 0 0 auto !important;
+    padding: 8px 10px !important;
+    font-size: 11px !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  /* run.html — stack columns */
+  .run-layout { grid-template-columns: 1fr; height: auto; }
+  .run-left { border-right: none; border-bottom: 1px solid var(--border); }
+
+  /* live.html — stack LLM columns */
+  .live-layout { grid-template-columns: 1fr; height: auto; }
+  .llm-column { border-right: none; border-bottom: 1px solid var(--border); max-height: 60vh; }
+
+  /* approve.html — persona grid */
+  .persona-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  /* approve.html — single column personas */
+  .persona-grid { grid-template-columns: 1fr; }
 }
 

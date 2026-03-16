@@ -50,10 +50,6 @@
       letter-spacing: -0.03em;
       color: var(--text);
     }
-    .login-brand .tld {
-      color: var(--text3);
-    }
-
     /* Horizontal rule accent */
     .login-rule {
       width: 48px;
@@ -124,33 +120,14 @@
       opacity: 0.8;
     }
 
-    /* Corner details — brutalist grid coordinates */
-    .corner-detail {
-      position: fixed;
-      font-family: var(--font);
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      color: var(--text3);
-      opacity: 0.35;
-      z-index: 2;
-    }
-    .corner-tl { top: 16px; left: 20px; }
-    .corner-tr { top: 16px; right: 20px; }
-    .corner-br { bottom: 16px; right: 20px; }
-    .corner-bl { bottom: 16px; left: 20px; }
   </style>
 </head>
 <body>
   <canvas id="bg-canvas"></canvas>
   <div class="frost-overlay"></div>
 
-  <div class="corner-detail corner-tl">TERRAIN.RUN</div>
-  <div class="corner-detail corner-tr" id="tr-logo-corner" style="opacity:1"></div>
-  <div class="corner-detail corner-bl">2026.03</div>
-  <div class="corner-detail corner-br">v0.5</div>
-
   <div class="login-container">
-    <a href="/" class="login-brand" style="text-decoration:none;color:inherit;cursor:pointer">terrain<span class="tld">.run</span></a>
+    <div id="login-logo" class="login-brand"></div>
     <div class="login-rule"></div>
     <div class="login-input-wrap">
       <span class="login-prefix">›</span>
@@ -167,7 +144,9 @@
   </div>
 
   <script src="/assets/tr-logo-anim.js"></script>
-  <script>initTRLogo('#tr-logo-corner', { size: 112 });</script>
+  <script>
+    initTRLogo('#login-logo', { size: window.innerWidth <= 768 ? 120 : 200 });
+  </script>
 
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>
