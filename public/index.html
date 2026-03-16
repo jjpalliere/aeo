@@ -32,7 +32,7 @@
       transition: width 0.2s ease;
     }
     #runs-sidebar.collapsed { width: 48px; }
-    #runs-sidebar.collapsed .sidebar-header-text,
+    #runs-sidebar.collapsed .sidebar-logo,
     #runs-sidebar.collapsed #sidebar-list { display: none; }
     .sidebar-toggle {
       background: none; border: none; color: var(--text2); cursor: pointer;
@@ -42,9 +42,9 @@
     .sidebar-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 13px 16px; border-bottom: 1px solid var(--border);
-      font-size: var(--text-xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text2);
       flex-shrink: 0;
     }
+    .sidebar-logo { font-size: var(--text-md); font-weight: 600; letter-spacing: 0.06em; text-decoration: none; color: inherit; }
     #runs-sidebar.collapsed .sidebar-header { justify-content: center; padding: 13px 0; }
     #sidebar-list { flex:1; overflow-y:auto; }
     .sidebar-run { padding:11px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.1s; min-height:76px; display:flex; flex-direction:column; justify-content:center; }
@@ -298,10 +298,11 @@
 <body>
   <canvas id="bg-canvas"></canvas>
   <div class="frost-overlay"></div>
+  <div id="tr-logo-corner" style="position:fixed;top:16px;right:20px;z-index:99"></div>
   <div class="index-layout">
     <aside id="runs-sidebar" class="collapsed">
       <div class="sidebar-header">
-        <span class="sidebar-header-text">Runs</span>
+        <a href="/" class="logo sidebar-logo">terrain<em>.run</em></a>
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar">▶</button>
       </div>
       <div id="sidebar-list"></div>
@@ -429,10 +430,13 @@
     </section>
     </div><!-- /below-fold -->
 
-  <div style="position:fixed;bottom:12px;right:16px;z-index:99;font-size:11px;letter-spacing:0.1em;color:var(--text2)"><a href="/" style="color:inherit;text-decoration:none">terrain.run</a> · v0.5</div>
+  <div style="position:fixed;bottom:12px;right:16px;z-index:99;font-size:11px;letter-spacing:0.1em;color:var(--text)"><a href="/" style="color:inherit;text-decoration:none">terrain.run</a> · v0.5</div>
   </div><!-- /setup-wrap -->
     </main>
   </div>
+
+  <script src="/assets/tr-logo-anim.js"></script>
+  <script>initTRLogo('#tr-logo-corner', { size: 124 });</script>
 
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>

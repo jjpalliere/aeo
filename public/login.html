@@ -145,7 +145,7 @@
   <div class="frost-overlay"></div>
 
   <div class="corner-detail corner-tl">TERRAIN.RUN</div>
-  <div class="corner-detail corner-tr">SYS.AUTH</div>
+  <div class="corner-detail corner-tr" id="tr-logo-corner" style="opacity:1"></div>
   <div class="corner-detail corner-bl">2026.03</div>
   <div class="corner-detail corner-br">v0.5</div>
 
@@ -165,6 +165,9 @@
     </div>
     <div id="err"></div>
   </div>
+
+  <script src="/assets/tr-logo-anim.js"></script>
+  <script>initTRLogo('#tr-logo-corner', { size: 112 });</script>
 
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>

@@ -25,11 +25,15 @@
     .rank-1 { background: rgba(160,190,130,0.15); color: var(--success); }
     .rank-2 { background: rgba(251,191,36,0.15); color: var(--warning); }
     .rank-3 { background: rgba(96,165,250,0.15); color: var(--tofu); }
-    .rank-other { background: var(--surface2); color: var(--text2); }
+    .rank-other { background: var(--surface2); color: var(--dash-row-muted); }
     #loading { display:flex; align-items:center; justify-content:center; height:100vh; gap:10px; font-size:var(--text-sm); letter-spacing:0.08em; color:var(--text2); }
     .target-row td { background: var(--accent-dim); }
     .no-data { color:var(--text3); font-size:var(--text-sm); letter-spacing:0.06em; }
     .suggestions { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    #panel-assistant .chat-input-row input { color: var(--accent); }
+    #panel-assistant .chat-input-row input::placeholder { color: var(--text3); }
+    #panel-assistant .suggestions .btn { color: var(--accent); }
+    #panel-assistant .suggestions .btn:hover { color: var(--accent); border-color: var(--w-25); }
     .rank-filter-btn {
       font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase;
       padding: 3px 8px; border-radius: 1px; border: 1px solid var(--border2);
@@ -66,7 +70,7 @@
     .domain-filter-bubble {
       font-size: var(--text-xs); letter-spacing: 0.04em;
       padding: 6px 14px; border-radius: 4px; border: 1px solid var(--border2);
-      background: var(--surface2); color: var(--text2); cursor: pointer;
+      background: var(--surface2); color: var(--dash-row-muted); cursor: pointer;
       font-family: var(--font); transition: all 0.15s;
     }
     .domain-filter-bubble:hover { border-color: var(--text3); color: var(--text); background: var(--surface3); }
@@ -79,7 +83,7 @@
     .source-type-competitor { background: rgba(248,113,113,0.15); color: var(--danger); }
     .source-type-news { background: rgba(96,165,250,0.15); color: var(--tofu); }
     .source-type-industry { background: rgba(251,191,36,0.15); color: var(--warning); }
-    .source-type-unknown { background: var(--surface2); color: var(--text2); }
+    .source-type-unknown { background: var(--surface2); color: var(--dash-row-muted); }
     .citation-row {
       display: flex; justify-content: space-between; align-items: center; gap: 12px;
       padding: 8px 0; border-bottom: 1px solid var(--border); font-size: var(--text-sm);
@@ -88,17 +92,20 @@
     .citation-row a:hover { text-decoration: underline; }
     .citation-count { flex-shrink: 0; color: var(--text2); font-size: var(--text-xs); }
     .citation-detail-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); table-layout: fixed; }
-    .citation-detail-table th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text2); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+    .citation-detail-table th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--dash-col-title); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; }
     .citation-detail-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .citation-detail-table tr:hover td { background: var(--surface); }
-    .citation-prompt-snippet { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .citation-prompt-snippet { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
+    .citation-detail-table td:nth-child(5) { color: var(--dash-row-muted); }
+    .citation-page-title-link { color: var(--dash-row-content); text-decoration: underline; text-underline-offset: 2px; }
+    .citation-page-title-link:hover { color: var(--accent); }
     /* Citations panel: fixed width, prevent filter-dependent layout shift */
     #panel-citations { width: 100%; min-width: 0; overflow: hidden; }
     #panel-citations .card { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
     #panel-citations .card-title::before, #panel-citations .card-title::after { display: none; }
     #panel-citations .table-wrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
     .citation-output-btn {
-      background: none; border: 1px solid var(--border2); color: var(--text2); cursor: pointer;
+      background: none; border: 1px solid var(--border2); color: var(--dash-row-muted); cursor: pointer;
       padding: 4px 8px; border-radius: 2px; font-size: var(--text-xs); transition: all 0.15s;
     }
     .citation-output-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -141,7 +148,7 @@
     .citation-filter-search:focus { outline: none; border-color: var(--accent); }
     .citation-brand-filter-label {
       display: flex; align-items: center; gap: 8px; white-space: nowrap;
-      font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--text2);
+      font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--dash-row-muted);
       cursor: pointer; font-weight: 400; padding: 6px 10px;
       border: 1px solid var(--border2); border-radius: 4px; background: var(--surface2);
       transition: all 0.15s;
@@ -175,7 +182,7 @@
     #runs-sidebar.collapsed {
       width: 48px;
     }
-    #runs-sidebar.collapsed .sidebar-header-text,
+    #runs-sidebar.collapsed .sidebar-logo,
     #runs-sidebar.collapsed #sidebar-list { display: none; }
     .sidebar-toggle {
       background: none; border: none; color: var(--text2); cursor: pointer;
@@ -198,9 +205,9 @@
     .sidebar-header {
       display:flex; align-items:center; justify-content:space-between;
       padding:13px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
-      font-size:var(--text-xs); letter-spacing:0.12em; text-transform:uppercase; color:var(--text2);
       min-width:0;
     }
+    .sidebar-logo { font-size: var(--text-md); font-weight: 600; letter-spacing: 0.06em; text-decoration: none; color: inherit; }
     #sidebar-list { flex:1; overflow-y:auto; }
     .sidebar-run {
       padding:11px 16px; border-bottom:1px solid var(--border);
@@ -237,60 +244,61 @@
     .sidebar-del-btn:disabled { opacity:0.4; cursor:not-allowed; }
     .sidebar-del-btn:disabled:hover { color:var(--text3); }
 
-    /* Top bar: logo on top row, nav below */
-    .top-bar { flex-direction: column; align-items: stretch; padding: 12px 24px 10px; gap: 12px; }
-    .top-bar-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-    .top-bar-logo-row { flex-shrink: 0; }
-    .top-bar-nav-row { border-top: 1px solid var(--border2); padding-top: 10px; }
+    .dash-nav-row .dash-nav { flex: 0 0 auto; gap: 12px; }
+    .dash-nav-row .dash-nav-item { flex: 0 0 auto; }
+
+    /* Consistent content width across all panels — page-wide fills main, panels fill page-wide */
+    .dash-main .page-wide { width: 100%; max-width: 100%; min-width: 0; flex: 1 1 0; overflow: hidden; box-sizing: border-box; }
+    .dash-panel { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+    .dash-panel .card { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+    .dash-panel .table-wrap { max-width: 100%; overflow-x: auto; }
 
     /* Report panel */
     .report-panel-card { width: 100%; }
+    #panel-report .card-title,
+    #panel-report .report-preview { color: var(--accent); }
     .report-preview {
-      font-size: var(--text-sm); line-height: 2; color: var(--text);
+      font-size: var(--text-sm); line-height: 2; color: var(--accent);
       padding: 20px 0; overflow-x: auto; white-space: pre-wrap; word-break: break-word;
       min-height: 500px; max-height: 70vh; overflow-y: auto;
     }
   </style>
 </head>
 <body>
-  <div class="grain-overlay" aria-hidden="true"></div>
+  <div class="frost-overlay" aria-hidden="true"></div>
   <div id="loading"><span class="spinner"></span><span>Loading results…</span></div>
 
   <div id="content">
     <aside id="runs-sidebar" class="collapsed">
       <div class="sidebar-header">
-        <span class="sidebar-header-text">Runs</span>
+        <a href="/" class="logo sidebar-logo">terrain<em>.run</em></a>
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar">▶</button>
       </div>
       <div id="sidebar-list"></div>
     </aside>
     <main class="dash-main">
-    <div class="top-bar">
-      <div class="top-bar-row top-bar-logo-row">
-        <a href="/" class="logo">terrain<em>.run</em></a>
-        <div class="brand-tag" id="brand-tag">–</div>
-      </div>
-      <div class="top-bar-row top-bar-nav-row">
-      <div class="dash-nav" style="margin:0;border:none">
-        <div class="dash-nav-item active" onclick="showPanel('ranking',this)">Ranking</div>
-        <div class="dash-nav-item" onclick="showPanel('citations',this)">Citations</div>
-        <div class="dash-nav-item" onclick="showPanel('competitors',this)">Competitors</div>
-          <div class="dash-nav-item" onclick="showPanel('personas',this)">Personas</div>
-        <div class="dash-nav-item" onclick="showPanel('assistant',this)">AI Chat</div>
-        <div class="dash-nav-item" onclick="showPanel('report',this)">Report</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="live-indicator" id="live-ind" style="display:none">
-          <div class="live-dot"></div>LIVE
-        </div>
-        <span id="live-progress" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2);display:none"></span>
-          <a id="live-link" href="#" class="btn btn-ghost btn-sm">Live View ↗</a>
-        <a href="/" class="btn btn-ghost btn-sm">New</a>
-        </div>
-      </div>
-    </div>
-
     <div class="page-wide">
+      <div class="dash-nav-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="brand-tag" id="brand-tag">–</div>
+          <div class="dash-nav" style="margin:0;border:none">
+            <div class="dash-nav-item active" onclick="showPanel('ranking',this)">Ranking</div>
+            <div class="dash-nav-item" onclick="showPanel('citations',this)">Citations</div>
+            <div class="dash-nav-item" onclick="showPanel('competitors',this)">Competitors</div>
+            <div class="dash-nav-item" onclick="showPanel('personas',this)">Personas</div>
+            <div class="dash-nav-item" onclick="showPanel('assistant',this)">AI Chat</div>
+            <div class="dash-nav-item" onclick="showPanel('report',this)">Report</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="live-indicator" id="live-ind" style="display:none">
+            <div class="live-dot"></div>LIVE
+          </div>
+          <span id="live-progress" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2);display:none"></span>
+          <a id="live-link" href="#" class="btn btn-ghost btn-sm">Live View ↗</a>
+          <a href="/" class="btn btn-ghost btn-sm">New</a>
+        </div>
+      </div>
 
       <!-- RANKING -->
       <div id="panel-ranking" class="dash-panel active">
@@ -336,7 +344,7 @@
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
             <div style="display:flex;align-items:center;gap:12px">
             <span>Citations</span>
-            <span id="citation-count" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2);font-weight:400"></span>
+            <span id="citation-count" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--dash-row-content);font-weight:400"></span>
               <label class="citation-brand-filter-label">
                 <input type="checkbox" id="citation-brand-toggle" onchange="toggleCitationBrandFilter(this.checked)" /> Brand mentioned only
               </label>
@@ -759,7 +767,7 @@
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
                 ${stageBadge(group.funnel_stage)}
             </div>
-              <div class="pg-prompt-text" style="font-size:var(--text-sm);line-height:1.5;color:var(--text)">${escHtml(group.prompt_text)}</div>
+              <div class="pg-prompt-text" style="font-size:var(--text-sm);line-height:1.5;color:var(--accent)">${escHtml(group.prompt_text)}</div>
           </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-top:2px">
               <span class="pg-count">${group.count} response${group.count !== 1 ? 's' : ''}</span>
@@ -839,7 +847,7 @@
       document.getElementById('ranking-table').innerHTML = sorted.length
         ? sorted.map(r => `
           <tr class="${r.is_target?'target-row':''}">
-            <td><strong>${escHtml(r.brand_name)}</strong>${r.is_target?' <span style="font-size:var(--text-xs);color:var(--text2)">(you)</span>':''}</td>
+            <td><strong>${escHtml(r.brand_name)}</strong>${r.is_target?' <span style="font-size:var(--text-xs);color:var(--dash-row-muted)">(you)</span>':''}</td>
             <td>${totalMentions(r)}</td>
             <td>${rankBadge(Math.round(Number(r?.avg_rank) || 0))}</td>
             <td>${rankBadge(Number(r?.best_rank) || 0)}</td>
@@ -1046,7 +1054,7 @@
           <td class="citation-prompt-snippet" title="${escHtml(promptText)}">${escHtml(promptSnippet)}</td>
           <td>${llmBadge(llm)}</td>
           <td>${sourceBadge}</td>
-          <td title="${escHtml(pageTitle)}">${url && url.startsWith('http') ? `<a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:var(--accent)">${escHtml(pageTitle || '—')}</a>` : escHtml(pageTitle || '—')}</td>
+          <td title="${escHtml(pageTitle)}">${url && url.startsWith('http') ? `<a href="${escHtml(url)}" target="_blank" rel="noopener" class="citation-page-title-link">${escHtml(pageTitle || '—')}</a>` : escHtml(pageTitle || '—')}</td>
           <td>${escHtml(domain)}</td>
           <td><button class="citation-output-btn" data-query-id="${escHtml(qId)}" onclick="openOutputModal(this.dataset.queryId)" title="View LLM output">💬</button></td>
         </tr>`

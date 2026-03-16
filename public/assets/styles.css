@@ -101,6 +101,9 @@
   --tofu:      #60a5fa;
   --mofu:      #c084fc;
   --bofu:      #c0dea2;
+  --badge-tofu-bg: rgba(96,165,250,0.12);
+  --badge-mofu-bg: rgba(192,132,252,0.12);
+  --badge-bofu-bg: rgba(160,190,130,0.12);
 
   /* LLM badges — vivid */
   --claude:    #fb923c;
@@ -140,6 +143,12 @@
   /* Frost overlay — B 4 more than R,G in final blend (at 0.14 opacity, need B≈39) */
   --frost-bg: rgba(10,10,39,0.14);
 
+  /* Dashboard — section headers (charts), column titles, row content */
+  --dash-section-header: var(--accent);
+  --dash-col-title:      var(--text);
+  --dash-row-content:    var(--text2);
+  --dash-row-muted:      var(--text3);
+
 }
 
 /* ─── Base reset + body ───────────────────────────────────────────────────────
@@ -161,11 +170,17 @@ html { font-size: var(--text-sm); }
   mix-blend-mode: overlay;
 }
 
-/* ─── Frost overlay (used with #bg-canvas pages) ─────────────────────────── */
+/* ─── Frost overlay (blue-tinted blur + grain — all pages) ─────────────────── */
 .frost-overlay {
-  position: relative;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  backdrop-filter: blur(2.5px);
+  -webkit-backdrop-filter: blur(2.5px);
   background: var(--frost-bg);
+  pointer-events: none;
 }
+body > *:not(.frost-overlay):not(#bg-canvas) { position: relative; z-index: 1; }
 .frost-overlay::after {
   content: '';
   position: absolute;
@@ -246,18 +261,18 @@ a.logo:hover em { color: var(--accent); opacity: 0.9; }
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: var(--text2);
+  color: var(--dash-section-header);
   margin-bottom: 16px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 .card-title::before {
   content: '[ ';
-  color: var(--text3);
+  color: var(--dash-section-header);
 }
 .card-title::after {
   content: ' ]';
-  color: var(--text3);
+  color: var(--dash-section-header);
 }
 
 /* ─── Data rows (label > value pattern) ─────────────────────────────────── */
@@ -375,9 +390,9 @@ textarea { resize: vertical; min-height: 80px; }
   letter-spacing: 0.1em;
 }
 
-.badge-tofu     { background: rgba(96,165,250,0.12); color: var(--tofu); }
-.badge-mofu     { background: rgba(192,132,252,0.12); color: var(--mofu); }
-.badge-bofu     { background: rgba(160,190,130,0.12); color: var(--bofu); }
+.badge-tofu     { background: var(--badge-tofu-bg); color: var(--tofu); }
+.badge-mofu     { background: var(--badge-mofu-bg); color: var(--mofu); }
+.badge-bofu     { background: var(--badge-bofu-bg); color: var(--bofu); }
 .badge-owned    { background: rgba(255,255,255,0.07); color: var(--text); }
 .badge-competitor { background: rgba(248,113,113,0.12); color: var(--danger); }
 .badge-news     { background: rgba(96,165,250,0.12); color: var(--tofu); }
@@ -422,7 +437,7 @@ textarea { resize: vertical; min-height: 80px; }
   font-size: var(--text-xl);
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: var(--text);
+  color: var(--dash-row-content);
   line-height: 1;
   margin-bottom: 6px;
 }
@@ -431,7 +446,7 @@ textarea { resize: vertical; min-height: 80px; }
   font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text2);
+  color: var(--dash-row-muted);
 }
 
 /* ─── Progress bar ───────────────────────────────────────────────────────── */
@@ -458,7 +473,7 @@ table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
 th {
   text-align: left;
   padding: 6px 10px;
-  color: var(--text2);
+  color: var(--dash-col-title);
   font-weight: 600;
   font-size: var(--text-xs);
   letter-spacing: 0.1em;
@@ -470,7 +485,7 @@ td {
   padding: 9px 10px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
-  color: var(--text);
+  color: var(--dash-row-content);
 }
 
 tr:last-child td { border-bottom: none; }
@@ -480,9 +495,9 @@ tr:hover td { background: var(--surface2); }
 /* Competitor ranking table: narrow rank columns, more space for positioning */
 .competitor-ranking-table { table-layout: fixed; }
 .competitor-ranking-table th:nth-child(1),
-.competitor-ranking-table td:nth-child(1) { width: 110px; }
+.competitor-ranking-table td:nth-child(1) { width: 70px; }
 .competitor-ranking-table th:nth-child(2),
-.competitor-ranking-table td:nth-child(2) { width: 55%; }
+.competitor-ranking-table td:nth-child(2) { width: 65%; }
 .competitor-ranking-table th:nth-child(3),
 .competitor-ranking-table td:nth-child(3) { width: 1%; white-space: nowrap; text-align: center; }
 .competitor-ranking-table th:nth-child(4),
@@ -505,7 +520,7 @@ tr:hover td { background: var(--surface2); }
 
 .dash-nav {
   display: flex;
-  gap: 0;
+  gap: 20px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 24px;
 }
@@ -751,7 +766,7 @@ tr:hover td { background: var(--surface2); }
 .chat-message.assistant .chat-bubble {
   background: var(--surface2);
   border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--accent);
 }
 .chat-message.user .chat-bubble {
   background: var(--accent);

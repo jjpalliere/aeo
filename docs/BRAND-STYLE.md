@@ -35,6 +35,14 @@ The scatter-plot background uses a camera-flash treatment: dots closer to the ca
 - **Display:** Syne, Outfit — headers, hero, brand/logo
 - **Body:** JetBrains Mono, Courier New — UI, data, labels, inputs
 
+### Dashboard hierarchy
+| Variable              | Use |
+|-----------------------|-----|
+| `--dash-section-header` | Section headers (e.g. [ OVERVIEW ]) — white |
+| `--dash-col-title`      | Column titles (e.g. BRAND, MENTIONS) — red/accent |
+| `--dash-row-content`    | Main row content — white |
+| `--dash-row-muted`      | Smaller descriptive text (e.g. labels, "(you)") — darker |
+
 ### Font sizes
 | Token     | Size  | Use |
 |-----------|-------|-----|
