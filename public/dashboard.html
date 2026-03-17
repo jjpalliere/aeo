@@ -5,27 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
   <title>Dashboard — terrain.run</title>
-  <link rel="stylesheet" href="/assets/styles.css" />
+  <link rel="stylesheet" href="/assets/styles.css?v=3" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     .brand-tag {
-      font-size: var(--text-xs);
+      font-family: var(--font-hero);
+      font-size: var(--text-md);
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--accent);
+      color: var(--text);
       background: var(--accent-dim);
       padding: 3px 10px;
       border-radius: 1px;
     }
-    .rank-cell {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 22px; height: 22px; border-radius: 2px;
-      font-size: var(--text-sm); font-weight: 700;
+    .rank-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 2px;
+      font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.04em;
     }
-    .rank-1 { background: rgba(160,190,130,0.15); color: var(--success); }
-    .rank-2 { background: rgba(251,191,36,0.15); color: var(--warning); }
-    .rank-3 { background: rgba(96,165,250,0.15); color: var(--tofu); }
-    .rank-other { background: var(--surface2); color: var(--dash-row-muted); }
+    .rank-badge.rank-1 { background: rgba(160,190,130,0.15); color: var(--success); }
+    .rank-badge.rank-2 { background: rgba(251,191,36,0.15); color: var(--warning); }
+    .rank-badge.rank-3 { background: rgba(96,165,250,0.15); color: var(--tofu); }
+    .rank-badge.rank-other { background: var(--surface2); color: var(--dash-row-muted); }
     #loading { display:flex; align-items:center; justify-content:center; height:100vh; gap:10px; font-size:var(--text-sm); letter-spacing:0.08em; color:var(--text2); }
     .target-row td { background: var(--accent-dim); }
     .no-data { color:var(--text3); font-size:var(--text-sm); letter-spacing:0.06em; }
@@ -34,14 +34,11 @@
     #panel-assistant .chat-input-row input::placeholder { color: var(--text3); }
     #panel-assistant .suggestions .btn { color: var(--accent); }
     #panel-assistant .suggestions .btn:hover { color: var(--accent); border-color: var(--w-25); }
-    .rank-filter-btn {
-      font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase;
-      padding: 3px 8px; border-radius: 1px; border: 1px solid var(--border2);
-      background: transparent; color: var(--text2); cursor: pointer;
-      font-family: var(--font); transition: all 0.15s;
-    }
-    .rank-filter-btn.active { border-color: var(--text2); color: var(--text); background: var(--surface2); }
+    .rank-filter-btn { letter-spacing: 0.08em; text-transform: uppercase; }
+    .rank-filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     .rank-filter-btn:hover { color: var(--text); }
+    .charts-split { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+    .chart-col { min-width: 0; display: flex; flex-direction: column; }
     .sortable-th { cursor: pointer; user-select: none; }
     .sortable-th:hover { color: var(--accent); }
     .sortable-th.sort-desc::after { content: ' ▼'; margin-left: 4px; font-size: 0.85em; color: var(--accent); }
@@ -53,13 +50,18 @@
       align-items: start; padding: 12px 0;
       border-bottom: 1px solid var(--border); cursor: pointer;
     }
+    .pg-prompt-group .pg-header { border-bottom: none; }
+    .pg-prompt-group .pg-detail .pg-sub { border-bottom: none; }
+    .pg-prompt-group .pg-detail .pg-sub:last-child { margin-bottom: 0; }
     .pg-header:hover .pg-prompt-text { color: var(--accent); }
     .pg-detail { border-bottom: 1px solid var(--border); }
     .pg-sub {
-      display: grid; grid-template-columns: 1fr 100px; gap: 16px;
+      display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 16px;
       padding: 10px 0 10px 16px; border-bottom: 1px solid var(--border2);
     }
     .pg-sub:last-child { border-bottom: none; }
+    .pg-competitors-list { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+    .pg-competitor-item { display: inline-flex; align-items: center; gap: 4px; }
     .pg-count {
       font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase;
       color: var(--text3); border: 1px solid var(--border2); padding: 2px 6px;
@@ -90,25 +92,68 @@
     }
     .citation-row a { word-break: break-all; color: var(--accent); }
     .citation-row a:hover { text-decoration: underline; }
-    .citation-count { flex-shrink: 0; color: var(--text2); font-size: var(--text-xs); }
-    .citation-detail-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); table-layout: fixed; }
-    .citation-detail-table th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--dash-col-title); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; }
-    .citation-detail-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .citation-detail-table tr:hover td { background: var(--surface); }
+    .citation-count { flex-shrink: 0; min-width: 18ch; text-align: right; display: inline-block; color: var(--text2); margin-right: 20px; }
+    .citation-detail-table { width: 100%; min-width: 720px; font-size: var(--text-sm); table-layout: fixed; }
+    .citation-detail-table th { text-align: left; font-weight: 600; color: var(--dash-col-title); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+    .citation-detail-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .citation-prompt-snippet { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
-    .citation-detail-table td:nth-child(5) { color: var(--dash-row-muted); }
+    .citation-detail-table td:nth-child(6) { color: var(--dash-row-muted); }
     .citation-page-title-link { color: var(--dash-row-content); text-decoration: underline; text-underline-offset: 2px; }
     .citation-page-title-link:hover { color: var(--accent); }
-    /* Citations panel: fixed width, prevent filter-dependent layout shift */
+    /* Citations panel: fixed width, no outer box, no header lines */
     #panel-citations { width: 100%; min-width: 0; overflow: hidden; }
     #panel-citations .card { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+    #panel-citations .float-row-card { border: none; background: transparent; }
+    #panel-citations .float-row-card .card-title { border-bottom: none; }
+    #panel-citations .float-row-table thead,
+    #panel-citations .float-row-table thead th { border: none; border-bottom: none; background: transparent; }
     #panel-citations .card-title::before, #panel-citations .card-title::after { display: none; }
+    /* Competitors panel: no outer box, no header lines */
+    #panel-competitors .float-row-card { border: none; background: transparent; }
+    #panel-competitors .float-row-card .card-title { border-bottom: none; }
+    #panel-competitors .float-row-table thead,
+    #panel-competitors .float-row-table thead th { border: none; border-bottom: none; background: transparent; }
+    .comp-analysis-item:hover { background: var(--float-row-bg-hover); }
+    .pg-prompt-group:hover { background: var(--float-row-bg-hover); }
+    /* Ranking panel: no outer box, no header lines */
+    #panel-ranking .float-row-card { border: none; background: transparent; }
+    #panel-ranking .float-row-card .card-title { border-bottom: none; }
+    #panel-ranking .float-row-table thead,
+    #panel-ranking .float-row-table thead th { border: none; border-bottom: none; background: transparent; }
+    /* Personas panel: no outer box */
+    #panel-personas .float-row-card { border: none; background: transparent; }
+    #panel-personas .float-row-card .card-title { border-bottom: none; }
+    .persona-prompt-item:hover { background: var(--float-row-bg-hover); }
+    /* Report panel: no outer box */
+    #panel-report .float-row-card { border: none; background: transparent; }
+    #panel-report .float-row-card .card-title { border-bottom: none; }
+    /* AI Assistant panel: no outer box */
+    #panel-assistant .float-row-card { border: none; background: transparent; }
+    #panel-assistant .float-row-card .card-title { border-bottom: none; }
     #panel-citations .table-wrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
     .citation-output-btn {
       background: none; border: 1px solid var(--border2); color: var(--dash-row-muted); cursor: pointer;
       padding: 4px 8px; border-radius: 2px; font-size: var(--text-xs); transition: all 0.15s;
     }
     .citation-output-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .citation-mentions-btn {
+      background: none; border: 1px solid var(--border2); color: var(--dash-row-muted); cursor: pointer;
+      padding: 4px 8px; border-radius: 2px; font-family: var(--font); display: inline-flex; align-items: baseline; gap: 4px;
+      transition: all 0.15s; position: relative;
+    }
+    .citation-mentions-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .citation-mentions-num { font-size: var(--text-sm); }
+    .citation-mentions-label { font-size: var(--text-xs); text-transform: lowercase; opacity: 0.85; }
+    .citation-mentions-dropdown {
+      position: absolute; right: 0; top: 100%; margin-top: 2px; z-index: 100;
+      background: var(--surface3); border: 1px solid var(--border); border-radius: 2px; min-width: 100%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4); padding: 4px 0;
+    }
+    .citation-mentions-dropdown button {
+      display: block; width: 100%; text-align: left; padding: 6px 10px; background: none; border: none;
+      color: var(--text2); font-size: var(--text-xs); cursor: pointer; font-family: var(--font);
+    }
+    .citation-mentions-dropdown button:hover { background: var(--surface2); color: var(--accent); }
     /* Column filter popovers */
     .citation-col-filter {
       cursor: pointer; user-select: none; position: relative;
@@ -119,14 +164,30 @@
     .citation-col-filter::after { content: ' ▾'; font-size: 0.7em; opacity: 0.6; }
     .citation-col-filter:hover::after, .citation-col-filter.active::after { opacity: 1; }
     .citation-filter-popover {
-      position: absolute; z-index: 100; background: var(--surface); border: 1px solid var(--border);
+      position: fixed; z-index: 1000; background: var(--surface); border: 1px solid var(--border);
       border-radius: 4px; padding: 12px; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       font-size: var(--text-sm);
     }
     .citation-filter-popover input { width: 100%; padding: 6px 10px; border: 1px solid var(--border2); border-radius: 2px; background: var(--bg); color: var(--text); font-size: var(--text-sm); box-sizing: border-box; }
-    .citation-filter-popover .cf-check { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; }
-    .citation-filter-popover .cf-check:hover { color: var(--accent); }
-    .citation-filter-popover .cf-check input[type="checkbox"] { width: auto; margin: 0; }
+    .citation-filter-popover .cf-check {
+      display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer;
+      font-size: var(--text-sm); color: var(--text2); transition: color 0.15s;
+    }
+    .citation-filter-popover .cf-check:hover { color: var(--text); }
+    .citation-filter-popover .cf-check input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .cf-checkbox {
+      flex-shrink: 0; width: 14px; height: 14px; border-radius: 2px;
+      border: 1px solid var(--border2); background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .citation-filter-popover .cf-check:hover .cf-checkbox { border-color: var(--text3); }
+    .citation-filter-popover .cf-check input:checked + .cf-checkbox {
+      background: var(--accent); border-color: var(--accent);
+    }
+    .citation-filter-popover .cf-check input:checked + .cf-checkbox::after {
+      content: '✓'; font-size: 10px; font-weight: 700; color: #0a0a0a; line-height: 1;
+    }
     .cf-llm-toggle {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
       padding: 6px 10px; margin-bottom: 4px; border-radius: 3px; cursor: pointer;
@@ -137,26 +198,63 @@
     .cf-llm-toggle:hover { border-color: var(--text3); color: var(--text); }
     .cf-llm-toggle.active { border-color: var(--text2); color: var(--text); background: var(--surface2); }
     .cf-llm-toggle .cf-llm-count { font-size: var(--text-xs); color: var(--text3); }
-    /* Page title search row */
-    .citation-filter-row th { padding: 4px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-weight: 400; text-transform: none; letter-spacing: 0; }
-    .citation-page-title-search-cell { padding: 6px 12px !important; }
-    .citation-filter-search {
-      width: 100%; padding: 6px 10px; border: 1px solid var(--border2); border-radius: 2px;
-      background: var(--bg); color: var(--text); font-size: var(--text-sm); font-family: var(--font);
-      box-sizing: border-box;
+    /* Header inputs: column name as placeholder, value replaces when typing */
+    .citation-header-input {
+      width: 100%; padding: 8px 12px; box-sizing: border-box;
+      background: transparent; border: 1px solid transparent; border-radius: 2px;
+      font-family: var(--font); font-size: var(--text-xs); font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--dash-col-title);
+      transition: border-color 0.15s, background 0.15s;
     }
-    .citation-filter-search:focus { outline: none; border-color: var(--accent); }
-    .citation-brand-filter-label {
-      display: flex; align-items: center; gap: 8px; white-space: nowrap;
-      font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--dash-row-muted);
-      cursor: pointer; font-weight: 400; padding: 6px 10px;
-      border: 1px solid var(--border2); border-radius: 4px; background: var(--surface2);
-      transition: all 0.15s;
+    .citation-header-input::placeholder { color: var(--text); }
+    .citation-header-input:hover { border-color: var(--border2); background: var(--surface2); }
+    .citation-header-input:focus { outline: none; border-color: var(--accent); background: var(--surface2); }
+    .citation-brand-filter {
+      display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+      font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--text3);
+      user-select: none;
     }
-    .citation-brand-filter-label:hover { border-color: var(--text3); color: var(--text); }
-    .citation-brand-filter-label input { margin: 0; }
-    .citation-domain-filters-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .citation-brand-filter:hover { color: var(--text2); }
+    .citation-brand-filter input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .citation-brand-toggle-track {
+      width: 36px; height: 18px; border-radius: 9px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      position: relative; transition: background 0.2s, border-color 0.2s;
+    }
+    .citation-brand-filter input:checked + .citation-brand-toggle-track {
+      background: rgba(160,190,130,0.2); border-color: var(--success);
+    }
+    .citation-brand-filter:hover .citation-brand-toggle-track { border-color: var(--text3); }
+    .citation-brand-filter input:checked + .citation-brand-toggle-track::after {
+      transform: translateX(18px);
+    }
+    .citation-brand-toggle-track::after {
+      content: ''; position: absolute; left: 2px; top: 2px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--text3); transition: transform 0.2s ease, background 0.2s;
+    }
+    .citation-brand-filter input:checked + .citation-brand-toggle-track::after {
+      background: var(--success);
+    }
+    .citation-domain-filters-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-basis: 100%; min-height: 28px; }
     .citation-filters-label { font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--text3); }
+    .stats-row-overview {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin-bottom: 16px;
+      background: var(--surface2); border: none; border-radius: var(--float-row-radius); overflow: hidden;
+    }
+    .stats-row-overview .stat-card {
+      background: transparent; padding: 16px 12px; text-align: center;
+      border-right: 1px solid var(--border2);
+    }
+    .stats-row-overview .stat-card:last-child { border-right: none; }
+    .stats-row-overview .stat-value { font-size: var(--text-xl); font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+    .stats-row-overview .stat-label { font-size: var(--text-xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); }
+    .persona-comparison-table .persona-col { min-width: 240px; max-width: 50%; }
+    .persona-comparison-table th:not(.persona-col):not(.llm-col),
+    .persona-comparison-table td:not(.persona-col):not(.llm-col) { width: 1%; white-space: nowrap; text-align: center; }
+    .persona-comparison-table .llm-col { width: 64px; text-align: center; vertical-align: middle; white-space: nowrap; }
+    .persona-comparison-table .llm-col-hdr { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .persona-comparison-table .llm-col-pct { font-size: var(--text-xs); font-weight: 400; color: var(--text3); }
     #output-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; }
     #output-modal-overlay.open { display: flex; align-items: center; justify-content: center; }
     #output-modal {
@@ -246,6 +344,8 @@
 
     .dash-nav-row .dash-nav { flex: 0 0 auto; gap: 12px; }
     .dash-nav-row .dash-nav-item { flex: 0 0 auto; }
+    .dash-nav-item[href] { text-decoration: none; }
+    .dash-nav-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
 
     /* Consistent content width across all panels — page-wide fills main, panels fill page-wide */
     .dash-main .page-wide { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
@@ -265,7 +365,6 @@
   </style>
 </head>
 <body>
-  <div class="frost-overlay" aria-hidden="true"></div>
   <div id="loading"><span class="spinner"></span><span>Loading results…</span></div>
 
   <div id="content">
@@ -278,54 +377,51 @@
     </aside>
     <main class="dash-main">
     <div class="page-wide">
-      <div class="dash-nav-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div class="brand-tag" id="brand-tag">–</div>
-          <div class="dash-nav" style="margin:0;border:none">
-            <div class="dash-nav-item active" onclick="showPanel('ranking',this)">Ranking</div>
-            <div class="dash-nav-item" onclick="showPanel('citations',this)">Citations</div>
-            <div class="dash-nav-item" onclick="showPanel('competitors',this)">Competitors</div>
-            <div class="dash-nav-item" onclick="showPanel('personas',this)">Personas</div>
-            <div class="dash-nav-item" onclick="showPanel('assistant',this)">AI Chat</div>
-            <div class="dash-nav-item" onclick="showPanel('report',this)">Report</div>
-          </div>
+      <div class="dash-nav-row">
+        <div class="dash-nav" style="margin:0;border:none">
+          <a id="live-link" href="#" class="dash-nav-item">Live View ↗</a>
+          <div class="dash-nav-item active" onclick="showPanel('ranking',this)">Ranking</div>
+          <div class="dash-nav-item" onclick="showPanel('citations',this)">Citations</div>
+          <div class="dash-nav-item" onclick="showPanel('competitors',this)">Competitors</div>
+          <div class="dash-nav-item" onclick="showPanel('personas',this)">Personas</div>
+          <div class="dash-nav-item" onclick="showPanel('assistant',this)">AI Chat</div>
+          <div class="dash-nav-item" onclick="showPanel('report',this)">Report</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
           <div class="live-indicator" id="live-ind" style="display:none">
             <div class="live-dot"></div>LIVE
           </div>
           <span id="live-progress" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2);display:none"></span>
-          <a id="live-link" href="#" class="btn btn-ghost btn-sm">Live View ↗</a>
-          <a href="/" class="btn btn-ghost btn-sm">New</a>
+          <div class="brand-tag" id="brand-tag">–</div>
         </div>
       </div>
 
       <!-- RANKING -->
       <div id="panel-ranking" class="dash-panel active">
         <!-- Overview stats + charts (only in Rankings) -->
-      <div class="card" style="margin-bottom:12px">
-        <div class="card-title">Overview</div>
-        <div id="stats-row" class="stats-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin-bottom:16px"></div>
-        <div class="grid-2" style="gap:16px">
-          <div><div class="card-title" style="font-size:var(--text-xs);margin-bottom:8px">LLM Top-3 Visibility</div><div class="chart-wrap" style="height:180px"><canvas id="chart-visibility"></canvas></div></div>
-          <div><div class="card-title" style="font-size:var(--text-xs);margin-bottom:8px">Citation Sources</div><div class="chart-wrap" style="height:180px"><canvas id="chart-source-types"></canvas></div></div>
+      <div class="card float-row-card">
+        <div class="card-title chart-title">Overview</div>
+        <div id="stats-row" class="stats-row stats-row-overview"></div>
+        <div class="grid-2 charts-split">
+          <div class="chart-col"><div class="card-title chart-title" style="font-size:var(--text-xs);margin-bottom:8px">LLM Top-3 Visibility</div><div class="chart-wrap" style="height:180px"><canvas id="chart-visibility"></canvas></div></div>
+          <div class="chart-col"><div class="card-title chart-title" style="font-size:var(--text-xs);margin-bottom:8px">Citation Sources</div><div class="chart-wrap" style="height:180px"><canvas id="chart-source-types"></canvas></div></div>
         </div>
-      </div>
-        <div class="card">
+        </div>
+        <div class="card float-row-card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-            Brand Rank Per Query
-            <div style="display:flex;gap:6px;flex-wrap:wrap" id="rank-filter-btns">
-              <button class="rank-filter-btn active" onclick="setRankFilter('all',this)">All Queries</button>
-              <button class="rank-filter-btn" onclick="setRankFilter('multi',this)">Multi-brand</button>
-              <button class="rank-filter-btn" onclick="setRankFilter('mentioned',this)">Brand Mentioned</button>
+            <span>Branding</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto" id="rank-filter-btns">
+              <button class="btn btn-ghost btn-sm rank-filter-btn active" onclick="setRankFilter('all',this)">All Queries</button>
+              <button class="btn btn-ghost btn-sm rank-filter-btn" onclick="setRankFilter('multi',this)">Multi-brand</button>
+              <button class="btn btn-ghost btn-sm rank-filter-btn" onclick="setRankFilter('mentioned',this)">Brand Mentioned</button>
             </div>
           </div>
           <div id="ranking-per-prompt"></div>
         </div>
-        <div class="card" style="margin-top:12px">
+        <div class="card float-row-card">
           <div class="card-title">Brand Summary</div>
           <div class="table-wrap">
-            <table>
+            <table class="float-row-table">
               <thead><tr>
                 <th>Brand</th>
                 <th class="sortable-th" data-sort="mentions" onclick="setRankingSort('mentions',this)">Mentions</th>
@@ -340,13 +436,15 @@
 
       <!-- CITATIONS -->
       <div id="panel-citations" class="dash-panel">
-          <div class="card">
+          <div class="card float-row-card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
             <div style="display:flex;align-items:center;gap:12px">
             <span>Citations</span>
-            <span id="citation-count" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--dash-row-content);font-weight:400"></span>
-              <label class="citation-brand-filter-label">
-                <input type="checkbox" id="citation-brand-toggle" onchange="toggleCitationBrandFilter(this.checked)" /> Brand mentioned only
+            <span id="citation-count" class="citation-count" style="font-size:var(--text-xs);letter-spacing:0.06em;font-weight:400"></span>
+              <label class="citation-brand-filter">
+                <input type="checkbox" id="citation-brand-toggle" onchange="toggleCitationBrandFilter(this.checked)" />
+                <span class="citation-brand-toggle-track"></span>
+                <span>Brand mentioned only</span>
               </label>
           </div>
             <div class="citation-domain-filters-wrap">
@@ -355,22 +453,22 @@
           </div>
         </div>
           <div class="table-wrap" id="citations-table-wrap">
-            <table class="citation-detail-table" id="citations-table">
+            <table class="citation-detail-table float-row-table" id="citations-table">
+              <colgroup><col style="width:22%"><col style="width:8%"><col style="width:10%"><col style="width:90px"><col style="width:28%"><col style="width:22%"></colgroup>
               <thead>
                 <tr>
-                  <th class="citation-col-filter" data-col="query" onclick="openCitationColFilter('query', event)" style="width:22%">Query</th>
+                  <th style="width:22%">
+                    <input type="text" id="citation-query-search" class="citation-header-input" placeholder="Query" />
+                  </th>
                   <th class="citation-col-filter" data-col="llm" onclick="openCitationColFilter('llm', event)" style="width:8%">LLM</th>
                   <th class="citation-col-filter" data-col="source" onclick="openCitationColFilter('source', event)" style="width:10%">Source</th>
-                  <th class="citation-page-title-header" style="width:28%">Page Title</th>
-                  <th class="citation-col-filter" data-col="domain" onclick="openCitationColFilter('domain', event)" style="width:22%">Domain</th>
-                  <th style="width:40px"></th>
-                </tr>
-                <tr class="citation-filter-row">
-                  <th></th><th></th><th></th>
-                  <th class="citation-page-title-search-cell">
-                    <input type="text" id="citation-page-title-search" class="citation-filter-search" placeholder="Search page titles…" />
+                  <th style="width:90px">Mentions</th>
+                  <th style="width:28%">
+                    <input type="text" id="citation-page-title-search" class="citation-header-input" placeholder="Page Title" />
                   </th>
-                  <th></th><th></th>
+                  <th style="width:22%">
+                    <input type="text" id="citation-domain-search" class="citation-header-input" placeholder="Domain" />
+                  </th>
                 </tr>
               </thead>
               <tbody id="citations-list"></tbody>
@@ -383,20 +481,20 @@
 
       <!-- COMPETITORS -->
       <div id="panel-competitors" class="dash-panel">
-        <div class="card">
-          <div class="card-title">Top Competitors by Mention Count</div>
+        <div class="card float-row-card" style="overflow:hidden">
+          <div class="card-title chart-title">Top Competitors by Mention Count</div>
           <div class="chart-wrap"><canvas id="chart-competitors"></canvas></div>
         </div>
-        <div class="card" style="margin-top:12px">
+        <div class="card float-row-card">
           <div class="card-title">Competitor vs. Brand Ranking</div>
           <div class="table-wrap">
-            <table class="competitor-ranking-table">
+            <table class="competitor-ranking-table float-row-table">
               <thead><tr><th>Brand</th><th>Positioning</th><th>Mentions</th><th>By LLM</th><th>Avg Rank</th><th>Best Rank</th><th>vs. You</th></tr></thead>
               <tbody id="competitor-table"></tbody>
             </table>
           </div>
         </div>
-        <div class="card" style="margin-top:12px">
+        <div class="card float-row-card">
           <div class="card-title">Competitor Analysis</div>
           <div style="font-size:var(--text-xs);color:var(--text2);margin-bottom:10px;line-height:1.5">
             Each card shows a competitor and how the AI characterized them. Click to expand: each row shows one AI response—the characterization and the surrounding quote from the response where the competitor was mentioned.
@@ -407,23 +505,25 @@
 
       <!-- PERSONAS -->
       <div id="panel-personas" class="dash-panel">
-        <div class="card" style="margin-bottom:12px">
+        <div class="card float-row-card">
           <div class="card-title">Persona Performance</div>
           <div class="table-wrap">
-            <table>
+            <table class="persona-comparison-table float-row-table">
               <thead><tr>
-                <th>Persona</th>
+                <th class="persona-col">Persona</th>
                 <th>Queries</th>
                 <th>Avg Rank</th>
                 <th>Top-3 Rate</th>
                 <th>Mention Rate</th>
-                <th>By LLM (Top-3)</th>
+                <th class="llm-col"><div class="llm-col-hdr"><span class="llm-badge llm-chatgpt">ChatGPT</span></div></th>
+                <th class="llm-col"><div class="llm-col-hdr"><span class="llm-badge llm-claude">Claude</span></div></th>
+                <th class="llm-col"><div class="llm-col-hdr"><span class="llm-badge llm-gemini">Gemini</span></div></th>
               </tr></thead>
               <tbody id="persona-comparison-table"></tbody>
             </table>
           </div>
         </div>
-        <div class="card" style="margin-bottom:12px">
+        <div class="card float-row-card">
           <div class="card-title">Per-Persona Prompts</div>
           <div id="persona-prompt-breakdown"></div>
         </div>
@@ -431,7 +531,7 @@
 
       <!-- REPORT (same width as AI Chat panel) -->
       <div id="panel-report" class="dash-panel">
-        <div class="card report-panel-card">
+        <div class="card report-panel-card float-row-card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
             Report
             <div style="display:flex;gap:6px">
@@ -445,7 +545,7 @@
 
       <!-- AI ASSISTANT -->
       <div id="panel-assistant" class="dash-panel">
-        <div class="card" style="padding:0;overflow:hidden">
+        <div class="card float-row-card" style="padding:0;overflow:hidden">
           <div class="chat-window" style="height:500px;border:none;border-radius:0">
             <div class="chat-messages" id="chat-messages">
               <div class="chat-message assistant">
@@ -460,7 +560,7 @@
             </div>
           </div>
         </div>
-        <div class="card" style="margin-top:12px">
+        <div class="card float-row-card">
           <div class="card-title">Suggested Questions</div>
           <div class="suggestions" id="suggestions"></div>
         </div>
@@ -538,6 +638,12 @@
 
     const COLORS = ['#fbbf24','#a0be82','#60a5fa','#c084fc','#f87171','#fb923c','#14b8a6','#06b6d4']
 
+    function parseHex(hex) {
+      const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i)
+      return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [0,0,0]
+    }
+    function createPixelPattern(ctx, color) { return color }
+
     Chart.defaults.color = '#6b6660'
     Chart.defaults.borderColor = '#2c2a27'
     Chart.defaults.font.family = "'JetBrains Mono', monospace"
@@ -549,7 +655,7 @@
 
     function rankBadge(r) {
       const cls = r===1?'rank-1':r===2?'rank-2':r===3?'rank-3':'rank-other'
-      return `<span class="rank-cell ${cls}">${r}</span>`
+      return `<span class="rank-badge ${cls}">${r}</span>`
     }
 
     function llmBadge(llm) { return `<span class="llm-badge llm-${llm}">${llm}</span>` }
@@ -570,7 +676,10 @@
       document.querySelectorAll('.dash-nav-item').forEach(i => i.classList.remove('active'))
       document.getElementById(`panel-${name}`).classList.add('active')
       el.classList.add('active')
-      if (name === 'competitors') resetCompetitorAnalysisAccordions()
+      if (name === 'competitors') {
+        resetCompetitorAnalysisAccordions()
+        ensureCompetitorsChart()
+      }
     }
 
     function resetCompetitorAnalysisAccordions() {
@@ -580,6 +689,36 @@
 
     function destroyChart(id) {
       if (charts[id]) { charts[id].destroy(); delete charts[id] }
+    }
+
+    const barLabelPlugin = {
+      id: 'barLabel',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx
+        const isHorizontal = chart.options.indexAxis === 'y'
+        const fmt = chart.options.plugins?.barLabel?.formatter || (x => x)
+        chart.data.datasets.forEach((ds, i) => {
+          const meta = chart.getDatasetMeta(i)
+          meta.data.forEach((bar, j) => {
+            const v = ds.data[j]
+            if (v == null) return
+            const txt = fmt(v)
+            ctx.save()
+            ctx.font = "9px 'JetBrains Mono', monospace"
+            ctx.fillStyle = '#9f9a9a'
+            if (isHorizontal) {
+              ctx.textAlign = 'left'
+              ctx.textBaseline = 'middle'
+              ctx.fillText(txt, bar.x + bar.width + 4, bar.y + bar.height / 2)
+            } else {
+              ctx.textAlign = 'center'
+              ctx.textBaseline = 'bottom'
+              ctx.fillText(txt, bar.x, bar.y - 4)
+            }
+            ctx.restore()
+          })
+        })
+      },
     }
 
     function buildOverview() {
@@ -615,10 +754,39 @@
       })
 
       destroyChart('visibility')
+      const visColors = COLORS.slice(0, 3)
       charts.visibility = new Chart(document.getElementById('chart-visibility'), {
         type: 'bar',
-        data: { labels: ['Claude','ChatGPT','Gemini'], datasets:[{ label:'% in Top 3', data: llmVis, backgroundColor: COLORS.slice(0,3), borderRadius:2 }] },
-        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{max:100,ticks:{callback:v=>`${v}%`}}} },
+        data: {
+          labels: ['Claude','ChatGPT','Gemini'],
+          datasets: [{
+            label: '% in Top 3',
+            data: llmVis,
+            backgroundColor: (ctx) => createPixelPattern(ctx.chart.ctx, visColors[ctx.dataIndex], 3),
+            borderRadius: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            barLabel: { formatter: (v) => v + '%' },
+          },
+          scales: {
+            y: {
+              max: 100,
+              ticks: { callback: v => v + '%' },
+              grid: { display: false },
+              border: { display: true },
+            },
+            x: {
+              grid: { display: false },
+              border: { display: true },
+            },
+          },
+        },
+        plugins: [barLabelPlugin],
       })
 
       destroyChart('sourceTypes')
@@ -633,20 +801,59 @@
         options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right'}} },
       })
 
+      destroyChart('competitors')
+      if (document.getElementById('panel-competitors').classList.contains('active')) {
+        ensureCompetitorsChart()
+      }
+    }
+
+    function ensureCompetitorsChart() {
+      if (!data) return
+      const { competitorRanks, competitorDetail } = data
+      const compsForOverview = competitorDetail?.length ? competitorDetail : competitorRanks || []
+      const competitors = compsForOverview.filter(r => !r.is_target)
       const topComp = [...competitors].sort((a,b) => totalMentions(b) - totalMentions(a)).slice(0,8)
       const mentionValues = topComp.map(c=>totalMentions(c))
       const maxMentions = Math.max(1, ...mentionValues)
       const barColors = topComp.map((_, i) => COLORS[i % COLORS.length])
       destroyChart('competitors')
-      charts.competitors = new Chart(document.getElementById('chart-competitors'), {
+      const canvas = document.getElementById('chart-competitors')
+      if (!canvas) return
+      charts.competitors = new Chart(canvas, {
         type: 'bar',
-        data: { labels: topComp.map(c=>c.brand_name), datasets:[{ label:'Mentions', data:mentionValues, backgroundColor:barColors, borderRadius:2 }] },
-        options: {
-          responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}},
-          scales: {
-            x: { min:0, max: maxMentions, ticks: { stepSize:1, precision:0 } }
-          }
+        data: {
+          labels: topComp.map(c => c.brand_name),
+          datasets: [{
+            label: 'Mentions',
+            data: mentionValues,
+            backgroundColor: (ctx) => createPixelPattern(ctx.chart.ctx, barColors[ctx.dataIndex], 3),
+            borderRadius: 0,
+          }],
         },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          animation: false,
+          plugins: {
+            legend: { display: false },
+            barLabel: { formatter: (v) => String(v) },
+          },
+          scales: {
+            x: {
+              min: 0,
+              max: maxMentions,
+              ticks: { stepSize: 1, precision: 0 },
+              grid: { display: false },
+              border: { display: true },
+            },
+            y: {
+              grid: { display: false },
+              border: { display: true },
+            },
+          },
+        },
+        plugins: [barLabelPlugin],
       })
     }
 
@@ -691,12 +898,17 @@
         const qid = r.query_id
         const allBrands = (qid && mentionsByQueryId[qid]) || []
         if (!subsByPrompt[r.prompt_text]) subsByPrompt[r.prompt_text] = { funnel_stage: r.funnel_stage, subs: [] }
+        const competitorsOrdered = allBrands
+          .filter(b => !b.is_target)
+          .sort((a, b) => a.rank - b.rank)
+          .slice(0, 3)
         subsByPrompt[r.prompt_text].subs.push({
           query_id: r.query_id,
           llm: r.llm,
           persona_name: r.persona_name,
           target: allBrands.find(b => b.is_target),
           brand_count: allBrands.length,
+          competitors_ordered: competitorsOrdered,
         })
       }
 
@@ -740,15 +952,20 @@
             (!group.avg_rank.toFixed(1).endsWith('.0')
               ? `<span style="color:var(--text3);font-size:var(--text-xs);margin-left:3px">(${group.avg_rank.toFixed(1)})</span>`
               : '')
-          : `<span style="color:var(--text3);font-size:var(--text-xs);letter-spacing:0.04em">No ranking</span>`
+          : `<span style="color:var(--text3);font-size:var(--text-xs);letter-spacing:0.04em">No mentions</span>`
 
         // Sub-rows
         const subRows = group.subs.map((sub, j) => {
-          const rankStr = sub.target
-            ? rankBadge(sub.target.rank) + (sub.brand_count > 1
+          let rankStr
+          if (sub.target) {
+            rankStr = rankBadge(sub.target.rank) + (sub.brand_count > 1
                 ? ` <span style="color:var(--text3);font-size:var(--text-xs);letter-spacing:0.04em">of ${sub.brand_count}</span>`
                 : '')
-            : `<span style="color:var(--text3);font-size:var(--text-xs);letter-spacing:0.04em">No ranking</span>`
+          } else if (sub.competitors_ordered?.length) {
+            rankStr = `<span class="pg-competitors-list">${sub.competitors_ordered.map((c, i) => `<span class="pg-competitor-item">${rankBadge(i + 1)} ${escHtml(c.brand_name)}</span>`).join('')}</span>`
+          } else {
+            rankStr = `<span style="color:var(--text3);font-size:var(--text-xs);letter-spacing:0.04em">No mentions</span>`
+          }
           return `<div class="pg-sub">
             <div>
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
@@ -757,12 +974,12 @@
               </div>
               <div id="pg-resp-${gi}-${j}" data-loaded="false" style="color:var(--text3);font-size:var(--text-xs)">—</div>
             </div>
-            <div style="text-align:right;white-space:nowrap">${rankStr}</div>
+            <div style="text-align:right;white-space:normal;min-width:0">${rankStr}</div>
           </div>`
         }).join('')
 
-        return `<div>
-          <div class="pg-header" onclick="togglePromptGroup(${gi})">
+        return `<div class="pg-prompt-group" style="margin-bottom:var(--float-row-buffer);background:var(--float-row-bg);border-radius:var(--float-row-radius);overflow:hidden">
+          <div class="pg-header" onclick="togglePromptGroup(${gi})" style="padding:var(--float-row-padding);margin:0">
           <div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
                 ${stageBadge(group.funnel_stage)}
@@ -775,7 +992,7 @@
               <span class="pg-caret" id="pg-caret-${gi}">▼</span>
             </div>
           </div>
-          <div class="pg-detail" id="pg-detail-${gi}" style="display:none">${subRows}</div>
+          <div class="pg-detail" id="pg-detail-${gi}" style="display:none;padding:0 14px 12px;border:none">${subRows}</div>
         </div>`
       }).join('')
     }
@@ -911,8 +1128,7 @@
     function openCitationColFilter(col, ev) {
       ev.stopPropagation()
       const pop = document.getElementById('citation-col-popover')
-      const wrap = document.getElementById('citations-table-wrap')
-      if (!pop || !wrap) return
+      if (!pop) return
       if (citationColPopoverOpen === col) { closeCitationColFilter(); return }
       citationColPopoverOpen = col
       document.querySelectorAll('.citation-col-filter').forEach(h => h.classList.remove('active'))
@@ -922,32 +1138,14 @@
       const sourceTypes = [...new Set(citationDetail.map(c => String(c.source_type || 'unknown').toLowerCase()))].sort()
       const llms = LLM_KEYS
 
-      if (col === 'query') {
-        pop.innerHTML = `<input type="text" placeholder="Search keywords…" value="${escHtml(citationQueryFilter)}" id="cf-query-input" />`
-        setTimeout(() => {
-          const inp = document.getElementById('cf-query-input')
-          if (inp) {
-            inp.focus()
-            inp.oninput = () => { citationQueryFilter = inp.value; buildCitationDomainFilters(); renderCitationsList() }
-          }
-        }, 0)
-      } else if (col === 'domain') {
-        pop.innerHTML = `<input type="text" placeholder="Search domain…" value="${escHtml(citationDomainKeywordFilter)}" id="cf-domain-input" />`
-        setTimeout(() => {
-          const inp = document.getElementById('cf-domain-input')
-          if (inp) {
-            inp.focus()
-            inp.oninput = () => { citationDomainKeywordFilter = inp.value; buildCitationDomainFilters(); renderCitationsList() }
-          }
-        }, 0)
-      } else if (col === 'llm') {
+      if (col === 'llm') {
         const sel = citationLLMFilters || []
         const allCitations = (data && data.citationDetail) || []
         pop.innerHTML = llms.map(l => {
           const active = sel.includes(l) ? ' active' : ''
           const label = l.charAt(0).toUpperCase() + l.slice(1)
           const count = allCitations.filter(c => String(c.llm || '').toLowerCase() === l).length
-          return `<button class="cf-llm-toggle${active}" data-llm="${escHtml(l)}" onclick="toggleCitationLLMFilter('${escHtml(l)}', !this.classList.contains('active'))">${label}<span class="cf-llm-count">${count}</span></button>`
+          return `<button class="cf-llm-toggle${active}" data-llm="${escHtml(l)}" onclick="toggleCitationLLMFilter('${escHtml(l)}', !this.classList.contains('active'))"><span class="llm-badge llm-${l}">${label}</span><span class="cf-llm-count">${count}</span></button>`
         }).join('')
       } else if (col === 'source') {
         const sel = citationSourceFilters || []
@@ -955,15 +1153,14 @@
         pop.innerHTML = types.map(s => {
           const checked = sel.includes(s) ? ' checked' : ''
           const label = s.charAt(0).toUpperCase() + s.slice(1)
-          return `<label class="cf-check"><input type="checkbox" data-source="${escHtml(s)}"${checked} onchange="toggleCitationSourceFilter(this.dataset.source, this.checked)">${label}</label>`
+          return `<label class="cf-check"><input type="checkbox" data-source="${escHtml(s)}"${checked} onchange="toggleCitationSourceFilter(this.dataset.source, this.checked)"><span class="cf-checkbox"></span>${label}</label>`
         }).join('')
       }
-      // Position popover below the clicked header
+      // Position popover below the clicked header (fixed so it doesn't cause table layout shift)
       pop.style.display = 'block'
       const rect = ev.currentTarget.getBoundingClientRect()
-      const wrapRect = wrap.getBoundingClientRect()
-      pop.style.left = (rect.left - wrapRect.left + wrap.scrollLeft) + 'px'
-      pop.style.top = (rect.bottom - wrapRect.top + wrap.scrollTop + 4) + 'px'
+      pop.style.left = rect.left + 'px'
+      pop.style.top = (rect.bottom + 4) + 'px'
       setTimeout(() => document.addEventListener('click', closeCitationColFilterOnClick), 0)
     }
 
@@ -994,6 +1191,13 @@
       const emptyEl = document.getElementById('citations-empty')
       const tableEl = document.getElementById('citations-table')
       if (!tbody) return
+      // Sync inline filter inputs from state (e.g. when changed via popover)
+      const qInp = document.getElementById('citation-query-search')
+      const dInp = document.getElementById('citation-domain-search')
+      const pInp = document.getElementById('citation-page-title-search')
+      if (qInp && qInp.value !== citationQueryFilter) qInp.value = citationQueryFilter
+      if (dInp && dInp.value !== citationDomainKeywordFilter) dInp.value = citationDomainKeywordFilter
+      if (pInp && pInp.value !== citationPageTitleFilter) pInp.value = citationPageTitleFilter
       let list = (data && data.citationDetail) || []
       if (!Array.isArray(list)) list = []
       let filtered = list.filter(c => c)
@@ -1027,12 +1231,11 @@
       const countEl = document.getElementById('citation-count')
       if (countEl) countEl.textContent = hasFilters ? `${filtered.length} of ${total} links` : `${total} links`
       if (filtered.length === 0) {
-        tbody.innerHTML = ''
-        if (emptyEl) {
-          emptyEl.style.display = 'block'
-          emptyEl.textContent = hasFilters ? 'No citations match the current filters.' : 'No citations yet.'
-        }
-        if (tableEl) tableEl.style.display = 'none'
+        const msg = hasFilters ? 'No citations match the current filters.' : 'No citations yet.'
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text3);font-size:var(--text-sm)">${escHtml(msg)}</td></tr>`
+        if (emptyEl) emptyEl.style.display = 'none'
+        if (tableEl) tableEl.style.display = 'table'
+        updateCitationColIndicators()
         return
       }
       if (emptyEl) emptyEl.style.display = 'none'
@@ -1040,25 +1243,91 @@
 
       updateCitationColIndicators()
 
-      tbody.innerHTML = filtered.map(c => {
+      // Group identical citations by (prompt_text, url, domain, page_title)
+      const groups = new Map()
+      for (const c of filtered) {
+        const url = (c && c.url) ? String(c.url).trim() : ''
+        const domain = (c && c.domain) ? String(c.domain) : ''
+        const pageTitle = (c && c.page_title) ? String(c.page_title).trim() : ''
+        const promptText = (c && c.prompt_text) ? String(c.prompt_text).trim() : ''
+        const key = `${promptText}|${url}|${domain}|${pageTitle}`
+        if (!groups.has(key)) groups.set(key, { c, items: [] })
+        const g = groups.get(key)
+        g.items.push({ query_id: (c && c.query_id) ? String(c.query_id) : '', llm: (c && c.llm) ? String(c.llm) : '' })
+      }
+
+      citationGroups = [...groups.values()]
+      tbody.innerHTML = citationGroups.map((g, gi) => {
+        const c = g.c
+        const items = g.items
         const url = (c && c.url) ? String(c.url).trim() : ''
         const domain = (c && c.domain) ? String(c.domain) : ''
         const pageTitle = (c && c.page_title) ? String(c.page_title).trim() : ''
         const promptText = (c && c.prompt_text) ? String(c.prompt_text).trim() : ''
         const promptSnippet = promptText ? (promptText.substring(0, 80) + (promptText.length > 80 ? '…' : '')) : '—'
-        const qId = (c && c.query_id) ? String(c.query_id) : ''
-        const llm = (c && c.llm) ? String(c.llm) : ''
         const sourceType = (c && c.source_type) ? String(c.source_type) : 'unknown'
         const sourceBadge = `<span class="source-type-badge source-type-${sourceType}">${escHtml(sourceType)}</span>`
-        return `<tr>
+
+        const uniqueLlms = [...new Set(items.map(i => i.llm).filter(Boolean))]
+        const llmCell = uniqueLlms.length === 1
+          ? llmBadge(uniqueLlms[0])
+          : `<div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start">${uniqueLlms.map(llm => llmBadge(llm)).join('')}</div>`
+
+        const deduped = items.filter((o, i, arr) => arr.findIndex(x => x.query_id === o.query_id && x.llm === o.llm) === i)
+        const label = items.length === 1 ? 'mention' : 'mentions'
+        const mentionsCell = `<span class="pg-count">${items.length} ${label}</span>`
+
+        return `<tr class="citation-row-header" onclick="toggleCitationRow(${gi})" style="cursor:pointer">
           <td class="citation-prompt-snippet" title="${escHtml(promptText)}">${escHtml(promptSnippet)}</td>
-          <td>${llmBadge(llm)}</td>
+          <td>${llmCell}</td>
           <td>${sourceBadge}</td>
-          <td title="${escHtml(pageTitle)}">${url && url.startsWith('http') ? `<a href="${escHtml(url)}" target="_blank" rel="noopener" class="citation-page-title-link">${escHtml(pageTitle || '—')}</a>` : escHtml(pageTitle || '—')}</td>
+          <td>${mentionsCell} <span class="pg-caret" id="cit-caret-${gi}">▼</span></td>
+          <td title="${escHtml(pageTitle)}">${url && url.startsWith('http') ? `<a href="${escHtml(url)}" target="_blank" rel="noopener" class="citation-page-title-link" onclick="event.stopPropagation()">${escHtml(pageTitle || '—')}</a>` : escHtml(pageTitle || '—')}</td>
           <td>${escHtml(domain)}</td>
-          <td><button class="citation-output-btn" data-query-id="${escHtml(qId)}" onclick="openOutputModal(this.dataset.queryId)" title="View LLM output">💬</button></td>
-        </tr>`
+        </tr>
+        <tr id="cit-detail-${gi}" style="display:none"><td colspan="6" style="padding:0 14px 12px">
+          ${deduped.map((o, j) => `<div class="pg-sub" style="grid-template-columns:1fr" id="cit-resp-${gi}-${j}" data-query-id="${escHtml(o.query_id)}" data-loaded="false">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">${llmBadge(o.llm)}</div>
+            <div style="color:var(--text3);font-size:var(--text-xs)">—</div>
+          </div>`).join('')}
+        </td></tr>`
       }).join('')
+    }
+
+    let citationGroups = []
+
+    function toggleCitationRow(gi) {
+      const detail = document.getElementById(`cit-detail-${gi}`)
+      const caret = document.getElementById(`cit-caret-${gi}`)
+      if (!detail || !caret) return
+      const isOpen = detail.style.display !== 'none'
+      detail.style.display = isOpen ? 'none' : 'table-row'
+      caret.textContent = isOpen ? '▼' : '▲'
+      if (!isOpen) {
+        const g = citationGroups[gi]
+        if (!g) return
+        const deduped = g.items.filter((o, i, arr) => arr.findIndex(x => x.query_id === o.query_id && x.llm === o.llm) === i)
+        deduped.forEach((_, j) => loadCitationResponse(gi, j))
+      }
+    }
+
+    function loadCitationResponse(gi, j) {
+      const el = document.getElementById(`cit-resp-${gi}-${j}`)
+      if (!el || el.dataset.loaded !== 'false') return
+      const queryId = el.dataset.queryId
+      if (!queryId) return
+      el.dataset.loaded = 'loading'
+      el.children[1].innerHTML = '<span class="spinner"></span>'
+      fetch(API(`/api/runs/${runId}/queries/${queryId}/response`))
+        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
+        .then(d => {
+          el.dataset.loaded = 'true'
+          el.children[1].innerHTML = `<div style="white-space:pre-wrap;font-size:var(--text-sm);line-height:1.6;color:var(--text2);max-height:220px;overflow-y:auto;border:1px solid var(--border);padding:8px 10px;margin-top:4px">${escHtml(d.response_text || '')}</div>`
+        })
+        .catch(err => {
+          el.dataset.loaded = 'false'
+          el.children[1].innerHTML = `<span style="color:var(--danger);font-size:var(--text-xs);cursor:pointer" onclick="loadCitationResponse(${gi},${j})">⟳ Retry</span>`
+        })
     }
 
     function buildCitationDomainFilters() {
@@ -1134,6 +1403,26 @@
           renderCitationsList()
         }
       }
+      const queryInput = document.getElementById('citation-query-search')
+      if (queryInput && !queryInput.dataset.wired) {
+        queryInput.dataset.wired = '1'
+        queryInput.value = citationQueryFilter
+        queryInput.oninput = () => {
+          citationQueryFilter = queryInput.value
+          buildCitationDomainFilters()
+          renderCitationsList()
+        }
+      }
+      const domainInput = document.getElementById('citation-domain-search')
+      if (domainInput && !domainInput.dataset.wired) {
+        domainInput.dataset.wired = '1'
+        domainInput.value = citationDomainKeywordFilter
+        domainInput.oninput = () => {
+          citationDomainKeywordFilter = domainInput.value
+          buildCitationDomainFilters()
+          renderCitationsList()
+        }
+      }
       buildCitationDomainFilters()
       renderCitationsList()
     }
@@ -1186,14 +1475,14 @@
         console.debug('[Competitors] buildCompetitors — comps:', comps.length, 'competitorDetail:', !!competitorDetail?.length)
       }
 
-      /** Format mentions_by_llm as "C:12 Ch:8 G:5" for table cell */
-      function byLlmStr(mbl) {
+      /** Format mentions_by_llm as colored badges */
+      function byLlmBadges(mbl) {
         if (!mbl || typeof mbl !== 'object') return '—'
         const parts = []
-        if (mbl.claude) parts.push(`C:${mbl.claude}`)
-        if (mbl.chatgpt) parts.push(`Ch:${mbl.chatgpt}`)
-        if (mbl.gemini) parts.push(`G:${mbl.gemini}`)
-        return parts.length ? parts.join(' ') : '—'
+        if (mbl.claude) parts.push(`<span class="llm-badge llm-claude">${mbl.claude}</span>`)
+        if (mbl.chatgpt) parts.push(`<span class="llm-badge llm-chatgpt">${mbl.chatgpt}</span>`)
+        if (mbl.gemini) parts.push(`<span class="llm-badge llm-gemini">${mbl.gemini}</span>`)
+        return parts.length ? parts.join('') : '—'
       }
 
       // Top 20 by mentions, sorted descending; target brand always included
@@ -1214,7 +1503,7 @@
             <td><strong>${escHtml(r.brand_name)}</strong>${r.is_target?' <span style="font-size:var(--text-xs);color:var(--accent)">(you)</span>':''}</td>
             <td class="competitor-positioning-cell">${r.positioning ? escHtml(String(r.positioning)) : '—'}</td>
             <td>${totalMentions(r)}</td>
-            <td style="font-size:var(--text-xs);color:var(--text2)">${byLlmStr(r.mentions_by_llm)}</td>
+            <td><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center">${byLlmBadges(r.mentions_by_llm)}</div></td>
             <td>${rankBadge(Math.round(Number(r?.avg_rank) || 0))}</td>
             <td>${rankBadge(Number(r?.best_rank) || 0)}</td>
             <td style="font-size:var(--text-sm)">${diffStr}</td>
@@ -1261,8 +1550,8 @@
                 </div>
           </div>`).join('')
             return `
-              <div style="margin-bottom:12px;border:1px solid var(--border);border-radius:4px;overflow:hidden">
-                <div class="pg-header" onclick="toggleCompAnalysisGroup(${gi})" style="padding:12px 14px;margin:0">
+              <div class="comp-analysis-item" style="margin-bottom:var(--float-row-buffer);background:var(--float-row-bg);border-radius:var(--float-row-radius);overflow:hidden">
+                <div class="pg-header" onclick="toggleCompAnalysisGroup(${gi})" style="padding:var(--float-row-padding);margin:0">
                   <div>
                     <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
                       <strong style="font-size:var(--text-sm)">${escHtml(g.brand)}</strong>
@@ -1274,7 +1563,7 @@
                     <span class="pg-caret" id="ca-caret-${gi}">▼</span>
                   </div>
                 </div>
-                <div class="pg-detail" id="ca-detail-${gi}" style="display:none;padding:0 14px 12px;border-top:1px solid var(--border2)">${subRows}</div>
+                <div class="pg-detail" id="ca-detail-${gi}" style="display:none;padding:0 14px 12px">${subRows}</div>
               </div>`
           }).join('')
         }
@@ -1456,15 +1745,16 @@
       // Comparison table
       const tbody = document.getElementById('persona-comparison-table')
       if (!personaStats.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No persona data available yet.</td></tr>'
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">No persona data available yet.</td></tr>'
       } else {
+        const llmOrder = ['chatgpt', 'claude', 'gemini']
         tbody.innerHTML = personaStats.map(p => {
-          const llmCells = llms.map(l => {
+          const llmCells = llmOrder.map(l => {
             const d = p.byLlm[l]
             return d.total > 0 ? `${Math.round((d.top3 / d.total) * 100)}%` : '—'
           })
           return `<tr>
-            <td style="border-left:3px solid ${p.color};padding-left:10px">
+            <td class="persona-col" style="padding-left:12px">
               <div style="font-weight:600">${escHtml(p.shortName)}</div>
               ${p.description ? `<div style="font-size:var(--text-xs);color:var(--text3);line-height:1.4;margin-top:2px">${escHtml(p.description)}</div>` : ''}
             </td>
@@ -1472,7 +1762,9 @@
             <td>${p.avgRank != null ? '#' + p.avgRank.toFixed(1) : '—'}</td>
             <td>${p.top3Rate}%</td>
             <td>${p.mentionRate}%</td>
-            <td style="font-size:var(--text-xs);color:var(--text2)">C:${llmCells[0]} Ch:${llmCells[1]} G:${llmCells[2]}</td>
+            <td class="llm-col">${llmCells[0]}</td>
+            <td class="llm-col">${llmCells[1]}</td>
+            <td class="llm-col">${llmCells[2]}</td>
           </tr>`
         }).join('')
       }
@@ -1518,13 +1810,13 @@
         })
 
         return `
-          <div style="margin-bottom:4px">
-            <div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);border-left:3px solid ${p.color};padding-left:10px" onclick="document.getElementById('persona-bd-${pi}').style.display = document.getElementById('persona-bd-${pi}').style.display === 'none' ? 'block' : 'none'">
-              <span style="font-weight:600">${escHtml(p.shortName)}</span>
+          <div class="persona-prompt-item" style="margin-bottom:var(--float-row-buffer);background:var(--float-row-bg);border-radius:var(--float-row-radius);overflow:hidden">
+            <div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:var(--float-row-padding);border-left:3px solid ${p.color}" onclick="document.getElementById('persona-bd-${pi}').style.display = document.getElementById('persona-bd-${pi}').style.display === 'none' ? 'block' : 'none'">
+              <span style="font-weight:600;color:var(--accent)">${escHtml(p.shortName)}</span>
               <span class="pg-count">${Object.keys(byPrompt).length} prompts</span>
             </div>
-            <div id="persona-bd-${pi}" style="display:none">
-              <table class="citation-detail-table" style="table-layout:auto">
+            <div id="persona-bd-${pi}" style="display:none;padding:0 14px 12px">
+              <table class="citation-detail-table float-row-table" style="table-layout:auto">
                 <thead><tr>
                   <th style="text-align:left">Prompt</th>
                   <th style="width:80px">Avg Rank</th>

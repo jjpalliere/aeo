@@ -10,24 +10,25 @@
     .live-layout {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0;
+      gap: var(--float-row-buffer);
       height: calc(100vh - 49px);
+      padding: var(--float-row-buffer);
+      align-content: stretch;
     }
 
     .llm-column {
       display: flex;
       flex-direction: column;
-      border-right: 1px solid var(--border);
+      background: var(--float-row-bg);
+      border-radius: var(--float-row-radius);
       overflow: hidden;
     }
-    .llm-column:last-child { border-right: none; }
 
     .col-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
 
@@ -50,20 +51,22 @@
     .col-body {
       flex: 1;
       overflow-y: auto;
-      padding: 0;
+      padding: var(--float-row-buffer);
     }
 
     .response-card {
       padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--float-row-buffer);
+      background: var(--surface);
+      border-radius: var(--float-row-radius);
       cursor: pointer;
     }
-    .response-card:hover { background: var(--surface2); }
+    .response-card:hover { background: var(--float-row-bg-hover); }
     .response-card.new { background: var(--w-02); }
 
     .response-prompt {
       font-size: var(--text-sm);
-      color: var(--text2);
+      color: var(--text3);
       margin-bottom: 6px;
       line-height: 1.4;
       display: flex;
@@ -81,7 +84,7 @@
 
     .response-text {
       font-size: var(--text-sm);
-      color: var(--text);
+      color: var(--text3);
       line-height: 1.6;
       display: -webkit-box;
       -webkit-line-clamp: 4;
@@ -129,7 +132,17 @@
       transition: all 0.15s;
     }
     .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-    .filter-btn:hover  { color: var(--text); border-color: var(--border2); }
+    .filter-btn:hover { color: var(--text); border-color: var(--border2); }
+    /* Stage filter colors */
+    .filter-btn.filter-tofu { background: var(--badge-tofu-bg); color: var(--tofu); }
+    .filter-btn.filter-tofu.active { background: var(--tofu); color: var(--bg); border-color: var(--tofu); }
+    .filter-btn.filter-mofu { background: var(--badge-mofu-bg); color: var(--mofu); }
+    .filter-btn.filter-mofu.active { background: var(--mofu); color: var(--bg); border-color: var(--mofu); }
+    .filter-btn.filter-bofu { background: var(--badge-bofu-bg); color: var(--bofu); }
+    .filter-btn.filter-bofu.active { background: var(--bofu); color: var(--bg); border-color: var(--bofu); }
+    /* Persona filter color */
+    .filter-btn.filter-persona { background: rgba(251,191,36,0.12); color: var(--warning); }
+    .filter-btn.filter-persona.active { background: var(--warning); color: var(--bg); border-color: var(--warning); }
 
     .empty-col {
       padding: 32px 16px;
@@ -143,7 +156,6 @@
   </style>
 </head>
 <body>
-  <div class="frost-overlay" aria-hidden="true"></div>
 
   <div class="top-bar">
     <a href="/" class="logo">terrain<em>.run</em></a>
@@ -336,12 +348,12 @@
         <div class="filter-row">
           <span class="filter-row-label">Stage</span>
           <button class="filter-btn ${f.stage === 'all' ? 'active' : ''}" onclick="setFilter('${llm}','stage','all')">All</button>
-          ${stages.map(s => `<button class="filter-btn ${f.stage === s ? 'active' : ''}" onclick="setFilter('${llm}','stage','${s}')">${s}</button>`).join('')}
+          ${stages.map(s => `<button class="filter-btn filter-${s.toLowerCase()} ${f.stage === s ? 'active' : ''}" onclick="setFilter('${llm}','stage','${s}')">${s}</button>`).join('')}
         </div>
         <div class="filter-row">
           <span class="filter-row-label">Persona</span>
           <button class="filter-btn ${f.persona === 'all' ? 'active' : ''}" onclick="setFilter('${llm}','persona','all')">All</button>
-          ${personas.map(p => `<button class="filter-btn ${f.persona === p ? 'active' : ''}" onclick="setFilter('${llm}','persona',${JSON.stringify(p)})" title="${escHtml(p)}">${escHtml(p.length > 24 ? p.slice(0, 21) + '…' : p)}</button>`).join('')}
+          ${personas.map(p => `<button class="filter-btn filter-persona ${f.persona === p ? 'active' : ''}" onclick="setFilter('${llm}','persona',${JSON.stringify(p)})" title="${escHtml(p)}">${escHtml(p.length > 24 ? p.slice(0, 21) + '…' : p)}</button>`).join('')}
         </div>
       `
     }

@@ -110,7 +110,7 @@ BRAND: ${run.brand_name} (${run.brand_domain})
 RUN STATUS: ${run.status}${run.total_queries > 0 ? ` (${run.completed_queries ?? 0} / ${run.total_queries} queries complete, ${Math.round(((run.completed_queries ?? 0) / run.total_queries) * 100)}%)` : ''}
 
 ## Brand & Competitor Rankings
-${competitorSummary || 'No ranking data yet'}
+${competitorSummary || 'No mentions data yet'}
 
 ## Top Cited Domains
 ${domainSummary || 'No citations yet'}

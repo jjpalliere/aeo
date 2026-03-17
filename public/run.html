@@ -9,12 +9,6 @@
   <style>
     html, body { background: #0a0a0a !important; overflow-x: hidden; }
     body { min-height: 100vh; display: flex; flex-direction: column; }
-    #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-    .frost-overlay {
-      position: fixed; inset: 0; z-index: 0;
-      backdrop-filter: blur(2.5px); -webkit-backdrop-filter: blur(2.5px);
-      background: var(--frost-bg); pointer-events: none;
-    }
 
     .run-layout {
       flex: 1;
@@ -129,8 +123,6 @@
   </style>
 </head>
 <body>
-  <canvas id="bg-canvas"></canvas>
-  <div class="frost-overlay"></div>
   <div class="top-bar" style="position:relative;z-index:1;">
     <a href="/" class="logo">terrain<em>.run</em></a>
     <div id="live-ind"></div>
@@ -419,7 +411,5 @@
 
     process()
   </script>
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <script src="/assets/background.js"></script>
 </body>
 </html>

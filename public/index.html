@@ -20,6 +20,7 @@
       background: var(--frost-bg);
       pointer-events: none;
     }
+    .frost-overlay::after { display: none; }
     body { display: flex; min-height: 100vh; margin: 0; }
     .index-layout { display: flex; flex: 1; min-width: 0; }
     #runs-sidebar {
@@ -105,8 +106,9 @@
     }
 
     .hero-title {
-      font-family: var(--font-display);
+      font-family: var(--font-hero);
       font-size: clamp(28px, 5vw, 42px);
+      text-transform: none;
       font-weight: 700;
       letter-spacing: -0.03em;
       line-height: 1.2;
@@ -311,7 +313,7 @@
   <div class="setup-wrap">
     <div class="above-fold">
       <div class="above-fold-content">
-      <h1 class="hero-title">What AI says<br>about you.</h1>
+      <h1 class="hero-title">What AI says about you.</h1>
 
     <form id="setup-form">
       <div class="url-wrap">

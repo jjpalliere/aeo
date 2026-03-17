@@ -26,14 +26,13 @@
     .persona-row:last-child { margin-bottom: 0; }
     .persona-row-wrap { overflow-x: auto; }
     .persona-card-col {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--float-row-bg);
+      border-radius: var(--float-row-radius);
       padding: 14px;
       min-height: 80px;
       min-width: 0;
     }
-    .persona-card-col .persona-name { color: var(--accent); }
+    .persona-card-col .persona-name { color: var(--text); font-family: var(--font-hero); font-size: var(--text-md); }
     .persona-card-desc-wrap {
       font-size: var(--text-xs);
       line-height: 1.5;
@@ -47,7 +46,6 @@
       gap: 8px;
       margin-bottom: 12px;
       padding-bottom: 10px;
-      border-bottom: 1px solid var(--border2);
     }
     .persona-row-generating { grid-template-columns: 420px 1fr; min-width: 900px; }
     .persona-term-col { min-width: 0; }
@@ -57,6 +55,7 @@
       align-items: center;
       gap: 10px;
       margin-bottom: 10px;
+      width: 100%;
     }
     .funnel-header h3 {
       font-size: var(--text-xs);
@@ -65,7 +64,11 @@
       text-transform: uppercase;
       color: var(--text2);
     }
-    .prompt-list { display: flex; flex-direction: column; gap: 6px; }
+    .funnel-select-all { font-size: 10px; }
+    .prompt-list { display: flex; flex-direction: column; gap: var(--float-row-buffer); }
+    .prompt-card { cursor: pointer; }
+    .prompt-card.approved { box-shadow: 0 0 0 1px var(--selection-outline), 0 0 16px rgba(255,255,255,0.06); }
+    .prompt-card .btn-ghost { border: none; }
 
     /* Persona cards — max 3 per row */
     .persona-grid {
@@ -119,8 +122,14 @@
       padding: 16px;
       margin-bottom: 24px;
     }
+    .supplement-panels-row .supplement-panel {
+      margin-bottom: 0;
+      height: 100%;
+      min-height: 56px;
+    }
     .supplement-panel.collapsed .supplement-body { display: none; }
     .supplement-panel.collapsed .supplement-label { margin-bottom: 0; }
+    .supplement-panel .supplement-label { flex: 0 0 auto; min-height: 36px; display: flex; align-items: center; }
     .supplement-panel.locked { opacity: 0.6; pointer-events: none; }
     .supplement-panel.locked .supplement-label { text-decoration: line-through; color: var(--text3); cursor: default; }
     .supplement-label {
@@ -217,7 +226,6 @@
   </style>
 </head>
 <body>
-  <div class="frost-overlay" aria-hidden="true"></div>
   <div id="loading">
     <div class="term-win">
       <div class="term-titlebar">
@@ -242,32 +250,39 @@
 
     <div class="page-wide" style="max-width:1400px">
 
-      <!-- ICP Supplement -->
-      <div class="supplement-panel" id="icp-supplement-panel">
-        <div class="supplement-label" id="icp-supplement-label">
-          <span>ICP Supplement <span style="font-size:var(--text-xs);color:var(--text3)">Optional — enriches persona generation</span></span>
-          <span class="supplement-caret" id="icp-supplement-caret" style="display:none">▼</span>
+      <!-- Supplement panels: ICP + Source Material side by side -->
+      <div class="supplement-panels-row" style="display:grid;grid-template-columns:minmax(320px,1fr) minmax(320px,1fr);gap:var(--float-row-buffer);margin-bottom:24px;align-items:stretch">
+        <!-- ICP Supplement -->
+        <div class="supplement-panel" id="icp-supplement-panel" style="flex:1;min-width:320px;min-height:56px;display:flex;flex-direction:column">
+          <div class="supplement-label" id="icp-supplement-label">
+            <span>ICP Supplement <span style="font-size:var(--text-xs);color:var(--text3)">Optional — enriches persona generation</span></span>
+            <span class="supplement-caret" id="icp-supplement-caret" style="display:none">▼</span>
+          </div>
+          <div class="supplement-body" id="icp-supplement-body">
+            <div class="supplement-split" style="display:flex;gap:var(--float-row-buffer);align-items:stretch">
+              <div class="supplement-hint" style="flex:1;margin-bottom:0">
+                Drop a .txt file or paste text describing your ideal customer profile. If your site doesn't fully reflect your target ICP, this closes the gap — personas will be regenerated with this context.
+              </div>
+              <div class="supplement-drop-wrap" style="flex:1;display:flex;flex-direction:column;gap:8px">
+                <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" style="flex:1;min-height:100px;display:flex;align-items:center;justify-content:center">
+                  DROP .TXT FILE HERE OR CLICK TO UPLOAD
+                </div>
+                <div id="supplement-status"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="supplement-body" id="icp-supplement-body">
-        <div class="supplement-hint">
-          Drop a .txt file or paste text describing your ideal customer profile. If your site doesn't fully reflect your target ICP, this closes the gap — personas will be regenerated with this context.
-        </div>
-        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-          DROP .TXT FILE HERE OR CLICK TO UPLOAD
-        </div>
-        <input type="file" id="file-input" accept=".txt,text/plain" style="display:none" />
-        <div id="supplement-status"></div>
+        <!-- Source Material -->
+        <div class="supplement-panel" style="flex:1;min-width:320px;margin-bottom:0;min-height:56px;display:flex;flex-direction:column">
+          <div class="supplement-label" style="cursor:pointer;user-select:none" onclick="toggleSourceMaterial()">
+            Source Material
+            <span id="source-toggle-label" style="font-size:var(--text-xs);color:var(--text3)">▶ Show pages crawled</span>
+          </div>
+          <div style="flex:1;min-height:0"></div>
+          <div id="source-material" style="display:none;margin-top:10px"></div>
         </div>
       </div>
-
-      <!-- Source Material -->
-      <div class="supplement-panel" style="margin-bottom:24px">
-        <div class="supplement-label" style="cursor:pointer;user-select:none" onclick="toggleSourceMaterial()">
-          Source Material
-          <span id="source-toggle-label" style="font-size:var(--text-xs);color:var(--text3)">▶ Show pages crawled</span>
-        </div>
-        <div id="source-material" style="display:none;margin-top:10px"></div>
-      </div>
+      <input type="file" id="file-input" accept=".txt,text/plain" style="display:none" />
 
       <!-- Personas — approve triggers per-persona prompt generation -->
       <div class="section-hdr" id="personas-section-hdr">
@@ -291,9 +306,7 @@
         <div class="section-hdr" style="margin-top:24px">
           Questions <span class="count-tag" id="prompt-count">0</span>
           <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn btn-ghost btn-sm" onclick="approveAllPrompts()">Select All</button>
             <button class="btn btn-primary btn-sm" id="gen-questions-btn" onclick="generateQuestions()" style="display:none">Generate Questions →</button>
-            <button class="btn btn-ghost btn-sm" id="regenerate-btn" onclick="generateQuestions()" style="display:none;font-size:var(--text-xs);letter-spacing:0.06em">↺ Regenerate All</button>
             <button class="btn btn-ghost btn-sm" id="import-toggle-btn" onclick="toggleImportPanel()">Import →</button>
           </div>
         </div>
@@ -457,7 +470,6 @@
         : ''
 
       card.innerHTML = `
-        <div class="approve-check${p.approved ? ' checked' : ''}" data-pid="${p.id}"></div>
         <div class="prompt-card-body">
           <div class="prompt-text" contenteditable="false">${escHtml(p.text)}</div>
         </div>
@@ -467,7 +479,7 @@
           <button class="btn btn-danger btn-sm" onclick="deletePrompt('${p.id}')">✕</button>
         </div>
       `
-      card.querySelector('.approve-check').addEventListener('click', () => toggleApprovePrompt(p.id))
+      card.addEventListener('click', (e) => { if (!e.target.closest('.prompt-actions')) toggleApprovePrompt(p.id) })
       return card
     }
 
@@ -587,6 +599,7 @@
 
       const actionsRow = personaOrNull
         ? `<div class="persona-section-actions">
+             <button class="btn btn-ghost btn-xs funnel-select-all" onclick="selectAllForPersona(this)" title="Select all prompts for this persona">Select all</button>
              <button class="btn btn-ghost btn-sm" onclick="regenerateForPersona('${personaOrNull.id}')">↺ Regenerate</button>
              <button class="btn btn-danger btn-sm" onclick="deletePersona('${personaOrNull.id}')">Delete</button>
            </div>`
@@ -726,17 +739,34 @@
       }
     }
 
+    async function patchPromptApproved(id, approved) {
+      await fetch(`/api/prompts/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ approved }) })
+    }
+
     async function toggleApprovePrompt(id) {
       const p = brand.prompts.find(x => x.id === id)
       if (!p) return
       const newVal = p.approved ? 0 : 1
-      await fetch(`/api/prompts/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved: newVal }),
-      })
+      await patchPromptApproved(id, newVal)
       p.approved = newVal
-      renderAll()
+      const card = document.querySelector(`.prompt-card[data-id="${id}"]`)
+      if (card) card.classList.toggle('approved', newVal === 1)
+    }
+
+    async function selectAllForPersona(btn) {
+      const section = btn.closest('.persona-prompt-section')
+      if (!section) return
+      for (const stage of ['tofu', 'mofu', 'bofu']) {
+        const list = section.querySelector(`[data-stage="${stage}"]`)
+        if (!list) continue
+        for (const card of list.querySelectorAll('.prompt-card')) {
+          const p = brand.prompts.find(x => x.id === card.dataset.id)
+          if (!p || p.approved) continue
+          await patchPromptApproved(p.id, 1)
+          p.approved = 1
+          card.classList.add('approved')
+        }
+      }
     }
 
     async function toggleApprovePersona(id) {
@@ -1183,6 +1213,64 @@
       }
     })
 
+    // Rationale tooltip: portal to body + viewport-aware positioning (avoids clipping from overflow/transform ancestors)
+    let rationaleTooltipActive = null
+    let rationaleHideTimer = null
+    function hideRationaleTooltip() {
+      rationaleHideTimer = null
+      if (!rationaleTooltipActive) return
+      const { tooltip, wrap } = rationaleTooltipActive
+      wrap.appendChild(tooltip)
+      tooltip.classList.remove('rationale-tooltip-positioned')
+      tooltip.style.display = ''
+      tooltip.style.left = ''
+      tooltip.style.top = ''
+      rationaleTooltipActive = null
+    }
+    document.addEventListener('mouseover', (e) => {
+      if (rationaleHideTimer) { clearTimeout(rationaleHideTimer); rationaleHideTimer = null }
+      const wrap = e.target.closest('.rationale-wrap')
+      if (!wrap || wrap.contains(e.relatedTarget)) return
+      const tooltip = wrap.querySelector('.rationale-tooltip')
+      if (!tooltip) return
+      if (rationaleTooltipActive && rationaleTooltipActive.tooltip !== tooltip) hideRationaleTooltip()
+      const icon = wrap.querySelector('.rationale-icon') || wrap
+      const rect = icon.getBoundingClientRect()
+      const tw = 260
+      const pad = 16
+      let left = rect.right + 8
+      let top = rect.top - 4
+      if (left + tw > window.innerWidth - pad) left = rect.left - tw - 8
+      if (left < pad) left = pad
+      if (top < pad) top = pad
+      document.body.appendChild(tooltip)
+      tooltip.classList.add('rationale-tooltip-positioned')
+      tooltip.style.display = 'block'
+      tooltip.style.left = left + 'px'
+      tooltip.style.top = top + 'px'
+      rationaleTooltipActive = { tooltip, wrap }
+      requestAnimationFrame(() => {
+        const tr = tooltip.getBoundingClientRect()
+        if (tr.bottom > window.innerHeight - pad) tooltip.style.top = (window.innerHeight - tr.height - pad) + 'px'
+        if (tr.right > window.innerWidth - pad) tooltip.style.left = (window.innerWidth - tr.width - pad) + 'px'
+        if (tr.left < pad) tooltip.style.left = pad + 'px'
+        if (parseFloat(tooltip.style.top) < pad) tooltip.style.top = pad + 'px'
+      })
+    })
+    document.addEventListener('mouseout', (e) => {
+      const fromTooltip = e.target.closest('.rationale-tooltip')
+      if (fromTooltip && rationaleTooltipActive && rationaleTooltipActive.tooltip === fromTooltip) {
+        if (!fromTooltip.contains(e.relatedTarget)) hideRationaleTooltip()
+        return
+      }
+      const wrap = e.target.closest('.rationale-wrap')
+      if (!wrap || wrap.contains(e.relatedTarget)) return
+      if (rationaleTooltipActive && rationaleTooltipActive.wrap === wrap) {
+        if (e.relatedTarget && rationaleTooltipActive.tooltip.contains(e.relatedTarget)) return
+        rationaleHideTimer = setTimeout(hideRationaleTooltip, 100)
+      }
+    })
+
     function showScrapeBlockedUI() {
       document.getElementById('loading').innerHTML = `
         <div style="max-width:500px;padding:32px 24px">
@@ -1474,18 +1562,18 @@
       const container = document.getElementById('source-material')
 
       container.innerHTML = `
-        <div style="font-size:var(--text-xs);color:var(--text3);margin-bottom:10px;letter-spacing:0.04em">
-          ${pages.length} page${pages.length !== 1 ? 's' : ''} crawled
-          · ~${totalChars.toLocaleString()} chars extracted
-          · first ${Math.min(pages.length, 20)} pages × up to 1,500 chars sent to Claude
-        </div>
+        <ul style="font-size:var(--text-xs);color:var(--text3);margin:0 0 10px;padding-left:16px;line-height:1.8">
+          <li><span style="font-size:var(--text-md)">${pages.length}</span> page${pages.length !== 1 ? 's' : ''} crawled</li>
+          <li>~<span style="font-size:var(--text-md)">${totalChars.toLocaleString()}</span> chars extracted</li>
+          <li>First <span style="font-size:var(--text-md)">${Math.min(pages.length, 20)}</span> pages × up to <span style="font-size:var(--text-md)">1,500</span> chars sent to Claude</li>
+        </ul>
         ${pages.map((p, i) => `
           <div style="margin-bottom:6px;border:1px solid var(--border)">
             <div onclick="togglePageText(${i})"
               style="padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--surface2)">
               <div>
                 <div style="font-size:var(--text-sm);font-weight:600;color:var(--text)">${escHtml(p.title || p.url)}</div>
-                <div style="font-size:var(--text-xs);color:var(--text3);margin-top:2px;word-break:break-all">${escHtml(p.url)}</div>
+                <div style="font-size:var(--text-xs);color:var(--accent);margin-top:2px;word-break:break-all">${escHtml(p.url)}</div>
               </div>
               <span style="font-size:var(--text-xs);color:var(--text3);flex-shrink:0;margin-left:12px">${(p.text||'').length.toLocaleString()} chars</span>
             </div>
