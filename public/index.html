@@ -698,7 +698,7 @@
         const data2 = await safeJson(res2)
         if (!res2.ok) {
           console.log('[quick-run] run creation failed', res2.status, data2)
-          statusEl.innerHTML = `<span style="color:var(--danger)">Error: ${data2.error || 'Run creation failed'}. <a href="/approve.html?brandId=${encodeURIComponent(data1.brandId)}" style="color:var(--accent)">Go to brand →</a></span>`
+          statusEl.innerHTML = `<span style="color:var(--danger)">Error: ${data2.error || 'Run creation failed'}. <a href="/generating.html?brandId=${encodeURIComponent(data1.brandId)}" style="color:var(--accent)">Go to brand →</a></span>`
           btn.disabled = false
           return
         }
@@ -744,7 +744,7 @@
           return
         }
         statusEl.innerHTML = '<span class="spinner"></span><span>Redirecting…</span>'
-        window.location.href = `/approve.html?brandId=${data.id}`
+        window.location.href = `/generating.html?brandId=${data.id}`
       } catch (err) {
         statusEl.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`
         predictBtn.disabled = false
@@ -774,7 +774,7 @@
         }
 
         setStatus('Redirecting…')
-        window.location.href = `/approve.html?brandId=${data.id}`
+        window.location.href = `/generating.html?brandId=${data.id}`
       } catch (err) {
         setStatus(`Error: ${err.message}`)
         btn.disabled = false

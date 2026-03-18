@@ -131,7 +131,7 @@
   --blink-period-4: 5.5;   --blink-duty-4: 0.08;  /* glacial */
   --blink-period-5: 1.8;   --blink-duty-5: 0.15;  /* quicker */
   --blink-period-6: 7.0;   --blink-duty-6: 0.06;  /* barely there */
-  --blink-intensity: 0.65;  /* 0 = no blink, 1 = full white flash */
+  --blink-intensity: 0.85;  /* 0 = no blink, 1 = full white flash */
 
   /* 3D backdrop cluster colors */
   --cluster-1:  #6366f1;
@@ -155,8 +155,8 @@
   --font-display: 'Syne', 'Outfit', sans-serif;
   --font-hero: 'Oswald', 'Syne', sans-serif;
 
-  /* Frost overlay — B 4 more than R,G in final blend (at 0.14 opacity, need B≈39) */
-  --frost-bg: rgba(10,10,39,0.14);
+  /* Frost overlay — B 4 more than R,G in final blend. Lower opacity = more visible web. */
+  --frost-bg: rgba(10,10,39,0.06);
 
   /* Floating row tables (Persona Performance, Citations) — batch-tweakable */
   --float-row-bg:       var(--surface2);   /* row background */
@@ -272,7 +272,7 @@ a.logo:hover em { color: var(--accent); opacity: 0.9; }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius);
   padding: 20px;
 }
@@ -384,18 +384,18 @@ textarea { resize: vertical; min-height: 80px; }
 .btn-primary:hover { background: var(--accent-hover); }
 
 .btn-ghost {
-  background: var(--w-04);
-  color: var(--text2);
-  border: 1px solid var(--w-15);
+  background: #0a0a0a;
+  color: #ffffff;
+  border: none;
 }
-.btn-ghost:hover { color: var(--text); border-color: var(--w-25); background: var(--w-08); }
+.btn-ghost:hover { color: var(--text); background: var(--w-08); }
 
 .btn-danger {
-  background: transparent;
-  color: var(--danger);
-  border: 1px solid transparent;
+  background: #0a0a0a;
+  color: #ffffff;
+  border: none;
 }
-.btn-danger:hover { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); }
+.btn-danger:hover { color: var(--danger); box-shadow: 0 0 8px rgba(248,113,113,0.15); }
 
 .btn-sm { padding: 4px 10px; font-size: var(--text-xs); }
 .btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -444,7 +444,7 @@ textarea { resize: vertical; min-height: 80px; }
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1px;
   background: var(--border);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius);
   overflow: hidden;
   margin-bottom: 20px;
@@ -615,7 +615,7 @@ tr:hover td { background: var(--surface2); }
   box-shadow: 0 0 0 1px transparent, 0 0 0 rgba(255,255,255,0);
   transition: box-shadow 0.4s ease-out;
 }
-.prompt-card.approved { box-shadow: 0 0 0 1px var(--selection-outline), 0 0 16px rgba(255,255,255,0.06); }
+.prompt-card.approved { box-shadow: none; }
 .prompt-card-body { flex: 1; min-width: 0; }
 
 .prompt-text {
@@ -699,12 +699,11 @@ tr:hover td { background: var(--surface2); }
 
 .persona-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius);
   padding: 18px;
-  transition: border-color 0.15s;
 }
-.persona-card.approved { border-color: rgba(255,255,255,0.2); }
+.persona-card.approved { border: none; }
 
 .persona-id {
   font-size: var(--text-xs);
@@ -771,7 +770,7 @@ tr:hover td { background: var(--surface2); }
   font-size: var(--text-xxs);
   color: var(--text3);
   background: var(--surface2);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius);
   padding: 8px 10px;
   line-height: 1.5;
@@ -802,7 +801,7 @@ tr:hover td { background: var(--surface2); }
 
 .chat-window {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius);
   overflow: hidden;
   display: flex;
@@ -831,7 +830,7 @@ tr:hover td { background: var(--surface2); }
 }
 .chat-message.assistant .chat-bubble {
   background: var(--surface2);
-  border: 1px solid var(--border);
+  border: none;
   color: var(--accent);
 }
 .chat-message.user .chat-bubble {
@@ -939,26 +938,33 @@ tr:hover td { background: var(--surface2); }
   border-left: 1px solid var(--border2);
 }
 
-/* ─── Terminal window ────────────────────────────────────────────────────────
-   Used in approve.html during scraping/generating phases.
-   Mimics a real terminal — dark bg, monospace, scrollable log output.
+/* ─── Terminal / log output ───────────────────────────────────────────────────
+   Borderless log display: label + lines. No box, background, or borders.
    ─────────────────────────────────────────────────────────────────────────── */
 
 .term-win {
-  background: #050505;
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
   font-family: var(--font);
-  font-size: var(--text-sm);
-  width: 520px;
-  max-width: 96vw;
+  font-size: var(--text-xs);
+  width: 90%;
+  max-width: 1200px;
   overflow: hidden;
+}
+.term-win-fullheight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+}
+.term-win-fullheight .term-body {
+  flex: 1;
+  min-height: 200px;
 }
 
 .term-titlebar {
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-  padding: 7px 12px;
+  padding: 0 0 8px 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -968,41 +974,31 @@ tr:hover td { background: var(--surface2); }
   font-size: var(--text-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text3);
+  color: var(--text);
   flex: 1;
 }
 
 .term-body {
-  padding: 14px 16px;
-  height: 220px;
+  padding: 0;
+  min-height: 140px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   scroll-behavior: smooth;
 }
 
 .term-line {
-  color: var(--text2);
-  line-height: 1.7;
+  color: var(--text3);
+  line-height: 1.35;
   white-space: pre-wrap;
   word-break: break-all;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
 }
-.term-line.hl  { color: var(--text2); }   /* milestone lines */
+.term-line.hl  { color: var(--text3); }   /* milestone lines */
 .term-line.ok  { color: var(--success); } /* ✓ lines */
 .term-line.err { color: var(--danger);  } /* ✗ lines */
 
-.term-cursor {
-  display: inline-block;
-  width: 6px;
-  height: 12px;
-  background: var(--text3);
-  vertical-align: text-bottom;
-  margin-left: 2px;
-  animation: term-blink 1s step-end infinite;
-}
-@keyframes term-blink { 50% { opacity: 0; } }
 
 /* ─── Misc utils ─────────────────────────────────────────────────────────── */
 

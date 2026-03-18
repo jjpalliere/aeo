@@ -70,11 +70,91 @@
     .prompt-card.approved { box-shadow: 0 0 0 1px var(--selection-outline), 0 0 16px rgba(255,255,255,0.06); }
     .prompt-card .btn-ghost { border: none; }
 
-    /* Persona cards — max 3 per row */
-    .persona-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
+    /* Persona carousel — one card at a time, vertical label outside */
+    .persona-carousel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      min-height: 320px;
+    }
+    .persona-carousel-arrow {
+      flex-shrink: 0;
+      width: 64px;
+      height: 64px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s;
+      opacity: 0.4;
+      color: var(--text2);
+    }
+    .persona-carousel-arrow:hover { opacity: 1; }
+    .persona-carousel-arrow.hidden { visibility: hidden; pointer-events: none; }
+    .persona-carousel-arrow svg { width: 160px; height: 80px; stroke: currentColor; }
+    .persona-carousel-viewport {
+      flex: 1;
+      min-width: 0;
+      max-width: 700px;
+    }
+    .persona-carousel-track { position: relative; }
+    .persona-carousel-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-height: 280px;
+    }
+    .persona-carousel-item-inner {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+    }
+    .persona-label-vertical {
+      flex-shrink: 0;
+      width: 35px;
+      align-self: stretch;
+      writing-mode: vertical-rl;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      font-size: var(--text-xs);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text2);
+      background: none;
+      border: none;
+      padding: 12px 4px 12px 0;
+      white-space: nowrap;
+    }
+    .persona-label-vertical .rationale-wrap { writing-mode: horizontal-tb; }
+    .persona-label-vertical .rationale-tooltip {
+      writing-mode: horizontal-tb;
+      left: 24px;
+      top: auto;
+      right: auto;
+    }
+    .persona-carousel-card-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+    .persona-carousel-card-wrap .persona-card {
+      height: 100%;
+    }
+    .persona-name-pill {
+      display: inline-block;
+      background: none;
+      color: var(--text);
+      padding: 0;
+      font-family: var(--font-hero);
+      font-size: var(--text-md);
+      font-weight: 600;
+      margin-bottom: 8px;
     }
 
     .approve-check {
@@ -104,8 +184,8 @@
       padding: 2px 8px; border-radius: 1px;
     }
 
-    #loading { display: flex; align-items: center; justify-content: center; height: 100vh; }
     #content { display: none; }
+    #loading-approve { display: flex; align-items: center; justify-content: center; min-height: 100vh; color: var(--text3); font-size: var(--text-xs); letter-spacing: 0.08em; }
 
     .section-hdr {
       font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
@@ -226,18 +306,7 @@
   </style>
 </head>
 <body>
-  <div id="loading">
-    <div class="term-win">
-      <div class="term-titlebar">
-        <span class="live-dot"></span>
-        <span class="term-title-text">PROCESS LOG</span>
-        <span class="term-elapsed" style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text3)"></span>
-      </div>
-      <div class="term-body" id="term-body">
-        <span class="term-line">Connecting…<span class="term-cursor"></span></span>
-      </div>
-    </div>
-  </div>
+  <div id="loading-approve"><span class="spinner"></span></div>
 
   <div id="content">
     <div class="top-bar">
@@ -285,11 +354,20 @@
       <input type="file" id="file-input" accept=".txt,text/plain" style="display:none" />
 
       <!-- Personas — approve triggers per-persona prompt generation -->
-      <div class="section-hdr" id="personas-section-hdr">
-        Personas <span class="count-tag" id="persona-count">0</span>
+      <div class="section-hdr" id="personas-section-hdr" style="position:relative">
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span id="persona-count" style="font-family:var(--font-hero);font-size:64px;font-weight:700;color:var(--text);line-height:1;letter-spacing:-0.02em">0</span>
+          Personas
+        </div>
       </div>
       <div style="position:relative" id="persona-grid-wrap">
-        <div class="persona-grid" id="persona-grid"></div>
+        <div class="persona-carousel" id="persona-carousel">
+          <button type="button" class="persona-carousel-arrow persona-carousel-prev hidden" id="persona-carousel-prev" aria-label="Previous persona"><svg viewBox="0 0 36 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M36 12H4M4 12L14 3M4 12L14 21"/></svg></button>
+          <div class="persona-carousel-viewport">
+            <div class="persona-carousel-track" id="persona-carousel-track"></div>
+          </div>
+          <button type="button" class="persona-carousel-arrow persona-carousel-next hidden" id="persona-carousel-next" aria-label="Next persona"><svg viewBox="0 0 36 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><path d="M0 12H32M32 12L22 3M32 12L22 21"/></svg></button>
+        </div>
         <div class="persona-regen-banner" id="persona-regen-banner" style="display:none">
           <span class="spinner"></span>
           <span>Regenerating personas…</span>
@@ -303,8 +381,11 @@
 
       <!-- Prompts — Step 2: revealed after personas, generate or import -->
       <div id="prompts-section" style="display:none">
-        <div class="section-hdr" style="margin-top:24px">
-          Questions <span class="count-tag" id="prompt-count">0</span>
+        <div class="section-hdr" style="margin-top:24px;position:relative">
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <span id="prompt-count" style="font-family:var(--font-hero);font-size:64px;font-weight:700;color:var(--text);line-height:1;letter-spacing:-0.02em">0</span>
+            Questions
+          </div>
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn btn-primary btn-sm" id="gen-questions-btn" onclick="generateQuestions()" style="display:none">Generate Questions →</button>
             <button class="btn btn-ghost btn-sm" id="import-toggle-btn" onclick="toggleImportPanel()">Import →</button>
@@ -357,6 +438,8 @@
     const params = new URLSearchParams(location.search)
     const brandId = params.get('brandId')
     if (!brandId) location.href = '/'
+    const brandIdEl = document.getElementById('loading-brand-id')
+    if (brandIdEl && brandId) brandIdEl.textContent = brandId
 
     let brand = null
     let pollTimer = null
@@ -369,23 +452,30 @@
     let importClassified = []
     let importSelected = new Set()
     let generatingPersonaIds = new Set()  // Personas we've triggered generation for, awaiting prompts
+    let personaCarouselIndex = 0
 
     // ── Terminal log helper ─────────────────────────────────────────────────────
     // Renders brand.logs into the #term-body element, keeping track of how many
     // lines were already shown so we only append new ones.
     function termLine(text) {
       const cls = text.includes('✓') ? 'ok' : text.includes('✗') || text.includes('⚠') ? 'err' : 'hl'
-      return `<span class="term-line ${cls}">${escHtml(text)}</span>`
+      // Add 2–3 tabs between [prefix] and message for two left-aligned columns
+      const idx = text.indexOf(']')
+      const formatted = idx >= 0
+        ? text.slice(0, idx + 1) + '\t\t\t' + text.slice(idx + 1).trimStart()
+        : text
+      return `<span class="term-line ${cls}">${escHtml(formatted)}</span>`
     }
 
     function updatePersonaTerminals(logs) {
       document.querySelectorAll('.persona-term-body').forEach(body => {
         if (!logs || !logs.length) {
-          body.innerHTML = '<span class="term-line">Starting…<span class="term-cursor"></span></span>'
+          body.innerHTML = '<span class="term-line">Starting…</span>'
           return
         }
-        body.innerHTML = logs.map(line => termLine(line)).join('') + '<span class="term-cursor"></span>'
-        body.scrollTop = body.scrollHeight
+        const reversed = [...logs].reverse()
+        body.innerHTML = reversed.map(line => termLine(line)).join('')
+        body.scrollTop = 0
       })
     }
 
@@ -398,23 +488,20 @@
       // Remove initial "Connecting…" placeholder on first real log
       if (lastLogCount === 0) body.innerHTML = ''
       newLines.forEach(line => {
-        body.insertAdjacentHTML('beforeend', termLine(line))
+        body.insertAdjacentHTML('afterbegin', termLine(line))
       })
       lastLogCount = logs.length
-      // Add blinking cursor at end
-      const cursor = body.querySelector('.term-cursor')
-      if (cursor) cursor.remove()
-      body.insertAdjacentHTML('beforeend', '<span class="term-cursor"></span>')
-      body.scrollTop = body.scrollHeight
+      body.scrollTop = 0
     }
 
     function startTermElapsed() {
       if (termElapsedTimer) return
       const start = Date.now()
       function update() {
-        const s = Math.floor((Date.now() - start) / 1000)
-        const m = Math.floor(s / 60)
-        const t = m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+        const total = Math.floor((Date.now() - start) / 1000)
+        const m = Math.floor(total / 60)
+        const ss = String(total % 60).padStart(2, '0')
+        const t = `${m} ${ss} seconds`
         document.querySelectorAll('.term-elapsed').forEach(el => el.textContent = t)
       }
       update()
@@ -483,7 +570,8 @@
       return card
     }
 
-    function renderPersonaCard(p, idx) {
+    function renderPersonaCard(p, idx, opts) {
+      const forCarousel = opts && opts.forCarousel
       const card = document.createElement('div')
       card.className = `persona-card${p.approved ? ' approved' : ''}`
       card.dataset.id = p.id
@@ -519,13 +607,14 @@
            </div>`
         : ''
 
+      const personaIdBlock = forCarousel ? '' : `<div class="persona-id" style="margin-bottom:6px">PERSONA ${num} ${rationale}</div>`
       card.innerHTML = `
         <div class="persona-footer" style="margin-bottom:10px;margin-top:0;align-items:flex-start">
           <div>
-            <div class="persona-id" style="margin-bottom:6px">PERSONA ${num} ${rationale}</div>
-            <div class="persona-name">${escHtml(p.name)}</div>
+            ${personaIdBlock}
+            <div class="persona-name-pill">${escHtml(p.name)}</div>
           </div>
-          <div style="display:flex;gap:6px;flex-shrink:0">
+          <div style="display:flex;gap:6px;flex-shrink:0;white-space:nowrap">
             <button class="btn btn-danger btn-sm" onclick="deletePersona('${p.id}')">Remove</button>
             <button class="btn ${p.approved ? 'btn-ghost' : 'btn-primary'} btn-sm"
               onclick="toggleApprovePersona('${p.id}')">
@@ -536,10 +625,79 @@
         <div class="persona-desc">${escHtml(p.description)}</div>
         ${goalsBlock}
         ${painsBlock}
-        <div class="persona-system">${escHtml(p.system_message)}</div>
       `
       return card
     }
+
+    function renderPersonaCarouselItem(p, idx) {
+      const num = String(idx + 1).padStart(2, '0')
+      const rationale = p.rationale
+        ? `<span class="rationale-wrap" style="margin-left:4px"><i class="rationale-icon">i</i><span class="rationale-tooltip" style="left:auto;right:0;top:24px">${escHtml(p.rationale)}</span></span>`
+        : ''
+      const item = document.createElement('div')
+      item.className = 'persona-carousel-item'
+      item.dataset.index = idx
+      const card = renderPersonaCard(p, idx, { forCarousel: true })
+      item.innerHTML = `
+        <div class="persona-carousel-item-inner">
+          <div class="persona-label-vertical">
+            <span>PERSONA ${num}</span>${rationale}
+          </div>
+          <div class="persona-carousel-card-wrap"></div>
+        </div>
+        <div class="persona-system" style="margin-top:12px;margin-left:35px">${escHtml(p.system_message)}</div>
+      `
+      item.querySelector('.persona-carousel-card-wrap').appendChild(card)
+      return item
+    }
+
+    let prevCarouselIndex = 0
+    function updatePersonaCarousel(animate = false) {
+      const track = document.getElementById('persona-carousel-track')
+      const prevBtn = document.getElementById('persona-carousel-prev')
+      const nextBtn = document.getElementById('persona-carousel-next')
+      if (!track || !prevBtn || !nextBtn) return
+      const items = track.querySelectorAll('.persona-carousel-item')
+      const n = items.length
+      personaCarouselIndex = Math.max(0, Math.min(personaCarouselIndex, n - 1))
+      // Show/hide arrows based on position
+      prevBtn.classList.toggle('hidden', personaCarouselIndex === 0)
+      nextBtn.classList.toggle('hidden', personaCarouselIndex >= n - 1)
+      const direction = personaCarouselIndex > prevCarouselIndex ? 1 : -1
+      items.forEach((el, i) => {
+        if (i === personaCarouselIndex) {
+          el.style.display = ''
+          if (animate && prevCarouselIndex !== personaCarouselIndex) {
+            el.style.transform = `translateX(${direction * 60}px)`
+            el.style.opacity = '0'
+            el.style.transition = 'none'
+            requestAnimationFrame(() => {
+              el.style.transition = 'transform 0.3s ease, opacity 0.3s ease'
+              el.style.transform = 'translateX(0)'
+              el.style.opacity = '1'
+            })
+          } else {
+            el.style.transform = ''
+            el.style.opacity = ''
+            el.style.transition = ''
+          }
+        } else {
+          el.style.display = 'none'
+        }
+      })
+      prevCarouselIndex = personaCarouselIndex
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target.id === 'persona-carousel-prev' || e.target.closest('#persona-carousel-prev')) {
+        personaCarouselIndex = Math.max(0, personaCarouselIndex - 1)
+        updatePersonaCarousel(true)
+      } else if (e.target.id === 'persona-carousel-next' || e.target.closest('#persona-carousel-next')) {
+        const n = document.querySelectorAll('.persona-carousel-item').length
+        personaCarouselIndex = Math.min(n - 1, personaCarouselIndex + 1)
+        updatePersonaCarousel(true)
+      }
+    })
 
     function renderPersonaCardCol(persona, idx) {
       const num = String(idx + 1).padStart(2, '0')
@@ -575,7 +733,7 @@
             <div class="term-win" style="flex:1;min-width:0">
               <div class="term-titlebar">
                 <span class="live-dot"></span>
-                <span class="term-title-text">GENERATING QUESTIONS</span>
+                <span class="term-title-text">Generating</span>
                 <span class="term-elapsed" style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text3)"></span>
               </div>
               <div class="term-body persona-term-body" style="height:140px"></div>
@@ -659,9 +817,11 @@
       const container = document.getElementById('persona-prompts-container')
       container.innerHTML = ''
 
-      // Personas WITHOUT prompts (and not generating): show in grid above
-      const grid = document.getElementById('persona-grid')
-      grid.innerHTML = ''
+      // Personas WITHOUT prompts (and not generating): show in carousel
+      const track = document.getElementById('persona-carousel-track')
+      const prevBtn = document.getElementById('persona-carousel-prev')
+      const nextBtn = document.getElementById('persona-carousel-next')
+      track.innerHTML = ''
       const personasWithoutPrompts = brand.personas.filter(p =>
         (!byPersona[p.id] || byPersona[p.id].length === 0) && !generatingPersonaIds.has(p.id)
       )
@@ -670,7 +830,9 @@
       const gridWrap = document.getElementById('persona-grid-wrap')
       if (personasHdr) personasHdr.style.display = showPersonasBlock ? '' : 'none'
       if (gridWrap) gridWrap.style.display = showPersonasBlock ? '' : 'none'
-      personasWithoutPrompts.forEach((p, i) => grid.appendChild(renderPersonaCard(p, brand.personas.indexOf(p))))
+      personasWithoutPrompts.forEach((p, i) => track.appendChild(renderPersonaCarouselItem(p, brand.personas.indexOf(p))))
+      personaCarouselIndex = 0
+      updatePersonaCarousel()
 
       // Personas WITH prompts: 4-col layout (Card | ToFu | MoFu | BoFu)
       brand.personas.forEach(persona => {
@@ -948,10 +1110,16 @@
       const launchBtn    = document.getElementById('launch-btn')
 
       if (brand.status === 'personas_ready') {
-        if (genBtn) genBtn.style.display = 'none'
+        const hasAnyApprovedWithPrompts = brand.personas.some(p => p.approved && brand.prompts?.some(pr => pr.persona_id === p.id))
+        const hasPersonasNeedingPrompts = brand.personas.some(p =>
+          !generatingPersonaIds.has(p.id) && !brand.prompts?.some(pr => pr.persona_id === p.id)
+        )
+        const showGenBtn = hasAnyApprovedWithPrompts || hasPersonasNeedingPrompts
+        if (genBtn) genBtn.style.display = showGenBtn ? '' : 'none'
         if (regenerateBtn) regenerateBtn.style.display = 'none'
         genStatus.style.display = 'none'
-        promptsSec.style.display = ''
+        const hasPrompts = brand.prompts && brand.prompts.length > 0
+        promptsSec.style.display = hasPrompts ? '' : 'none'
         launchBtn.disabled = true
         launchBtn.textContent = 'Launch Run →'
 
@@ -973,7 +1141,7 @@
             <div class="term-win" style="width:100%">
               <div class="term-titlebar">
                 <span class="live-dot"></span>
-                <span class="term-title-text">GENERATING QUESTIONS</span>
+                <span class="term-title-text">Generating</span>
                 <span class="term-elapsed" style="font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text3)"></span>
               </div>
               <div class="term-body" id="inline-term-body" style="height:140px"></div>
@@ -985,15 +1153,10 @@
           const existing = body.querySelectorAll('.term-line').length
           const newLines = brand.logs.slice(existing)
           if (existing === 0 && newLines.length === 0) {
-            body.innerHTML = '<span class="term-line">Starting…<span class="term-cursor"></span></span>'
+            body.innerHTML = '<span class="term-line">Starting…</span>'
           } else {
-            newLines.forEach(line => { body.insertAdjacentHTML('beforeend', termLine(line)) })
-            if (newLines.length) {
-              const cursor = body.querySelector('.term-cursor')
-              if (cursor) cursor.remove()
-              body.insertAdjacentHTML('beforeend', '<span class="term-cursor"></span>')
-              body.scrollTop = body.scrollHeight
-            }
+            newLines.forEach(line => { body.insertAdjacentHTML('afterbegin', termLine(line)) })
+            if (newLines.length) body.scrollTop = 0
           }
         }
         }
@@ -1136,30 +1299,14 @@
         if (!res.ok) { location.href = '/'; return }
         brand = await safeJson(res)
 
-        // Full-screen loading states — show real-time terminal log
+        // Redirect to generating page for scraping/generating states
         if (['scraping', 'generating'].includes(brand.status)) {
-          // Kick off scrape+personas (runs in long-lived request, avoids 30s waitUntil limit)
-          if (brand.status === 'scraping' && !continueFired) {
-            continueFired = true
-            fetch(`/api/brands/${brandId}/continue`, { method: 'POST' }).catch(() => {})
-          }
-          // Race-condition fallback: personas inserted before status update — treat as ready
           const hasPersonas = Array.isArray(brand.personas) && brand.personas.length > 0
           if (brand.status === 'generating' && hasPersonas) {
             brand.status = 'personas_ready'
-            // Fall through to show content (don't return)
+            // Fall through to show content
           } else {
-            startTermElapsed()
-            updateTerminal(brand.logs || [])
-            // Use setInterval for reliable polling; also poll on tab visibility
-            if (!pollInterval) {
-              pollInterval = setInterval(load, POLL_MS)
-            }
-            const logs = (brand.logs || []).join('\n')
-            if (/Personas ready|submit_personas done/i.test(logs)) {
-              stopPolling()
-              load() // immediate re-fetch — status should be committed by now
-            }
+            location.href = `/generating.html?brandId=${encodeURIComponent(brandId)}`
             return
           }
         }
@@ -1174,28 +1321,19 @@
       }
 
       if (brand.status === 'scrape_blocked') {
-        showScrapeBlockedUI()
+        location.href = `/generating.html?brandId=${encodeURIComponent(brandId)}`
         return
       }
 
       if (brand.status === 'failed') {
-        const errDetail = brand.lastError
-          ? `<div style="margin-top:8px;font-size:var(--text-xs);color:var(--text3);max-width:480px;line-height:1.5;font-family:monospace;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:8px 10px">${escHtml(brand.lastError)}</div>`
-          : ''
-        document.getElementById('loading').innerHTML =
-          `<div style="text-align:center">
-            <div style="color:var(--danger);font-size:var(--text-sm);font-weight:600">Analysis failed</div>
-            ${errDetail}
-            <div style="margin-top:12px"><a href="/" style="color:var(--accent);font-size:var(--text-sm)">Try again</a></div>
-          </div>`
+        location.href = `/generating.html?brandId=${encodeURIComponent(brandId)}`
         return
       }
 
       // personas_ready, generating_prompts, or ready — show the review page
       stopPolling()
-      document.getElementById('loading').style.display = 'none'
+      document.getElementById('loading-approve').style.display = 'none'
       document.getElementById('content').style.display = 'block'
-      stopTermElapsed()
       renderAll()
       renderSourceMaterial()
       applyStatusUI()
@@ -1207,11 +1345,6 @@
     }
 
     // Poll immediately when user returns to tab (handles background tab throttling)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && brand && ['scraping', 'generating'].includes(brand.status)) {
-        load()
-      }
-    })
 
     // Rationale tooltip: portal to body + viewport-aware positioning (avoids clipping from overflow/transform ancestors)
     let rationaleTooltipActive = null
@@ -1238,9 +1371,12 @@
       const rect = icon.getBoundingClientRect()
       const tw = 260
       const pad = 16
-      let left = rect.right + 8
-      let top = rect.top - 4
-      if (left + tw > window.innerWidth - pad) left = rect.left - tw - 8
+      // For vertical writing-mode, rect may have swapped width/height — use center
+      const cx = rect.left + rect.width / 2
+      const cy = rect.top + rect.height / 2
+      let left = cx + 16
+      let top = cy - 10
+      if (left + tw > window.innerWidth - pad) left = cx - tw - 16
       if (left < pad) left = pad
       if (top < pad) top = pad
       document.body.appendChild(tooltip)
@@ -1270,131 +1406,6 @@
         rationaleHideTimer = setTimeout(hideRationaleTooltip, 100)
       }
     })
-
-    function showScrapeBlockedUI() {
-      document.getElementById('loading').innerHTML = `
-        <div style="max-width:500px;padding:32px 24px">
-          <div style="text-align:center">
-            <div style="font-size:var(--text-xs);letter-spacing:0.14em;text-transform:uppercase;color:var(--danger);margin-bottom:14px">
-              Access Blocked
-            </div>
-            <div style="font-size:var(--text-lg);font-weight:700;line-height:1.3;color:var(--text);margin-bottom:14px">
-              This site blocked our scraper
-            </div>
-            <div style="font-size:var(--text-sm);color:var(--text2);line-height:1.9;margin-bottom:24px">
-              The site rejected our request before we could read any content.<br><br>
-              You can proceed using the AI's existing knowledge of this domain.
-              This works well for established, well-known companies — but may produce
-              generic or inaccurate results for smaller or lesser-known ones.<br><br>
-              Either way, you can provide context manually via the
-              <strong style="color:var(--text)">ICP Supplement</strong> on the next screen.
-            </div>
-            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:24px">
-              <a href="/" class="btn btn-ghost">← Try a different URL</a>
-              <button class="btn btn-primary" id="proceed-blocked-btn" onclick="proceedWithDomainKnowledge()">
-                Proceed with AI Knowledge →
-              </button>
-            </div>
-          </div>
-
-          <!-- Paste your own content as an alternative -->
-          <div style="border-top:1px solid var(--border);padding-top:20px">
-            <div
-              onclick="toggleBlockedPaste()"
-              style="font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;
-                     color:var(--text3);cursor:pointer;user-select:none;
-                     display:flex;align-items:center;justify-content:space-between;margin-bottom:0"
-            >
-              <span>Or paste your site content</span>
-              <span id="blocked-paste-caret" style="color:var(--accent)">▶</span>
-            </div>
-            <div id="blocked-paste-section" style="display:none;margin-top:12px">
-              <textarea
-                id="blocked-paste-text"
-                placeholder="Paste your site copy, product descriptions, or any content you want analysed…"
-                style="width:100%;height:140px;resize:vertical;
-                       background:var(--surface);border:1px solid var(--border2);
-                       color:var(--text);font-family:inherit;font-size:var(--text-sm);
-                       padding:10px 12px;line-height:1.6;outline:none;
-                       border-radius:0;box-sizing:border-box"
-              ></textarea>
-              <button
-                class="btn btn-primary"
-                id="paste-analyze-btn"
-                onclick="proceedWithPastedContent()"
-                style="margin-top:8px;width:100%"
-              >
-                Analyze Pasted Content →
-              </button>
-            </div>
-          </div>
-        </div>
-      `
-    }
-
-    function toggleBlockedPaste() {
-      const section = document.getElementById('blocked-paste-section')
-      const caret = document.getElementById('blocked-paste-caret')
-      const open = section.style.display === 'none'
-      section.style.display = open ? 'block' : 'none'
-      caret.textContent = open ? '▼' : '▶'
-    }
-
-    async function proceedWithPastedContent() {
-      const text = document.getElementById('blocked-paste-text')?.value?.trim()
-      if (!text) { showToast('Please paste some content first'); return }
-      const btn = document.getElementById('paste-analyze-btn')
-      btn.disabled = true
-      btn.innerHTML = '<span class="spinner"></span> Analyzing…'
-      try {
-        const res = await fetch(`/api/brands/${brandId}/proceed-blocked`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
-        })
-        const data = await safeJson(res)
-        if (!res.ok) {
-          btn.disabled = false
-          btn.textContent = 'Analyze Pasted Content →'
-          showToast('Error: ' + (data.error || 'Something went wrong'))
-          return
-        }
-        brand.status = 'generating'
-        lastLoadedStatus = null
-        pollTimer = setTimeout(load, 500)
-      } catch (err) {
-        btn.disabled = false
-        btn.textContent = 'Analyze Pasted Content →'
-        showToast(`Error: ${err.message}`)
-      }
-    }
-
-    async function proceedWithDomainKnowledge() {
-      const btn = document.getElementById('proceed-blocked-btn')
-      btn.disabled = true
-      btn.innerHTML = '<span class="spinner"></span> Starting…'
-      try {
-        const res = await fetch(`/api/brands/${brandId}/proceed-blocked`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        })
-        const data = await safeJson(res)
-        if (!res.ok) {
-          btn.disabled = false
-          btn.textContent = 'Proceed with AI Knowledge →'
-          showToast('Error: ' + (data.error || 'Something went wrong'))
-          return
-        }
-        brand.status = 'generating'
-        lastLoadedStatus = null // force load() to rebuild the step track
-        pollTimer = setTimeout(load, 500)
-      } catch (err) {
-        btn.disabled = false
-        btn.textContent = 'Proceed with AI Knowledge →'
-        showToast(`Error: ${err.message}`)
-      }
-    }
 
     // ── Import prompts ────────────────────────────────────────────────────────
 

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="/assets/auth.js"></script>
+  <title>Generating — terrain.run</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <style>
+    #loading { display: flex; flex-direction: column; height: 100vh; padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
+    .loading-log-layout {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      align-items: center;
+      justify-content: center;
+    }
+    .loading-status-label {
+      font-family: var(--font-hero);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="tr-logo-corner" style="position:fixed;top:16px;right:20px;z-index:99"></div>
+  <div id="loading">
+    <div class="loading-log-layout">
+      <div style="max-width:1200px;overflow:hidden">
+        <div class="loading-status-label" id="loading-log-label">Generating</div>
+        <div class="term-elapsed" style="font-family:var(--font);font-size:var(--text-xs);letter-spacing:0.08em;color:var(--text);margin-bottom:8px;font-variant-numeric:tabular-nums;text-align:left"></div>
+        <div class="term-body" id="term-body" style="overflow:hidden;min-height:0">
+          <span class="term-line">Connecting…</span>
+        </div>
+      </div>
+    </div>
+    <div id="loading-brand-id" style="position:fixed;bottom:12px;right:20px;font-family:var(--font);font-size:var(--text-xxs);color:var(--text);letter-spacing:0.06em"></div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const brandId = params.get('brandId')
+    if (!brandId) location.href = '/'
+    const brandIdEl = document.getElementById('loading-brand-id')
+    if (brandIdEl && brandId) brandIdEl.textContent = `BrandID ${brandId}`
+
+    let brand = null
+    let pollInterval = null
+    let loadInProgress = false
+    let continueFired = false
+    let lastLogCount = 0
+    let termElapsedTimer = null
+
+    function escHtml(s) {
+      return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast')
+      t.textContent = msg
+      t.classList.add('show')
+      setTimeout(() => t.classList.remove('show'), 2400)
+    }
+
+    function safeJson(res) {
+      return res.text().then(t => { try { return JSON.parse(t) } catch { return { error: t.substring(0, 300) } } })
+    }
+
+    function termLine(text) {
+      const cls = text.includes('✓') ? 'ok' : text.includes('✗') || text.includes('⚠') ? 'err' : 'hl'
+      const idx = text.indexOf(']')
+      const formatted = idx >= 0
+        ? text.slice(0, idx + 1) + '\t\t\t' + text.slice(idx + 1).trimStart()
+        : text
+      return `<span class="term-line ${cls}">${escHtml(formatted)}</span>`
+    }
+
+    function updateTerminal(logs) {
+      const body = document.getElementById('term-body')
+      if (!body || !logs || !logs.length) return
+      const newLines = logs.slice(lastLogCount)
+      if (!newLines.length) return
+      if (lastLogCount === 0) body.innerHTML = ''
+      newLines.forEach(line => {
+        body.insertAdjacentHTML('afterbegin', termLine(line))
+      })
+      lastLogCount = logs.length
+      body.scrollTop = 0
+    }
+
+    function startTermElapsed() {
+      if (termElapsedTimer) return
+      const start = Date.now()
+      function update() {
+        const total = Math.floor((Date.now() - start) / 1000)
+        const m = Math.floor(total / 60)
+        const ss = String(total % 60).padStart(2, '0')
+        const t = `${m} ${ss} seconds`
+        document.querySelectorAll('.term-elapsed').forEach(el => el.textContent = t)
+      }
+      update()
+      termElapsedTimer = setInterval(update, 1000)
+    }
+
+    function stopTermElapsed() {
+      clearInterval(termElapsedTimer)
+      termElapsedTimer = null
+    }
+
+    function stopPolling() {
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+    }
+
+    const POLL_MS = 2000
+
+    function showScrapeBlockedUI() {
+      document.getElementById('loading').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;height:100vh">
+        <div style="max-width:500px;padding:32px 24px">
+          <div style="text-align:center">
+            <div style="font-size:var(--text-xs);letter-spacing:0.14em;text-transform:uppercase;color:var(--danger);margin-bottom:14px">
+              Access Blocked
+            </div>
+            <div style="font-size:var(--text-lg);font-weight:700;line-height:1.3;color:var(--text);margin-bottom:14px">
+              This site blocked our scraper
+            </div>
+            <div style="font-size:var(--text-sm);color:var(--text2);line-height:1.9;margin-bottom:24px">
+              The site rejected our request before we could read any content.<br><br>
+              You can proceed using the AI's existing knowledge of this domain.
+              This works well for established, well-known companies — but may produce
+              generic or inaccurate results for smaller or lesser-known ones.<br><br>
+              Either way, you can provide context manually via the
+              <strong style="color:var(--text)">ICP Supplement</strong> on the next screen.
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:24px">
+              <a href="/" class="btn btn-ghost">← Try a different URL</a>
+              <button class="btn btn-primary" id="proceed-blocked-btn" onclick="proceedWithDomainKnowledge()">
+                Proceed with AI Knowledge →
+              </button>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--border);padding-top:20px">
+            <div
+              onclick="toggleBlockedPaste()"
+              style="font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;
+                     color:var(--text3);cursor:pointer;user-select:none;
+                     display:flex;align-items:center;justify-content:space-between;margin-bottom:0"
+            >
+              <span>Or paste your site content</span>
+              <span id="blocked-paste-caret" style="color:var(--accent)">▶</span>
+            </div>
+            <div id="blocked-paste-section" style="display:none;margin-top:12px">
+              <textarea
+                id="blocked-paste-text"
+                placeholder="Paste your site copy, product descriptions, or any content you want analysed…"
+                style="width:100%;height:140px;resize:vertical;
+                       background:var(--surface);border:1px solid var(--border2);
+                       color:var(--text);font-family:inherit;font-size:var(--text-sm);
+                       padding:10px 12px;line-height:1.6;outline:none;
+                       border-radius:0;box-sizing:border-box"
+              ></textarea>
+              <button
+                class="btn btn-primary"
+                id="paste-analyze-btn"
+                onclick="proceedWithPastedContent()"
+                style="margin-top:8px;width:100%"
+              >
+                Analyze Pasted Content →
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+      `
+    }
+
+    function toggleBlockedPaste() {
+      const section = document.getElementById('blocked-paste-section')
+      const caret = document.getElementById('blocked-paste-caret')
+      const open = section.style.display === 'none'
+      section.style.display = open ? 'block' : 'none'
+      caret.textContent = open ? '▼' : '▶'
+    }
+
+    async function proceedWithPastedContent() {
+      const text = document.getElementById('blocked-paste-text')?.value?.trim()
+      if (!text) { showToast('Please paste some content first'); return }
+      const btn = document.getElementById('paste-analyze-btn')
+      btn.disabled = true
+      btn.innerHTML = '<span class="spinner"></span> Analyzing…'
+      try {
+        const res = await fetch(`/api/brands/${brandId}/proceed-blocked`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        })
+        const data = await safeJson(res)
+        if (!res.ok) {
+          btn.disabled = false
+          btn.textContent = 'Analyze Pasted Content →'
+          showToast('Error: ' + (data.error || 'Something went wrong'))
+          return
+        }
+        brand.status = 'generating'
+        load()
+      } catch (err) {
+        btn.disabled = false
+        btn.textContent = 'Analyze Pasted Content →'
+        showToast(`Error: ${err.message}`)
+      }
+    }
+
+    async function proceedWithDomainKnowledge() {
+      const btn = document.getElementById('proceed-blocked-btn')
+      btn.disabled = true
+      btn.innerHTML = '<span class="spinner"></span> Starting…'
+      try {
+        const res = await fetch(`/api/brands/${brandId}/proceed-blocked`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        const data = await safeJson(res)
+        if (!res.ok) {
+          btn.disabled = false
+          btn.textContent = 'Proceed with AI Knowledge →'
+          showToast('Error: ' + (data.error || 'Something went wrong'))
+          return
+        }
+        brand.status = 'generating'
+        load()
+      } catch (err) {
+        btn.disabled = false
+        btn.textContent = 'Proceed with AI Knowledge →'
+        showToast(`Error: ${err.message}`)
+      }
+    }
+
+    async function load() {
+      if (loadInProgress) return
+      loadInProgress = true
+      try {
+        const res = await fetch(`/api/brands/${brandId}`)
+        if (!res.ok) { location.href = '/'; return }
+        brand = await safeJson(res)
+
+        if (['scraping', 'generating'].includes(brand.status)) {
+          const labelEl = document.getElementById('loading-log-label')
+          if (labelEl) labelEl.textContent = brand.status === 'scraping' ? 'Scraping' : 'Generating'
+          if (brand.status === 'scraping' && !continueFired) {
+            continueFired = true
+            fetch(`/api/brands/${brandId}/continue`, { method: 'POST' }).catch(() => {})
+          }
+          const hasPersonas = Array.isArray(brand.personas) && brand.personas.length > 0
+          if (brand.status === 'generating' && hasPersonas) {
+            // Personas ready — redirect to approve
+            stopPolling()
+            stopTermElapsed()
+            location.href = `/approve.html?brandId=${encodeURIComponent(brandId)}`
+            return
+          }
+          startTermElapsed()
+          updateTerminal(brand.logs || [])
+          if (!pollInterval) {
+            pollInterval = setInterval(load, POLL_MS)
+          }
+          const logs = (brand.logs || []).join('\n')
+          if (/Personas ready|submit_personas done/i.test(logs)) {
+            stopPolling()
+            load()
+          }
+          return
+        }
+
+        if (brand.status === 'scrape_blocked') {
+          stopPolling()
+          showScrapeBlockedUI()
+          return
+        }
+
+        if (brand.status === 'failed') {
+          stopPolling()
+          stopTermElapsed()
+          const errDetail = brand.lastError
+            ? `<div style="margin-top:8px;font-size:var(--text-xs);color:var(--text3);max-width:480px;line-height:1.5;font-family:monospace;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:8px 10px">${escHtml(brand.lastError)}</div>`
+            : ''
+          document.getElementById('loading').innerHTML =
+            `<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column">
+              <div style="color:var(--danger);font-size:var(--text-sm);font-weight:600">Analysis failed</div>
+              ${errDetail}
+              <div style="margin-top:12px"><a href="/" style="color:var(--accent);font-size:var(--text-sm)">Try again</a></div>
+            </div>`
+          return
+        }
+
+        // Any other status (personas_ready, generating_prompts, ready) — redirect to approve
+        stopPolling()
+        stopTermElapsed()
+        location.href = `/approve.html?brandId=${encodeURIComponent(brandId)}`
+      } catch (err) {
+        console.error('[generating] load error:', err)
+        if (!brand || ['scraping', 'generating'].includes(brand?.status)) {
+          // keep polling
+        }
+      } finally {
+        loadInProgress = false
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && brand && ['scraping', 'generating'].includes(brand.status)) {
+        load()
+      }
+    })
+
+    load()
+  </script>
+  <script src="/assets/tr-logo-anim.js"></script>
+  <script>initTRLogo('#tr-logo-corner', { size: window.innerWidth <= 768 ? 96 : 186 });</script>
+</body>
+</html>

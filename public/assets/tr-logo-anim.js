@@ -72,7 +72,7 @@ async function initTRLogo(selector, opts = {}) {
   // Animation state
   let animFrame = null;
   let startTime = 0;
-  const SPEED = 4; // 4x speed as requested
+  const SPEED = 2; // halved from 4x
 
   function runWave(now) {
     const elapsed = ((now - startTime) / 1000) * SPEED;

@@ -7,145 +7,242 @@
   <title>Live Responses — terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
-    .live-layout {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--float-row-buffer);
-      height: calc(100vh - 49px);
-      padding: var(--float-row-buffer);
-      align-content: stretch;
-    }
+    html, body { height: 100vh; overflow: hidden; margin: 0; padding: 0; }
 
-    .llm-column {
+    .top-bar { flex-shrink: 0; }
+
+    .live-scroll {
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      height: calc(100vh - 49px);
+      scrollbar-width: none;
+    }
+    .live-scroll::-webkit-scrollbar { display: none; }
+
+    .live-col {
+      flex: 0 0 calc(100vw / 3);
+      min-width: calc(100vw / 3);
       display: flex;
       flex-direction: column;
-      background: var(--float-row-bg);
-      border-radius: var(--float-row-radius);
-      overflow: hidden;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 16px 12px 12px;
     }
 
-    .col-header {
+    /* ── Log column (generating-page terminal style) ── */
+    .log-col {
+      flex: 0 0 calc(100vw / 3);
+      min-width: calc(100vw / 3);
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      flex-shrink: 0;
+      flex-direction: column;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 16px 12px 12px;
     }
-
-    .col-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: var(--text-xs);
+    .log-col-label {
+      font-family: var(--font-hero);
+      font-size: 28px;
       font-weight: 700;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 8px;
     }
-
-    .col-progress {
+    .log-col-elapsed {
+      font-family: var(--font);
       font-size: var(--text-xs);
-      color: var(--text2);
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      margin-bottom: 8px;
+      font-variant-numeric: tabular-nums;
     }
-
-    .col-body {
+    .log-col-body {
       flex: 1;
       overflow-y: auto;
-      padding: var(--float-row-buffer);
+      overflow-x: hidden;
+      min-height: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
     }
 
-    .response-card {
-      padding: 14px 16px;
-      margin-bottom: var(--float-row-buffer);
-      background: var(--surface);
-      border-radius: var(--float-row-radius);
-      cursor: pointer;
-    }
-    .response-card:hover { background: var(--float-row-bg-hover); }
-    .response-card.new { background: var(--w-02); }
-
-    .response-prompt {
-      font-size: var(--text-sm);
-      color: var(--text3);
-      margin-bottom: 6px;
-      line-height: 1.4;
+    /* ── Column header ── */
+    .col-header {
       display: flex;
-      align-items: flex-start;
-      gap: 6px;
-      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
+      padding: 0 4px 12px;
+      flex-shrink: 0;
+    }
+    .col-count {
+      font-family: var(--font);
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--text2);
+      line-height: 1;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+    .col-name {
+      font-family: var(--font-hero);
+      font-size: var(--text-md);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text2);
     }
 
-    .response-persona {
-      font-size: var(--text-xs);
-      color: var(--text3);
-      letter-spacing: 0.06em;
-      margin-bottom: 6px;
-    }
-
-    .response-text {
-      font-size: var(--text-sm);
-      color: var(--text3);
-      line-height: 1.6;
-      display: -webkit-box;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
+    /* ── Progress fill circle ── */
+    .progress-fill-wrap {
+      margin-left: auto;
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
       overflow: hidden;
+      background: transparent;
     }
-    .response-text.expanded {
-      display: block;
-      -webkit-line-clamp: unset;
+    .progress-fill-liquid {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: var(--text);
+      transition: height 0.4s ease;
+    }
+    .progress-fill-pct {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--bg);
+      font-variant-numeric: tabular-nums;
+      z-index: 1;
     }
 
+    /* ── Filter bar ── */
     .filter-bar {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
+      gap: 6px;
+      padding: 0 4px 10px;
       flex-shrink: 0;
     }
     .filter-row {
       display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
+      align-items: center;
+      gap: 0;
     }
     .filter-row-label {
       font-size: 10px;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text3);
-      align-self: center;
-      margin-right: 4px;
+      width: 56px;
+      flex-shrink: 0;
     }
-
     .filter-btn {
       font-size: var(--text-xs);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 3px 8px;
-      border-radius: 1px;
-      border: 1px solid var(--border2);
-      background: transparent;
-      color: var(--text2);
+      letter-spacing: 0.06em;
+      padding: 2px 8px;
+      border: none;
+      background: none;
+      color: var(--text3);
       cursor: pointer;
       font-family: var(--font);
-      transition: all 0.15s;
+      transition: color 0.15s;
+      white-space: nowrap;
     }
-    .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-    .filter-btn:hover { color: var(--text); border-color: var(--border2); }
-    /* Stage filter colors */
-    .filter-btn.filter-tofu { background: var(--badge-tofu-bg); color: var(--tofu); }
-    .filter-btn.filter-tofu.active { background: var(--tofu); color: var(--bg); border-color: var(--tofu); }
-    .filter-btn.filter-mofu { background: var(--badge-mofu-bg); color: var(--mofu); }
-    .filter-btn.filter-mofu.active { background: var(--mofu); color: var(--bg); border-color: var(--mofu); }
-    .filter-btn.filter-bofu { background: var(--badge-bofu-bg); color: var(--bofu); }
-    .filter-btn.filter-bofu.active { background: var(--bofu); color: var(--bg); border-color: var(--bofu); }
-    /* Persona filter color */
-    .filter-btn.filter-persona { background: rgba(251,191,36,0.12); color: var(--warning); }
-    .filter-btn.filter-persona.active { background: var(--warning); color: var(--bg); border-color: var(--warning); }
+    .filter-btn:hover { color: var(--text); }
+    .filter-btn.active { color: var(--text); }
+    /* Stage colors for active */
+    .filter-btn.filter-tofu.active { color: var(--tofu); }
+    .filter-btn.filter-mofu.active { color: var(--mofu); }
+    .filter-btn.filter-bofu.active { color: var(--bofu); }
+    /* Persona filter — orange */
+    .filter-btn.filter-persona { color: var(--text3); }
+    .filter-btn.filter-persona.active { color: var(--text); }
+    .filter-btn.filter-persona:hover { color: var(--text); }
+    /* Separator between ALL and options */
+    .filter-sep {
+      width: 1px;
+      height: 12px;
+      background: var(--border2);
+      margin: 0 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Response lines (terminal aesthetic) ── */
+    .col-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0 4px;
+      min-height: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
+    }
+
+    .response-line {
+      padding: 8px 0;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .response-line:hover { background: rgba(255,255,255,0.02); }
+
+    .response-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: var(--text-xs);
+      line-height: 1.35;
+    }
+    .response-stage {
+      font-family: var(--font);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .response-stage.tofu { color: var(--tofu); }
+    .response-stage.mofu { color: var(--mofu); }
+    .response-stage.bofu { color: var(--bofu); }
+
+    .response-persona-name {
+      font-family: var(--font-hero);
+      font-size: var(--text-xs);
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+
+    .response-prompt-text {
+      font-size: var(--text-xs);
+      color: var(--text2);
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+
+    .response-body {
+      font-size: var(--text-xs);
+      color: var(--text3);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .response-body.expanded {
+      display: block;
+      -webkit-line-clamp: unset;
+    }
 
     .empty-col {
-      padding: 32px 16px;
+      padding: 32px 0;
       font-size: var(--text-xs);
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -153,41 +250,84 @@
       text-align: center;
     }
 
+    /* ── Elapsed timer in top bar ── */
+    .run-elapsed-display {
+      font-family: var(--font);
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Nav tab buttons (full-bleed header highlight) ── */
+    .top-bar { align-items: stretch; }
+    .top-bar .nav-tabs {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin: -10px -24px -10px 0;
+    }
+    .top-bar .nav-tab {
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      font-family: var(--font);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffffff;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .top-bar .nav-tab:hover {
+      background: var(--text);
+      color: #ffffff;
+    }
   </style>
 </head>
 <body>
 
   <div class="top-bar">
     <a href="/" class="logo">terrain<em>.run</em></a>
-    <div style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;align-self:center;gap:12px">
       <div class="live-indicator" id="live-ind" style="display:none">
         <div class="live-dot"></div>LIVE
       </div>
-      <span id="run-progress-badge" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text2)"></span>
-      <span id="run-status-badge" style="font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;color:var(--text2)">–</span>
-      <span id="run-elapsed" style="font-size:var(--text-xs);letter-spacing:0.06em;color:var(--text3)"></span>
+      <span class="run-elapsed-display" id="run-elapsed"></span>
+      <span id="run-status-badge" style="font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;color:var(--text2)"></span>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button type="button" class="btn btn-ghost btn-sm" id="log-toggle" title="Show run progression log">Log</button>
-      <button type="button" class="btn btn-danger btn-sm" id="cancel-btn" title="Stop the run" style="display:none">Cancel Run</button>
-      <a id="dashboard-link" href="#" class="btn btn-primary btn-sm" title="View results (run continues in background)">Dashboard</a>
-      <a href="/" class="btn btn-ghost btn-sm">New</a>
+    <div class="nav-tabs">
+      <button type="button" class="nav-tab" id="log-toggle" title="Show run log">Log</button>
+      <button type="button" class="nav-tab" id="cancel-btn" title="Stop the run" style="display:none">Cancel Run</button>
+      <a id="dashboard-link" href="#" class="nav-tab" title="View results">Dashboard</a>
+      <a href="/" class="nav-tab">New</a>
     </div>
   </div>
 
-  <div id="log-panel" style="display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;max-height:180px;overflow-y:auto;font-size:var(--text-xs);font-family:var(--font);line-height:1.5;color:var(--text2)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:var(--text-xs);letter-spacing:0.1em;text-transform:uppercase;color:var(--text3)">Run progression</span>
-      <button type="button" class="btn btn-ghost btn-sm" style="font-size:var(--text-xs)" onclick="document.getElementById('log-panel').style.display='none'">×</button>
+  <div class="live-scroll" id="live-scroll">
+    <!-- Log column (hidden off-screen left on load) -->
+    <div class="log-col" id="col-log">
+      <div class="log-col-label">Run Log</div>
+      <div class="log-col-elapsed" id="log-elapsed"></div>
+      <div class="log-col-body" id="log-body">
+        <span class="term-line">Waiting for logs…</span>
+      </div>
     </div>
-    <pre id="log-body" style="margin:0;white-space:pre-wrap;word-break:break-word;font-family:inherit"></pre>
-  </div>
 
-  <div class="live-layout">
-    <div class="llm-column" id="col-claude">
+    <!-- Claude -->
+    <div class="live-col" id="col-claude">
       <div class="col-header">
-        <div class="col-title"><span class="llm-badge llm-claude">Claude</span></div>
-        <span class="col-progress" id="prog-claude">– / –</span>
+        <span class="col-count" id="count-claude">0</span>
+        <span class="col-name">Claude</span>
+        <div class="progress-fill-wrap" id="ring-claude">
+          <div class="progress-fill-liquid" id="ring-fill-claude" style="height:0%"></div>
+          <div class="progress-fill-pct" id="pct-claude">0%</div>
+        </div>
       </div>
       <div class="filter-bar" id="filter-claude"></div>
       <div class="col-body" id="body-claude">
@@ -195,10 +335,15 @@
       </div>
     </div>
 
-    <div class="llm-column" id="col-chatgpt">
+    <!-- ChatGPT -->
+    <div class="live-col" id="col-chatgpt">
       <div class="col-header">
-        <div class="col-title"><span class="llm-badge llm-chatgpt">ChatGPT</span></div>
-        <span class="col-progress" id="prog-chatgpt">– / –</span>
+        <span class="col-count" id="count-chatgpt">0</span>
+        <span class="col-name">ChatGPT</span>
+        <div class="progress-fill-wrap" id="ring-chatgpt">
+          <div class="progress-fill-liquid" id="ring-fill-chatgpt" style="height:0%"></div>
+          <div class="progress-fill-pct" id="pct-chatgpt">0%</div>
+        </div>
       </div>
       <div class="filter-bar" id="filter-chatgpt"></div>
       <div class="col-body" id="body-chatgpt">
@@ -206,10 +351,15 @@
       </div>
     </div>
 
-    <div class="llm-column" id="col-gemini">
+    <!-- Gemini -->
+    <div class="live-col" id="col-gemini">
       <div class="col-header">
-        <div class="col-title"><span class="llm-badge llm-gemini">Gemini</span></div>
-        <span class="col-progress" id="prog-gemini">– / –</span>
+        <span class="col-count" id="count-gemini">0</span>
+        <span class="col-name">Gemini</span>
+        <div class="progress-fill-wrap" id="ring-gemini">
+          <div class="progress-fill-liquid" id="ring-fill-gemini" style="height:0%"></div>
+          <div class="progress-fill-pct" id="pct-gemini">0%</div>
+        </div>
       </div>
       <div class="filter-bar" id="filter-gemini"></div>
       <div class="col-body" id="body-gemini">
@@ -223,8 +373,52 @@
     const runId = params.get('runId')
     if (!runId) location.href = '/'
 
-    // ── Run log panel ────────────────────────────────────────────────────────
+    // ── Scroll log column off-screen on load ──────────────────────────────
+    const scrollEl = document.getElementById('live-scroll')
+    const logCol = document.getElementById('col-log')
+    // Immediately scroll past the log column so Claude is the first visible
+    scrollEl.scrollLeft = logCol.offsetWidth
+    // Backup in case layout wasn't ready
+    requestAnimationFrame(() => { scrollEl.scrollLeft = logCol.offsetWidth })
+
+    // Log button scrolls to/from log column
+    let logVisible = false
+    let scrollTarget = logCol.offsetWidth // start with log hidden
+    document.getElementById('log-toggle').addEventListener('click', () => {
+      scrollTarget = logVisible ? logCol.offsetWidth : 0
+      logVisible = !logVisible
+      scrollEl.scrollLeft = scrollTarget
+    })
+
+    // ── Run log (terminal style from generating page) ─────────────────────
     let lastLogCount = 0
+
+    function escHtml(s) {
+      return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    }
+
+    function termLine(text) {
+      const cls = text.includes('✓') ? 'ok' : text.includes('✗') || text.includes('⚠') ? 'err' : 'hl'
+      const idx = text.indexOf(']')
+      const formatted = idx >= 0
+        ? text.slice(0, idx + 1) + '\t\t\t' + text.slice(idx + 1).trimStart()
+        : text
+      return `<span class="term-line ${cls}">${escHtml(formatted)}</span>`
+    }
+
+    function updateLogTerminal(logs) {
+      const body = document.getElementById('log-body')
+      if (!body || !logs || !logs.length) return
+      const newLines = logs.slice(lastLogCount)
+      if (!newLines.length) return
+      if (lastLogCount === 0) body.innerHTML = ''
+      newLines.forEach(line => {
+        body.insertAdjacentHTML('afterbegin', termLine(line))
+      })
+      lastLogCount = logs.length
+      body.scrollTop = 0
+    }
+
     async function fetchLogs() {
       try {
         const res = await fetch(`/api/runs/${runId}/logs`)
@@ -233,23 +427,8 @@
         return data.logs || []
       } catch { return [] }
     }
-    function updateLogPanel(logs) {
-      const el = document.getElementById('log-body')
-      if (!el) return
-      el.textContent = logs.length ? logs.join('\n') : 'No logs yet…'
-    }
-    document.getElementById('log-toggle').addEventListener('click', async () => {
-      const panel = document.getElementById('log-panel')
-      const open = panel.style.display !== 'none'
-      panel.style.display = open ? 'none' : 'block'
-      if (!open) {
-        const logs = await fetchLogs()
-        updateLogPanel(logs)
-        lastLogCount = logs.length
-      }
-    })
 
-    // ── Error log ────────────────────────────────────────────────────────────
+    // ── Error log ─────────────────────────────────────────────────────────
     const errorLog = []
     function logError(source, msg, detail = '') {
       errorLog.push({ time: new Date().toISOString(), source, message: msg, detail: String(detail).substring(0, 600) })
@@ -261,7 +440,7 @@
         btn.addEventListener('click', downloadErrorLog)
         document.body.appendChild(btn)
       }
-      btn.textContent = `⚠ ${errorLog.length} Error${errorLog.length > 1 ? 's' : ''} — Download Log`
+      btn.textContent = `${errorLog.length} Error${errorLog.length > 1 ? 's' : ''}`
     }
     function downloadErrorLog() {
       const text = [
@@ -269,15 +448,15 @@
         `Generated: ${new Date().toISOString()}`,
         `Run: ${runId || 'n/a'}`,
         `URL: ${location.href}`,
-        '═'.repeat(60),
+        '='.repeat(60),
         '',
-        ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '─'.repeat(40)].filter(Boolean).join('\n')),
+        ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '-'.repeat(40)].filter(Boolean).join('\n')),
       ].join('\n')
       const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `terrain-errors-${Date.now()}.txt` })
       a.click()
     }
 
-    // ── Safe JSON parser ─────────────────────────────────────────────────────
+    // ── Safe JSON parser ──────────────────────────────────────────────────
     async function safeJson(res) {
       const text = await res.text()
       try { return JSON.parse(text) }
@@ -301,15 +480,21 @@
       } catch {}
     })
 
+    // ── State ─────────────────────────────────────────────────────────────
     const LLMS = ['claude', 'chatgpt', 'gemini']
     const seenIds = new Set()
     const allData = { claude: [], chatgpt: [], gemini: [] }
     const activeFilters = { claude: { stage: 'all', persona: 'all' }, chatgpt: { stage: 'all', persona: 'all' }, gemini: { stage: 'all', persona: 'all' } }
-
-    function escHtml(s) {
-      return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    // ── Progress fill circle ──────────────────────────────────────────────
+    function updateRing(llm, done, total) {
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0
+      const fill = document.getElementById(`ring-fill-${llm}`)
+      const label = document.getElementById(`pct-${llm}`)
+      if (fill) fill.style.height = pct + '%'
+      if (label) label.textContent = `${pct}%`
     }
 
+    // ── Render column ─────────────────────────────────────────────────────
     function renderColumn(llm, items) {
       const body = document.getElementById(`body-${llm}`)
       const f = activeFilters[llm]
@@ -318,44 +503,62 @@
       if (f.stage !== 'all') filtered = filtered.filter(r => r.funnel_stage === f.stage)
       if (f.persona !== 'all') filtered = filtered.filter(r => (r.persona_name || '') === f.persona)
 
+      // Update count
+      const countEl = document.getElementById(`count-${llm}`)
+      if (countEl) countEl.textContent = filtered.length
+
       if (filtered.length === 0) {
         const waiting = f.stage === 'all' && f.persona === 'all'
-        body.innerHTML = `<div class="empty-col">${waiting ? 'Waiting for responses…' : 'No responses for this filter'}</div>`
+        body.innerHTML = `<div class="empty-col">${waiting ? 'Waiting for responses…' : 'No matches'}</div>`
         return
       }
 
       body.innerHTML = filtered.map(r => {
-        const personaLabel = (r.persona_name || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || r.persona_name || '—'
-        const personaShort = personaLabel.length > 20 ? personaLabel.slice(0, 17) + '…' : personaLabel
+        const personaLabel = (r.persona_name || '').replace(/\s*\([^)]*\)\s*$/, '').trim() || r.persona_name || ''
+        const stage = (r.funnel_stage || '').toLowerCase()
         return `
-        <div class="response-card" onclick="this.querySelector('.response-text').classList.toggle('expanded')">
-          <div class="response-prompt">
-            <span class="badge badge-${r.funnel_stage}">${r.funnel_stage}</span>
-            <span class="badge badge-persona" title="${escHtml(r.persona_name || '')}">${escHtml(personaShort)}</span>
-            ${escHtml(r.prompt_text)}
+        <div class="response-line" onclick="this.querySelector('.response-body').classList.toggle('expanded')">
+          <div class="response-meta">
+            <span class="response-stage ${stage}">${escHtml(r.funnel_stage || '')}</span>
+            ${personaLabel ? `<span class="response-persona-name">${escHtml(personaLabel)}</span>` : ''}
           </div>
-          <div class="response-text">${escHtml(r.response_text || '')}</div>
+          <div class="response-prompt-text">${escHtml(r.prompt_text)}</div>
+          <div class="response-body">${escHtml(r.response_text || '')}</div>
         </div>
       `}).join('')
     }
 
+    // ── Filters ───────────────────────────────────────────────────────────
     function buildFilters(llm, items) {
       const stages = [...new Set(items.map(r => r.funnel_stage).filter(Boolean))]
       const personas = [...new Set(items.map(r => r.persona_name || '').filter(Boolean))]
       const f = activeFilters[llm]
       const bar = document.getElementById(`filter-${llm}`)
-      bar.innerHTML = `
+
+      const stageRow = stages.length ? `
         <div class="filter-row">
           <span class="filter-row-label">Stage</span>
           <button class="filter-btn ${f.stage === 'all' ? 'active' : ''}" onclick="setFilter('${llm}','stage','all')">All</button>
+          <span class="filter-sep"></span>
           ${stages.map(s => `<button class="filter-btn filter-${s.toLowerCase()} ${f.stage === s ? 'active' : ''}" onclick="setFilter('${llm}','stage','${s}')">${s}</button>`).join('')}
         </div>
+      ` : ''
+
+      const personaRow = personas.length ? `
         <div class="filter-row">
           <span class="filter-row-label">Persona</span>
           <button class="filter-btn ${f.persona === 'all' ? 'active' : ''}" onclick="setFilter('${llm}','persona','all')">All</button>
-          ${personas.map(p => `<button class="filter-btn filter-persona ${f.persona === p ? 'active' : ''}" onclick="setFilter('${llm}','persona',${JSON.stringify(p)})" title="${escHtml(p)}">${escHtml(p.length > 24 ? p.slice(0, 21) + '…' : p)}</button>`).join('')}
+          <span class="filter-sep"></span>
+          ${personas.map(p => {
+            const short = p.replace(/\s*\([^)]*\)\s*$/, '').trim()
+            const display = short.length > 20 ? short.slice(0, 17) + '…' : short
+            const safeP = escHtml(p).replace(/'/g, '&#39;')
+            return `<button class="filter-btn filter-persona ${f.persona === p ? 'active' : ''}" onclick="setFilter('${llm}','persona','${safeP}')" title="${escHtml(p)}">${escHtml(display)}</button>`
+          }).join('')}
         </div>
-      `
+      ` : ''
+
+      bar.innerHTML = stageRow + personaRow
     }
 
     function setFilter(llm, type, value) {
@@ -364,6 +567,7 @@
       renderColumn(llm, allData[llm])
     }
 
+    // ── Fetch responses ───────────────────────────────────────────────────
     async function fetchResponses() {
       try {
         const res = await fetch(`/api/runs/${runId}/live-responses`)
@@ -372,25 +576,28 @@
         const { grouped, progress } = data
 
         let hasNew = false
+        // Preserve intended scroll position across DOM updates
         LLMS.forEach(llm => {
           const items = grouped[llm] || []
           const prog = progress[llm] || { done: 0, total: 0 }
-          document.getElementById(`prog-${llm}`).textContent = `${prog.done} / ${prog.total}`
+          updateRing(llm, prog.done, prog.total)
 
           const newItems = items.filter(r => !seenIds.has(r.id))
           if (newItems.length > 0) {
             hasNew = true
             newItems.forEach(r => seenIds.add(r.id))
-            allData[llm] = [...newItems, ...allData[llm]] // newest first
+            allData[llm] = [...newItems, ...allData[llm]]
             buildFilters(llm, allData[llm])
             renderColumn(llm, allData[llm])
           }
         })
+        scrollEl.scrollLeft = scrollTarget
 
         return hasNew
       } catch {}
     }
 
+    // ── Poll status ───────────────────────────────────────────────────────
     async function pollStatus() {
       try {
         const res = await fetch(`/api/runs/${runId}`)
@@ -401,31 +608,27 @@
         document.getElementById('live-ind').style.display = isLive ? 'inline-flex' : 'none'
         const cancelBtn = document.getElementById('cancel-btn')
         if (cancelBtn) cancelBtn.style.display = isLive ? 'inline-flex' : 'none'
-        // Progress counter next to LIVE badge
-        const done = run.completed_queries ?? 0
-        const total = run.total_queries ?? 0
-        const progEl = document.getElementById('run-progress-badge')
-        if (total > 0) {
-          const pct = Math.round((done / total) * 100)
-          progEl.textContent = `${done} / ${total} (${pct}%)`
-        } else {
-          progEl.textContent = ''
-        }
         return run.status
       } catch {}
     }
 
+    // ── Elapsed timer ─────────────────────────────────────────────────────
     let interval = null
     let processing = false
-
     const runStart = Date.now()
+
     const elapsedTimer = setInterval(() => {
-      const s = Math.floor((Date.now() - runStart) / 1000)
-      const m = Math.floor(s / 60)
+      const total = Math.floor((Date.now() - runStart) / 1000)
+      const m = Math.floor(total / 60)
+      const ss = String(total % 60).padStart(2, '0')
+      const t = `${m} ${ss} seconds`
       const el = document.getElementById('run-elapsed')
-      if (el) el.textContent = m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+      if (el) el.textContent = t
+      const logEl = document.getElementById('log-elapsed')
+      if (logEl) logEl.textContent = t
     }, 1000)
 
+    // ── Drive processing ──────────────────────────────────────────────────
     async function driveProcess(status) {
       if (processing || !status || ['complete','failed'].includes(status)) return
       if (!['pending','querying','scraping','analyzing'].includes(status)) return
@@ -436,23 +639,20 @@
       processing = false
     }
 
+    // ── Main tick ─────────────────────────────────────────────────────────
     async function tick() {
-      await fetchResponses()
-      const status = await pollStatus()
-      const logPanel = document.getElementById('log-panel')
-      // Update log panel if visible
-      if (logPanel && logPanel.style.display !== 'none') {
-        const logs = await fetchLogs()
-        if (logs.length !== lastLogCount) {
-          lastLogCount = logs.length
-          updateLogPanel(logs)
-        }
+      const [, status] = await Promise.all([fetchResponses(), pollStatus()])
+
+      // Always update log terminal (preserve scroll)
+      const logs = await fetchLogs()
+      if (logs.length !== lastLogCount) {
+        updateLogTerminal(logs)
       }
+      scrollEl.scrollLeft = scrollTarget
+
       if (status === 'complete' || status === 'failed') {
         if (interval) clearInterval(interval)
         clearInterval(elapsedTimer)
-        const el = document.getElementById('run-elapsed')
-        if (el) el.textContent = ''
         return
       }
       driveProcess(status)
