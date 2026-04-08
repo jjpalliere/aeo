@@ -55,27 +55,38 @@
     .landing-hero {
       position: relative; z-index: 1;
       min-height: 100vh;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center;
-      padding: 120px 32px 80px;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 25vh 40px 80px;
       box-sizing: border-box;
     }
-    .hero-content { max-width: 720px; }
+    .hero-layout {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 64px;
+      max-width: 960px;
+      width: 100%;
+    }
+    .hero-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .hero-logo-wrap {
+      flex-shrink: 0;
+    }
     .hero-logo {
-      height: 56px;
+      height: 140px;
       width: auto;
-      margin-bottom: 48px;
-      opacity: 0.95;
+      opacity: 0.85;
     }
     .hero-title {
       font-family: var(--font-hero);
-      font-size: clamp(36px, 6vw, 64px);
+      font-size: clamp(36px, 5.5vw, 58px);
       font-weight: 700;
       letter-spacing: -0.02em;
       line-height: 1.1;
       color: var(--text);
-      margin: 0 0 28px;
+      margin: 0 0 24px;
     }
     .hero-sub {
       font-family: var(--font);
@@ -83,9 +94,8 @@
       color: var(--text2);
       letter-spacing: 0.04em;
       line-height: 1.8;
-      margin: 0 0 32px;
-      max-width: 480px;
-      margin-left: auto; margin-right: auto;
+      margin: 0;
+      max-width: 440px;
     }
     .hero-scroll {
       position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
@@ -310,7 +320,8 @@
     @media (max-width: 680px) {
       .landing-nav { padding: 16px 20px; }
       .landing-hero { padding: 100px 20px 80px; }
-      .hero-logo { height: 40px; margin-bottom: 36px; }
+      .hero-layout { flex-direction: column-reverse; gap: 32px; text-align: center; }
+      .hero-logo { height: 80px; }
       .landing-section { padding: 64px 20px; }
       .steps-grid { grid-template-columns: 1fr; }
       .videos-grid { grid-template-columns: 1fr; }
@@ -330,10 +341,14 @@
 
   <!-- Hero (above the fold) -->
   <header class="landing-hero">
-    <div class="hero-content">
-      <img src="/assets/tr-logo.svg" alt="Terrain" class="hero-logo" />
-      <h1 class="hero-title">Answer Engine<br>Optimization</h1>
-      <p class="hero-sub">Measure how AI assistants rank and cite your brand across Claude, ChatGPT, and Gemini.</p>
+    <div class="hero-layout">
+      <div class="hero-text">
+        <h1 class="hero-title">Answer Engine<br>Optimization</h1>
+        <p class="hero-sub">Measure how AI assistants rank and cite your brand across Claude, ChatGPT, and Gemini.</p>
+      </div>
+      <div class="hero-logo-wrap">
+        <img src="/assets/tr-logo-orange.svg" alt="Terrain" class="hero-logo" />
+      </div>
     </div>
     <div class="hero-scroll" onclick="document.querySelector('.section-what').scrollIntoView({behavior:'smooth'})">
       <button class="hero-scroll-arrow">&darr;</button>
@@ -399,7 +414,6 @@
   <section class="landing-section section-videos">
     <div class="section-inner">
       <span class="section-label">Watch</span>
-      <h2 class="section-heading">See it in action</h2>
       <div class="videos-grid">
         <div>
           <div class="video-card" onclick="openVideo('/assets/demo.mp4')">
