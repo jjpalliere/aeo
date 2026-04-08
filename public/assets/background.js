@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   terrain.run — Decorative 3D scatter plot backdrop
+   AEO — Decorative 3D scatter plot backdrop
    Requires Three.js loaded globally (via CDN script tag).
    Looks for <canvas id="bg-canvas"> — no-ops if not found.
    Uses InstancedMesh for performance (single draw call for all dots).
@@ -19,7 +19,7 @@
   const MOUSE_INFLUENCE = 0.3;
   const MOUSE_LERP = 0.05;
   const NUM_CLUSTERS = 8;
-  const LINE_OPACITY = 0.2;
+  const LINE_OPACITY = 0.32;
 
   // Read cluster colors from CSS custom properties (--cluster-1 … --cluster-15)
   var styles = getComputedStyle(document.documentElement);
@@ -44,7 +44,7 @@
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0a0a);
-  scene.fog = new THREE.FogExp2(0x0a0a0a, 0.14);
+  scene.fog = new THREE.FogExp2(0x0a0a0a, 0.08);
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 100);
   camera.position.set(1.5, 1.0, 2.5);
@@ -147,9 +147,9 @@
   var white = new THREE.Color(1, 1, 1);
   var blinkTmp = new THREE.Color();
   var dotPos = new THREE.Vector3();
-  var DIST_FALLOFF = 0.18;   // far dots (less dark = brighter bg overall)
-  var DIST_SCALE = 0.24;     // distance multiplier
-  var DIST_POWER = 1.5;      // power curve
+  var DIST_FALLOFF = 0.32;   // far dots (higher = brighter bg overall)
+  var DIST_SCALE = 0.22;     // distance multiplier
+  var DIST_POWER = 1.3;      // power curve
   var FRONT_WHITE_WASH = 0.45;  // closest dots lerp toward white (flash overexposure)
 
   /* ── Connector lines (point → cluster centroid) ─────────────────────────── */

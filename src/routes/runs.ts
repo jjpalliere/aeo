@@ -4,13 +4,14 @@ import { queryLLM, extractCitations, type LLMResponse } from '../services/llm'
 import { scrapeCitation } from '../services/citation'
 import { extractBrandMentions } from '../services/generator'
 import { analyzeRun } from '../services/analyzer'
+import { requireRun, requireBrand } from '../middleware/scope'
 
 const runs = new Hono<{ Bindings: Env }>()
 
 // Appends run log lines to KV (visible as terminal in live.html)
-function makeRunReporter(runId: string, env: Env) {
+function makeRunReporter(runId: string, teamId: string, env: Env) {
   const short = runId.slice(0, 8)
-  const logsKey = `logs:run:${runId}`
+  const logsKey = `${teamId}:logs:run:${runId}`
 
   const log = async (line: string) => {
     console.log(line)
@@ -34,11 +35,12 @@ const DELAY_AFTER_429_MS = 30_000 // Brief backoff when we hit limit; bucket rep
 // Kick off the next /process call server-side so runs are self-driving
 function scheduleNextProcess(
   c: { executionCtx: ExecutionContext; req: { url: string; header: (name: string) => string | undefined }; env: Env },
-  runId: string
+  runId: string,
+  teamId: string
 ) {
   const origin = new URL(c.req.url).origin
   const short = runId.slice(0, 8)
-  const logsKey = `logs:run:${runId}`
+  const logsKey = `${teamId}:logs:run:${runId}`
   const appendLog = async (line: string) => {
     try {
       const existing = await c.env.KV.get(logsKey) || ''
@@ -71,11 +73,13 @@ function scheduleNextProcess(
 
 // GET /api/runs/list — list all runs across all brands (for sidebar)
 runs.get('/list', async c => {
+  const teamId = c.get('teamId')
   const { results } = await c.env.DB.prepare(
     `SELECT r.id, r.brand_id, r.status, r.error, r.created_at, r.total_queries, r.completed_queries, b.name as brand_name, b.domain as brand_domain
      FROM runs r JOIN brands b ON b.id = r.brand_id
+     WHERE r.team_id = ?
      ORDER BY r.created_at DESC`
-  ).all()
+  ).bind(teamId).all()
   return c.json({ runs: results || [] })
 })
 
@@ -84,28 +88,27 @@ runs.post('/', async c => {
   const body = await c.req.json<{ brand_id: string }>()
   if (!body.brand_id) return c.json({ error: 'brand_id is required' }, 400)
 
-  const brand = await c.env.DB.prepare(`SELECT * FROM brands WHERE id = ?`)
-    .bind(body.brand_id)
-    .first<Brand>()
+  const teamId = c.get('teamId')
+  const brand = await requireBrand(c, body.brand_id)
 
   if (!brand) return c.json({ error: 'Brand not found' }, 404)
   if (brand.status !== 'ready') return c.json({ error: 'Brand is not ready yet' }, 400)
 
   const id = crypto.randomUUID()
   await c.env.DB.prepare(
-    `INSERT INTO runs (id, brand_id, status) VALUES (?, ?, 'pending')`
+    `INSERT INTO runs (id, brand_id, status, team_id) VALUES (?, ?, 'pending', ?)`
   )
-    .bind(id, body.brand_id)
+    .bind(id, body.brand_id, teamId)
     .run()
 
   const short = id.slice(0, 8)
   console.log(`[run:${short}] created — kicking off self-driving process loop`)
   try {
-    const logsKey = `logs:run:${id}`
+    const logsKey = `${teamId}:logs:run:${id}`
     await c.env.KV.put(logsKey, `[${short}] Run created — starting process loop`, { expirationTtl: 3600 })
   } catch { /* non-fatal */ }
 
-  scheduleNextProcess(c, id)
+  scheduleNextProcess(c, id, teamId)
 
   return c.json({ id })
 })
@@ -113,9 +116,7 @@ runs.post('/', async c => {
 // GET /api/runs/:id — run status
 runs.get('/:id', async c => {
   const runId = c.req.param('id')
-  const run = await c.env.DB.prepare(`SELECT * FROM runs WHERE id = ?`)
-    .bind(runId)
-    .first<Run>()
+  const run = await requireRun(c, runId)
 
   if (!run) {
     console.log(`[runs] GET /${runId.slice(0, 8)} — not found`)
@@ -128,10 +129,14 @@ runs.get('/:id', async c => {
 // GET /api/runs/:id/logs — run progression log (terminal output)
 runs.get('/:id/logs', async c => {
   const runId = c.req.param('id')
-  const run = await c.env.DB.prepare(`SELECT id FROM runs WHERE id = ?`).bind(runId).first()
+  const run = await requireRun(c, runId)
   if (!run) return c.json({ error: 'Not found' }, 404)
 
-  const raw = await c.env.KV.get(`logs:run:${runId}`) || ''
+  const teamId = c.get('teamId')
+  // Dual-read fallback during deploy transition (old keys expire in 1 hour)
+  const raw = await c.env.KV.get(`${teamId}:logs:run:${runId}`)
+    || await c.env.KV.get(`logs:run:${runId}`)
+    || ''
   const logs = raw ? raw.split('\n').filter(Boolean) : []
   return c.json({ logs })
 })
@@ -139,28 +144,25 @@ runs.get('/:id/logs', async c => {
 // POST /api/runs/:id/process — advance the run by one batch
 runs.post('/:id/process', async c => {
   const runId = c.req.param('id')
-  const run = await c.env.DB.prepare(`SELECT * FROM runs WHERE id = ?`)
-    .bind(runId)
-    .first<Run>()
+  const run = await requireRun(c, runId)
 
   if (!run) return c.json({ error: 'Not found' }, 404)
   if (run.status === 'complete' || run.status === 'failed') {
     return c.json({ phase: run.status, done: true, total: run.total_queries, completed: run.completed_queries })
   }
 
-  const brand = await c.env.DB.prepare(`SELECT * FROM brands WHERE id = ?`)
-    .bind(run.brand_id)
-    .first<Brand>()
+  const brand = await requireBrand(c, run.brand_id)
 
   if (!brand) return c.json({ error: 'Brand not found' }, 500)
 
+  const teamId = c.get('teamId')
   const short = runId.slice(0, 8)
-  const { log } = makeRunReporter(runId, c.env)
+  const { log } = makeRunReporter(runId, teamId, c.env)
   console.log(`[run:${short}] /process → status=${run.status}`)
   await log(`[${short}] /process → status=${run.status}`)
 
   // ─── Process lock — prevent concurrent batches hammering the Claude rate limit
-  const lockKey = `lock:process:${runId}`
+  const lockKey = `${teamId}:lock:process:${runId}`
   const isLocked = await c.env.KV.get(lockKey)
   if (isLocked) {
     await log(`[${short}] /process busy — another batch in flight, skipping`)
@@ -198,8 +200,8 @@ runs.post('/:id/process', async c => {
       const DEFAULT_SYSTEM_MESSAGE = 'You are a helpful AI assistant. Answer the user\'s question thoughtfully and accurately. Do not mention that you are an AI.'
       const defaultPersonaId = crypto.randomUUID()
       await c.env.DB.prepare(
-        `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale, approved) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1)`
-      ).bind(defaultPersonaId, run.brand_id, 'Default', '', '[]', '[]', DEFAULT_SYSTEM_MESSAGE).run()
+        `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale, approved, team_id) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1, ?)`
+      ).bind(defaultPersonaId, run.brand_id, 'Default', '', '[]', '[]', DEFAULT_SYSTEM_MESSAGE, teamId).run()
       personasToUse = [{ id: defaultPersonaId }]
       await log(`[${short}] No approved personas — inserted default`)
       console.log(`[run:${short}] no approved personas — using default`)
@@ -250,7 +252,7 @@ runs.post('/:id/process', async c => {
       .bind(total, runId)
       .run()
 
-    await unlock(); scheduleNextProcess(c, runId)
+    await unlock(); scheduleNextProcess(c, runId, teamId)
     return c.json({ phase: 'querying', total, completed: 0, done: false })
   }
 
@@ -278,7 +280,7 @@ runs.post('/:id/process', async c => {
       if (resetResult.meta.changes > 0) {
         await log(`[${short}] Reset ${resetResult.meta.changes} stuck queries, retrying`)
         console.log(`[run:${short}] querying — reset ${resetResult.meta.changes} stuck processing queries, retrying`)
-        await unlock(); scheduleNextProcess(c, runId)
+        await unlock(); scheduleNextProcess(c, runId, teamId)
         return c.json({ phase: 'querying', total: run.total_queries, completed: run.completed_queries, done: false })
       }
 
@@ -288,7 +290,7 @@ runs.post('/:id/process', async c => {
       await c.env.DB.prepare(`UPDATE runs SET status = 'analyzing' WHERE id = ?`)
         .bind(runId)
         .run()
-      await unlock(); scheduleNextProcess(c, runId)
+      await unlock(); scheduleNextProcess(c, runId, teamId)
       return c.json({ phase: 'analyzing', total: run.total_queries, completed: run.total_queries, done: false })
     }
 
@@ -490,7 +492,7 @@ runs.post('/:id/process', async c => {
 
     await log(`[${short}] Batch complete — ${completed}/${run.total_queries} done`)
     console.log(`[run:${short}] querying batch complete — ${completed}/${run.total_queries} total done, scheduling next`)
-    await unlock(); scheduleNextProcess(c, runId)
+    await unlock(); scheduleNextProcess(c, runId, teamId)
     return c.json({ phase: 'querying', total: run.total_queries, completed, done: false })
   }
 
@@ -501,7 +503,7 @@ runs.post('/:id/process', async c => {
     await c.env.DB.prepare(`UPDATE runs SET status = 'analyzing' WHERE id = ?`)
       .bind(runId)
       .run()
-    await unlock(); scheduleNextProcess(c, runId)
+    await unlock(); scheduleNextProcess(c, runId, teamId)
     return c.json({ phase: 'analyzing', total: run.total_queries, completed: run.total_queries, done: false })
   }
 
@@ -528,13 +530,16 @@ runs.post('/:id/process', async c => {
 
   await log(`[${short}] ⚠ Unhandled status=${run.status} — scheduling next (fallback)`)
   console.log(`[run:${short}] ⚠ unhandled status=${run.status} — scheduling next (fallback)`)
-  await unlock(); scheduleNextProcess(c, runId)
+  await unlock(); scheduleNextProcess(c, runId, teamId)
   return c.json({ phase: run.status, total: run.total_queries, completed: run.completed_queries, done: false })
 })
 
 // GET /api/runs/:id/queries/:queryId/response — on-demand fetch for output modal (must be before /:id/results)
 runs.get('/:id/queries/:queryId/response', async c => {
   const runId = c.req.param('id')
+  const run = await requireRun(c, runId)
+  if (!run) return c.json({ error: 'Not found' }, 404)
+
   const queryId = c.req.param('queryId')
 
   const row = await c.env.DB.prepare(
@@ -571,6 +576,9 @@ function apiErrorDetail(err: unknown): string {
 // GET /api/runs/:id/results — full analytics results
 runs.get('/:id/results', async c => {
   const runId = c.req.param('id')
+  const runCheck = await requireRun(c, runId)
+  if (!runCheck) return c.json({ error: 'Not found' }, 404)
+
   try {
   const run = await c.env.DB.prepare(`SELECT r.*, b.name as brand_name, b.domain as brand_domain FROM runs r JOIN brands b ON b.id = r.brand_id WHERE r.id = ?`)
     .bind(runId)
@@ -812,6 +820,9 @@ runs.get('/:id/results', async c => {
 // POST /api/runs/:id/cancel — abort a run in progress
 runs.post('/:id/cancel', async c => {
   const runId = c.req.param('id')
+  const run = await requireRun(c, runId)
+  if (!run) return c.json({ error: 'Not found' }, 404)
+
   console.log(`[runs] POST /${runId.slice(0, 8)}/cancel — aborting run`)
   await c.env.DB.prepare(
     `UPDATE runs SET status = 'failed', error = 'Cancelled by user' WHERE id = ? AND status NOT IN ('complete','failed')`
@@ -829,6 +840,9 @@ runs.post('/:id/cancel', async c => {
 // GET /api/runs/:id/live-responses — completed query responses grouped by LLM (for live viewer)
 runs.get('/:id/live-responses', async c => {
   const runId = c.req.param('id')
+  const run = await requireRun(c, runId)
+  if (!run) return c.json({ error: 'Not found' }, 404)
+
   const { results } = await c.env.DB.prepare(
     `SELECT q.id, q.llm, q.response_text, q.status,
             p.text as prompt_text, p.funnel_stage,
@@ -872,6 +886,9 @@ runs.get('/:id/live-responses', async c => {
 // GET /api/runs/:id/partial — partial results while run is still in progress
 runs.get('/:id/partial', async c => {
   const runId = c.req.param('id')
+  const runCheck = await requireRun(c, runId)
+  if (!runCheck) return c.json({ error: 'Not found' }, 404)
+
   try {
   const run = await c.env.DB.prepare(
     `SELECT r.*, b.name as brand_name, b.domain as brand_domain
