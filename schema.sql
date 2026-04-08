@@ -85,4 +85,4 @@ CREATE INDEX IF NOT EXISTS idx_queries_run ON queries(run_id);
 CREATE INDEX IF NOT EXISTS idx_queries_status ON queries(run_id, status);
 CREATE INDEX IF NOT EXISTS idx_citations_query ON citations(query_id);
 CREATE INDEX IF NOT EXISTS idx_brand_mentions_query ON brand_mentions(query_id);
-CREATE INDEX IF NOT EXISTS idx_brand_mentions_target ON brand_mentions(query_id, is_target);
+CREATE INDEX IF NOT EXISTS idx_brand_mentions_run ON brand_mentions(query_id);

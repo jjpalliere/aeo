@@ -1,5 +1,5 @@
 /**
- * AEO — TR Logo Animation (optional, used on branded version)
+ * terrain.run — TR Logo Animation
  * Loads the SVG, attaches hover-triggered inverse wave in burnt orange
  * Usage: initTRLogo('#my-container', { size: 48 })
  */

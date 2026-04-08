@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AEO</title>
+  <title>terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
     html, body {
@@ -40,14 +40,18 @@
       padding: 0 24px;
     }
 
+    /* Brand — clean inline wordmark */
     .login-brand {
+      font-family: var(--font-display);
       text-align: center;
       margin-bottom: 56px;
+      line-height: 1;
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
     }
-    .login-brand img {
-      height: 48px;
-      width: auto;
-    }
+    /* Horizontal rule accent */
     .login-rule {
       width: 48px;
       height: 1px;
@@ -55,12 +59,13 @@
       margin-bottom: 48px;
     }
 
-    .login-field {
+    /* Input — just a line */
+    .login-input-wrap {
       width: 100%;
       display: flex;
       align-items: center;
       gap: 0;
-      margin-bottom: 16px;
+      margin-bottom: 32px;
     }
     .login-prefix {
       font-size: var(--text-sm);
@@ -68,7 +73,7 @@
       padding-right: 10px;
       user-select: none;
     }
-    .login-field input {
+    #pwd {
       flex: 1;
       background: transparent;
       border: none;
@@ -77,43 +82,35 @@
       padding: 10px 0;
       font-family: var(--font);
       font-size: var(--text-sm);
+      letter-spacing: 0.2em;
       color: var(--text);
       text-align: left;
       outline: none;
+      -webkit-text-security: disc;
     }
-    .login-field input::placeholder {
+    #pwd::placeholder {
       color: var(--text3);
       letter-spacing: 0.08em;
+      -webkit-text-security: none;
     }
-    .login-field input:focus { border-bottom-color: var(--text2); }
+    #pwd:focus { border-bottom-color: var(--text2); }
 
+    /* Submit — ghost, minimal */
     .login-submit {
-      width: 100%;
       background: none;
-      border: 1px solid var(--border2);
-      color: var(--text2);
+      border: none;
+      color: var(--text3);
       font-family: var(--font);
       font-size: var(--text-xs);
       letter-spacing: 0.12em;
       text-transform: uppercase;
       cursor: pointer;
-      padding: 12px 0;
-      margin-top: 16px;
-      transition: color 0.2s, border-color 0.2s;
+      padding: 10px 0 10px 14px;
+      transition: color 0.2s;
     }
-    .login-submit:hover { color: var(--text); border-color: var(--text3); }
-    .login-submit:disabled { opacity: 0.3; pointer-events: none; }
+    .login-submit:hover { color: var(--text); }
 
-    .toggle-link {
-      font-size: var(--text-xs);
-      color: var(--text3);
-      cursor: pointer;
-      margin-bottom: 24px;
-      text-decoration: underline;
-      text-underline-offset: 3px;
-    }
-    .toggle-link:hover { color: var(--text2); }
-
+    /* Error */
     #err {
       font-size: var(--text-xs);
       letter-spacing: 0.08em;
@@ -122,32 +119,8 @@
       text-align: center;
       text-transform: uppercase;
       opacity: 0.8;
-      margin-top: 16px;
     }
 
-    /* State: check email */
-    .check-email {
-      text-align: center;
-      color: var(--text2);
-      font-size: var(--text-sm);
-      line-height: 1.8;
-    }
-    .check-email .email-highlight {
-      color: var(--text);
-      font-weight: 600;
-    }
-    .check-email .resend-link {
-      color: var(--text3);
-      font-size: var(--text-xs);
-      cursor: pointer;
-      text-decoration: underline;
-      margin-top: 24px;
-      display: inline-block;
-    }
-    .check-email .resend-link:hover { color: var(--text2); }
-    .check-email .resend-link.disabled { opacity: 0.3; pointer-events: none; }
-
-    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -155,146 +128,62 @@
   <div class="frost-overlay"></div>
 
   <div class="login-container">
-    <div id="login-logo" class="login-brand"><img src="/assets/tr-logo.svg" alt="Terrain" /></div>
+    <div id="login-logo" class="login-brand"></div>
     <div class="login-rule"></div>
-
-    <!-- State 1/2: Login form -->
-    <div id="login-form">
-      <div class="login-field">
-        <span class="login-prefix">@</span>
-        <input type="email" id="email" placeholder="email" autocomplete="email" autofocus />
-      </div>
-
-      <div id="invite-field" class="login-field hidden">
-        <span class="login-prefix">#</span>
-        <input type="text" id="invite-code" placeholder="XXXX-XXXX" autocomplete="off" style="text-transform: uppercase; letter-spacing: 0.15em;" />
-      </div>
-
-      <div class="toggle-link" id="toggle-invite" onclick="toggleInvite()">First time? I have an invite code</div>
-
-      <button class="login-submit" id="submit-btn" onclick="submitLogin()">Send Login Link</button>
-      <div id="err"></div>
+    <div class="login-input-wrap">
+      <span class="login-prefix">›</span>
+      <input
+        type="password"
+        id="pwd"
+        placeholder="enter"
+        autocomplete="current-password"
+        autofocus
+      />
+      <button class="login-submit" onclick="submit()">→</button>
     </div>
-
-    <!-- State 3: Check your email -->
-    <div id="check-email" class="check-email hidden">
-      <p>We sent a login link to</p>
-      <p class="email-highlight" id="sent-email"></p>
-      <p style="color: var(--text3); font-size: var(--text-xs); margin-top: 8px;">Check your inbox (and spam folder)</p>
-      <span class="resend-link disabled" id="resend-link" onclick="resendLink()">
-        Didn't receive it? Send again (<span id="countdown">60</span>s)
-      </span>
-    </div>
+    <div id="err"></div>
   </div>
+
+  <script src="/assets/tr-logo-anim.js"></script>
+  <script>
+    initTRLogo('#login-logo', { size: window.innerWidth <= 768 ? 120 : 200 });
+  </script>
 
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>
   <script>
-    let showingInvite = false
-    let lastEmail = ''
-    let resendTimer = null
-
-    // Check for error from verify redirect
-    const params = new URLSearchParams(window.location.search)
-    const errorParam = params.get('error')
-    if (errorParam) {
-      const messages = {
-        expired: 'Link expired or already used',
-        missing_token: 'Invalid link',
-        no_account: 'Account not found',
-      }
-      document.getElementById('err').textContent = messages[errorParam] || errorParam
-    }
-
-    document.getElementById('email').addEventListener('keydown', e => {
-      if (e.key === 'Enter') submitLogin()
-    })
-    document.getElementById('invite-code').addEventListener('keydown', e => {
-      if (e.key === 'Enter') submitLogin()
+    document.getElementById('pwd').addEventListener('keydown', e => {
+      if (e.key === 'Enter') submit()
     })
 
-    function toggleInvite() {
-      showingInvite = !showingInvite
-      document.getElementById('invite-field').classList.toggle('hidden', !showingInvite)
-      document.getElementById('toggle-invite').textContent = showingInvite
-        ? 'Already have an account? Just enter email'
-        : 'First time? I have an invite code'
-      if (showingInvite) document.getElementById('invite-code').focus()
-    }
-
-    async function submitLogin() {
-      const email = document.getElementById('email').value.trim()
-      if (!email) return
-
-      const inviteCode = showingInvite ? document.getElementById('invite-code').value.trim() : ''
-      const btn = document.getElementById('submit-btn')
+    async function submit() {
+      const pwd = document.getElementById('pwd').value
+      if (!pwd) return
+      const btn = document.querySelector('.login-submit')
       const err = document.getElementById('err')
-      btn.disabled = true
+      btn.style.opacity = '0.3'
+      btn.style.pointerEvents = 'none'
       err.textContent = ''
-
       try {
-        const body = { email }
-        if (inviteCode) body.invite_code = inviteCode
-
-        const res = await fetch('/api/auth/login', {
+        const res = await fetch('/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify({ password: pwd }),
         })
-
-        const data = await res.json()
-
         if (res.ok) {
-          lastEmail = email
-          document.getElementById('login-form').classList.add('hidden')
-          document.getElementById('check-email').classList.remove('hidden')
-          document.getElementById('sent-email').textContent = email
-          startResendCountdown()
+          window.location.href = '/'
         } else {
-          err.textContent = data.error || 'Something went wrong'
-          btn.disabled = false
+          err.textContent = 'no'
+          btn.style.opacity = '1'
+          btn.style.pointerEvents = 'auto'
+          const input = document.getElementById('pwd')
+          input.value = ''
+          input.focus()
         }
       } catch {
-        err.textContent = 'Connection error'
-        btn.disabled = false
-      }
-    }
-
-    function startResendCountdown() {
-      let seconds = 60
-      const link = document.getElementById('resend-link')
-      const countdown = document.getElementById('countdown')
-      link.classList.add('disabled')
-
-      if (resendTimer) clearInterval(resendTimer)
-      resendTimer = setInterval(() => {
-        seconds--
-        countdown.textContent = seconds
-        if (seconds <= 0) {
-          clearInterval(resendTimer)
-          link.classList.remove('disabled')
-          link.textContent = "Didn't receive it? Send again"
-        }
-      }, 1000)
-    }
-
-    async function resendLink() {
-      if (!lastEmail) return
-      const link = document.getElementById('resend-link')
-      link.classList.add('disabled')
-      link.textContent = 'Sending...'
-
-      try {
-        await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: lastEmail }),
-        })
-        link.innerHTML = 'Sent! <span id="countdown">60</span>s'
-        startResendCountdown()
-      } catch {
-        link.textContent = 'Failed to send. Try again.'
-        link.classList.remove('disabled')
+        err.textContent = 'connection error'
+        btn.style.opacity = '1'
+        btn.style.pointerEvents = 'auto'
       }
     }
   </script>

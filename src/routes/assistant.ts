@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import type { Env } from '../types'
-import { requireRun } from '../middleware/scope'
 
 const assistant = new Hono<{ Bindings: Env }>()
 
@@ -12,10 +11,6 @@ assistant.post('/', async c => {
   }
 
   const { run_id, question } = body
-
-  // Validate run ownership before accessing any data
-  const runCheck = await requireRun(c, run_id)
-  if (!runCheck) return c.json({ error: 'Not found' }, 404)
 
   // Gather context data
   const run = await c.env.DB.prepare(

@@ -2,15 +2,14 @@ import { Hono } from 'hono'
 import type { Env, Brand } from '../types'
 import { scrapeSite, extractDomain, ScrapeBlockedError } from '../services/scraper'
 import { generatePrompts, generatePersonas, classifyPrompts, pingOpenAI, type PersonaForPrompts } from '../services/generator'
-import { requireBrand } from '../middleware/scope'
 
 const brands = new Hono<{ Bindings: Env }>()
 
 // Appends a raw log line to KV (visible as terminal output in the browser)
 // and writes it to the wrangler console too.
-function makeReporter(brandId: string, teamId: string, env: Env) {
+function makeReporter(brandId: string, env: Env) {
   const short = brandId.slice(0, 8)
-  const logsKey = `${teamId}:logs:${brandId}`
+  const logsKey = `logs:${brandId}`
 
   const log = async (line: string) => {
     console.log(line)
@@ -30,7 +29,7 @@ function makeReporter(brandId: string, teamId: string, env: Env) {
     await log(`[${short}] ${step}`)
     try {
       await env.KV.put(
-        `${teamId}:progress:${brandId}`,
+        `progress:${brandId}`,
         JSON.stringify({ step, ts: Date.now() }),
         { expirationTtl: 3600 },
       )
@@ -40,19 +39,9 @@ function makeReporter(brandId: string, teamId: string, env: Env) {
   return { log, onProgress }
 }
 
-// GET /api/brands — list all brands for current team
-brands.get('/', async c => {
-  const teamId = c.get('teamId')
-  const rows = await c.env.DB.prepare(
-    'SELECT id, url, domain, name, status, created_at FROM brands WHERE team_id = ? ORDER BY created_at DESC'
-  ).bind(teamId).all()
-  return c.json({ brands: rows.results })
-})
-
 // POST /api/brands — create brand and kick off scrape + generation
 brands.post('/', async c => {
   const body = await c.req.json<{ url?: string; name?: string; pastedText?: string }>()
-  const teamId = c.get('teamId')
 
   // ── Predict mode: user pasted text, no live URL needed ───────────────────────
   if (body.pastedText?.trim()) {
@@ -70,13 +59,13 @@ brands.post('/', async c => {
       }
 
       await c.env.DB.prepare(
-        `INSERT INTO brands (id, url, domain, name, scraped_content, status, team_id) VALUES (?, ?, ?, ?, ?, 'generating', ?)`
-      ).bind(id, url, safeName, name, JSON.stringify(scraped), teamId).run()
+        `INSERT INTO brands (id, url, domain, name, scraped_content, status) VALUES (?, ?, ?, ?, ?, 'generating')`
+      ).bind(id, url, safeName, name, JSON.stringify(scraped)).run()
 
       const env = c.env
       c.executionCtx.waitUntil(
         (async () => {
-          const { log, onProgress } = makeReporter(id, teamId, env)
+          const { log, onProgress } = makeReporter(id, env)
           try {
             await log(`[${id.slice(0,8)}] Pre-flight API check…`)
             await pingOpenAI(env.OPENAI_API_KEY)
@@ -88,8 +77,8 @@ brands.post('/', async c => {
             if (personas.length > 0) {
               await env.DB.batch(personas.map(p =>
                 env.DB.prepare(
-                  `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale, team_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-                ).bind(crypto.randomUUID(), id, p.name, p.description, JSON.stringify(p.goals ?? []), JSON.stringify(p.pain_points ?? []), p.system_message, p.rationale ?? null, teamId)
+                  `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(crypto.randomUUID(), id, p.name, p.description, JSON.stringify(p.goals ?? []), JSON.stringify(p.pain_points ?? []), p.system_message, p.rationale ?? null)
               ))
             }
             await env.DB.prepare(`UPDATE brands SET status = 'personas_ready' WHERE id = ?`).bind(id).run()
@@ -97,7 +86,7 @@ brands.post('/', async c => {
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
             await env.DB.prepare(`UPDATE brands SET status = 'failed' WHERE id = ?`).bind(id).run()
-            try { await env.KV.put(`${teamId}:error:${id}`, msg, { expirationTtl: 86400 }) } catch {}
+            try { await env.KV.put(`error:${id}`, msg, { expirationTtl: 86400 }) } catch {}
             console.error('Predict mode generation failed:', msg)
           }
         })()
@@ -118,22 +107,26 @@ brands.post('/', async c => {
   const domain = extractDomain(url.startsWith('http') ? url : `https://${url}`)
 
   await c.env.DB.prepare(
-    `INSERT INTO brands (id, url, domain, status, team_id) VALUES (?, ?, ?, 'scraping', ?)`
+    `INSERT INTO brands (id, url, domain, status) VALUES (?, ?, ?, 'scraping')`
   )
-    .bind(id, url, domain, teamId)
+    .bind(id, url, domain)
     .run()
 
+  // Return immediately — client redirects to approve page.
+  // Approve page calls POST /api/brands/:id/continue to run scrape+personas in a long-lived request
+  // (avoids Cloudflare waitUntil 30s limit which was killing the worker at "Identifying buyer archetypes").
   return c.json({ id, status: 'scraping' })
 })
 
 // POST /api/brands/:id/continue — run scrape + persona generation (called by approve page)
+// Runs in main request so no 30s waitUntil limit. Approve page fires this when it sees status 'scraping'.
 brands.post('/:id/continue', async c => {
   const brandId = c.req.param('id')
-  const brand = await requireBrand(c, brandId)
+  const brand = await c.env.DB.prepare(`SELECT * FROM brands WHERE id = ?`)
+    .bind(brandId)
+    .first<Brand & { url?: string }>()
   if (!brand) return c.json({ error: 'Not found' }, 404)
   if (brand.status !== 'scraping') return c.json({ ok: true, status: brand.status })
-
-  const teamId = c.get('teamId')
 
   // Claim the work: only one request runs (atomic status update)
   const claim = await c.env.DB.prepare(
@@ -143,7 +136,7 @@ brands.post('/:id/continue', async c => {
 
   const url = (brand.url || '').trim() || `https://${brand.domain || ''}`
   const env = c.env
-  const { log, onProgress } = makeReporter(brandId, teamId, env)
+  const { log, onProgress } = makeReporter(brandId, env)
   try {
     await log(`[${brandId.slice(0,8)}] Pre-flight API check…`)
     await pingOpenAI(env.OPENAI_API_KEY)
@@ -162,8 +155,8 @@ brands.post('/:id/continue', async c => {
 
     const personaStmts = personas.map(p =>
       env.DB.prepare(
-        `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale, team_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(crypto.randomUUID(), brandId, p.name, p.description, JSON.stringify(p.goals ?? []), JSON.stringify(p.pain_points ?? []), p.system_message, p.rationale ?? null, teamId)
+        `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(crypto.randomUUID(), brandId, p.name, p.description, JSON.stringify(p.goals ?? []), JSON.stringify(p.pain_points ?? []), p.system_message, p.rationale ?? null)
     )
     await env.DB.batch(personaStmts)
 
@@ -174,7 +167,7 @@ brands.post('/:id/continue', async c => {
     const msg = err instanceof Error ? err.message : String(err)
     const status = err instanceof ScrapeBlockedError ? 'scrape_blocked' : 'failed'
     await env.DB.prepare(`UPDATE brands SET status = ? WHERE id = ?`).bind(status, brandId).run()
-    try { await env.KV.put(`${teamId}:error:${brandId}`, msg, { expirationTtl: 86400 }) } catch {}
+    try { await env.KV.put(`error:${brandId}`, msg, { expirationTtl: 86400 }) } catch {}
     console.error(`[${brandId.slice(0,8)}] ✗ Brand setup failed:`, msg)
     return c.json({ error: msg }, 500)
   }
@@ -184,7 +177,6 @@ brands.post('/:id/continue', async c => {
 // Must be before /:id routes so 'quick-start' is not matched as a brand ID.
 brands.post('/quick-start', async c => {
   console.log('[quick-start] request received')
-  const teamId = c.get('teamId')
   let body: { brand_name?: string; brand_domain?: string; prompts?: Array<{ text: string; funnel_stage?: string; persona_name?: string }>; personas?: Array<{ name: string; system_message: string }> }
   try {
     body = await c.req.json()
@@ -241,16 +233,16 @@ brands.post('/quick-start', async c => {
 
   const brandId = crypto.randomUUID()
   await c.env.DB.prepare(
-    `INSERT INTO brands (id, url, domain, name, scraped_content, status, team_id) VALUES (?, ?, ?, ?, NULL, 'ready', ?)`
-  ).bind(brandId, url, domain, brandName, teamId).run()
+    `INSERT INTO brands (id, url, domain, name, scraped_content, status) VALUES (?, ?, ?, ?, NULL, 'ready')`
+  ).bind(brandId, url, domain, brandName).run()
   console.log('[quick-start] brand inserted:', brandId.slice(0, 8))
 
   // Insert personas (or default if none provided)
   try {
     const personaStmts = personasToInsert.map(p =>
       c.env.DB.prepare(
-        `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale, approved, team_id) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1, ?)`
-      ).bind(crypto.randomUUID(), brandId, p.name, '', '[]', '[]', p.system_message, teamId)
+        `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale, approved) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1)`
+      ).bind(crypto.randomUUID(), brandId, p.name, '', '[]', '[]', p.system_message)
     )
     await c.env.DB.batch(personaStmts)
     console.log('[quick-start] personas inserted:', personasToInsert.length)
@@ -270,8 +262,8 @@ brands.post('/quick-start', async c => {
   const promptStmts = validPrompts.map(p => {
     const personaId = p.persona_name ? (personaNameToId.get(p.persona_name.toLowerCase()) ?? null) : null
     return c.env.DB.prepare(
-      `INSERT INTO prompts (id, brand_id, persona_id, text, funnel_stage, rationale, approved, team_id) VALUES (?, ?, ?, ?, ?, NULL, 1, ?)`
-    ).bind(crypto.randomUUID(), brandId, personaId, p.text, p.stage, teamId)
+      `INSERT INTO prompts (id, brand_id, persona_id, text, funnel_stage, rationale, approved) VALUES (?, ?, ?, ?, ?, NULL, 1)`
+    ).bind(crypto.randomUUID(), brandId, personaId, p.text, p.stage)
   })
   try {
     await c.env.DB.batch(promptStmts)
@@ -292,11 +284,12 @@ brands.post('/:id/proceed-blocked', async c => {
   const brandId = c.req.param('id')
   const body = await c.req.json<{ text?: string }>().catch(() => ({} as { text?: string }))
 
-  const brand = await requireBrand(c, brandId)
+  const brand = await c.env.DB.prepare(`SELECT * FROM brands WHERE id = ?`)
+    .bind(brandId)
+    .first<Brand>()
   if (!brand) return c.json({ error: 'Not found' }, 404)
   if (brand.status !== 'scrape_blocked') return c.json({ error: 'Not in scrape_blocked state' }, 400)
 
-  const teamId = c.get('teamId')
   const domain = brand.domain || ''
   const brandName = (brand as any).name || domain.split('.')[0]
 
@@ -327,7 +320,7 @@ brands.post('/:id/proceed-blocked', async c => {
   const env = c.env
   c.executionCtx.waitUntil(
     (async () => {
-      const { log, onProgress } = makeReporter(brandId, teamId, env)
+      const { log, onProgress } = makeReporter(brandId, env)
       try {
         await log(`[${brandId.slice(0,8)}] Pre-flight API check…`)
         await pingOpenAI(env.OPENAI_API_KEY)
@@ -339,8 +332,8 @@ brands.post('/:id/proceed-blocked', async c => {
         if (personas.length > 0) {
           await env.DB.batch(personas.map(p =>
             env.DB.prepare(
-              `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale, team_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            ).bind(crypto.randomUUID(), brandId, p.name, p.description, JSON.stringify(p.goals ?? []), JSON.stringify(p.pain_points ?? []), p.system_message, p.rationale ?? null, teamId)
+              `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            ).bind(crypto.randomUUID(), brandId, p.name, p.description, JSON.stringify(p.goals ?? []), JSON.stringify(p.pain_points ?? []), p.system_message, p.rationale ?? null)
           ))
         }
         await env.DB.prepare(`UPDATE brands SET status = 'personas_ready' WHERE id = ?`).bind(brandId).run()
@@ -348,7 +341,7 @@ brands.post('/:id/proceed-blocked', async c => {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         await env.DB.prepare(`UPDATE brands SET status = 'scrape_blocked' WHERE id = ?`).bind(brandId).run()
-        try { await env.KV.put(`${teamId}:error:${brandId}`, msg, { expirationTtl: 86400 }) } catch {}
+        try { await env.KV.put(`error:${brandId}`, msg, { expirationTtl: 86400 }) } catch {}
         console.error(`[${brandId.slice(0,8)}] ✗ Proceed-blocked generation failed:`, msg)
       }
     })()
@@ -363,11 +356,11 @@ brands.post('/:id/generate-prompts', async c => {
   const brandId = c.req.param('id')
   const targetPersonaId = c.req.query('persona_id') || null
 
-  const brand = await requireBrand(c, brandId)
+  const brand = await c.env.DB.prepare(`SELECT * FROM brands WHERE id = ?`)
+    .bind(brandId)
+    .first<Brand>()
   if (!brand) return c.json({ error: 'Not found' }, 404)
   if (!brand.scraped_content) return c.json({ error: 'No scraped content' }, 400)
-
-  const teamId = c.get('teamId')
 
   const { results: personaRows } = await c.env.DB.prepare(
     `SELECT id, name, description, goals, pain_points FROM personas WHERE brand_id = ? AND approved = 1 ORDER BY created_at`
@@ -403,7 +396,7 @@ brands.post('/:id/generate-prompts', async c => {
   c.executionCtx.waitUntil(
     (async () => {
       const short = brandId.slice(0, 8)
-      const { log, onProgress } = makeReporter(brandId, teamId, env)
+      const { log, onProgress } = makeReporter(brandId, env)
       try {
         await log(`[${short}] Pre-flight API check…`)
         await pingOpenAI(env.OPENAI_API_KEY)
@@ -427,8 +420,8 @@ brands.post('/:id/generate-prompts', async c => {
             await env.DB.batch(
               prompts.map(p =>
                 env.DB.prepare(
-                  `INSERT INTO prompts (id, brand_id, persona_id, text, funnel_stage, rationale, team_id) VALUES (?, ?, ?, ?, ?, ?, ?)`
-                ).bind(crypto.randomUUID(), brandId, persona.id, p.text, p.funnel_stage, p.rationale ?? null, teamId)
+                  `INSERT INTO prompts (id, brand_id, persona_id, text, funnel_stage, rationale) VALUES (?, ?, ?, ?, ?, ?)`
+                ).bind(crypto.randomUUID(), brandId, persona.id, p.text, p.funnel_stage, p.rationale ?? null)
               )
             )
             totalSaved += prompts.length
@@ -442,7 +435,7 @@ brands.post('/:id/generate-prompts', async c => {
         const msg = err instanceof Error ? err.message : String(err)
         console.error(`[${short}] ✗ generate-prompts failed: ${msg}`)
         await env.DB.prepare(`UPDATE brands SET status = 'personas_ready' WHERE id = ?`).bind(brandId).run()
-        try { await env.KV.put(`${teamId}:error:${brandId}`, msg, { expirationTtl: 86400 }) } catch {}
+        try { await env.KV.put(`error:${brandId}`, msg, { expirationTtl: 86400 }) } catch {}
       }
     })()
   )
@@ -452,10 +445,11 @@ brands.post('/:id/generate-prompts', async c => {
 
 // GET /api/brands/:id — get brand with prompts + personas
 brands.get('/:id', async c => {
-  const brand = await requireBrand(c, c.req.param('id'))
-  if (!brand) return c.json({ error: 'Not found' }, 404)
+  const brand = await c.env.DB.prepare(`SELECT * FROM brands WHERE id = ?`)
+    .bind(c.req.param('id'))
+    .first<Brand>()
 
-  const teamId = c.get('teamId')
+  if (!brand) return c.json({ error: 'Not found' }, 404)
 
   const { results: prompts } = await c.env.DB.prepare(
     `SELECT * FROM prompts WHERE brand_id = ? ORDER BY persona_id, funnel_stage, created_at`
@@ -469,22 +463,19 @@ brands.get('/:id', async c => {
     .bind(brand.id)
     .all()
 
-  // Read real-time progress from KV (with dual-read fallback for transition)
+  // Read real-time progress from KV (only meaningful while status is in-progress)
   let currentStep: string | null = null
   let lastError: string | null = null
   let logs: string[] = []
   try {
-    const raw = await c.env.KV.get(`${teamId}:progress:${brand.id}`)
-      || await c.env.KV.get(`progress:${brand.id}`) // fallback to old format
+    const raw = await c.env.KV.get(`progress:${brand.id}`)
     if (raw) currentStep = (JSON.parse(raw) as { step: string }).step
   } catch { /* non-fatal */ }
   try {
-    lastError = await c.env.KV.get(`${teamId}:error:${brand.id}`)
-      || await c.env.KV.get(`error:${brand.id}`) // fallback
+    lastError = await c.env.KV.get(`error:${brand.id}`)
   } catch { /* non-fatal */ }
   try {
-    const rawLogs = await c.env.KV.get(`${teamId}:logs:${brand.id}`)
-      || await c.env.KV.get(`logs:${brand.id}`) // fallback
+    const rawLogs = await c.env.KV.get(`logs:${brand.id}`)
     if (rawLogs) logs = rawLogs.split('\n').filter(Boolean)
   } catch { /* non-fatal */ }
 
@@ -494,8 +485,9 @@ brands.get('/:id', async c => {
 // POST /api/brands/:id/classify-prompts — classify pasted prompts into funnel stages (no storage)
 brands.post('/:id/classify-prompts', async c => {
   const brandId = c.req.param('id')
-  const brand = await requireBrand(c, brandId)
-  if (!brand) return c.json({ error: 'Not found' }, 404)
+  const brand = await c.env.DB.prepare(`SELECT * FROM brands WHERE id = ?`)
+    .bind(brandId).first<Brand>()
+  if (!brand) return c.json({ error: 'Brand not found' }, 404)
 
   const body = await c.req.json<{ texts: string[] }>().catch(() => ({ texts: [] as string[] }))
   if (!body.texts?.length) return c.json({ error: 'texts is required' }, 400)
@@ -525,10 +517,9 @@ brands.post('/:id/classify-prompts', async c => {
 // POST /api/brands/:id/import-prompts — bulk insert pre-classified prompts
 brands.post('/:id/import-prompts', async c => {
   const brandId = c.req.param('id')
-  const brand = await requireBrand(c, brandId)
-  if (!brand) return c.json({ error: 'Not found' }, 404)
+  const brand = await c.env.DB.prepare(`SELECT id FROM brands WHERE id = ?`).bind(brandId).first()
+  if (!brand) return c.json({ error: 'Brand not found' }, 404)
 
-  const teamId = c.get('teamId')
   const body = await c.req.json<{ prompts: Array<{ text: string; funnel_stage: string; rationale?: string }>; persona_id?: string }>()
   if (!body.prompts?.length) return c.json({ error: 'prompts is required' }, 400)
 
@@ -539,8 +530,8 @@ brands.post('/:id/import-prompts', async c => {
     await c.env.DB.batch(
       valid.map(p =>
         c.env.DB.prepare(
-          `INSERT INTO prompts (id, brand_id, persona_id, text, funnel_stage, rationale, team_id) VALUES (?, ?, ?, ?, ?, ?, ?)`
-        ).bind(crypto.randomUUID(), brandId, personaId, p.text, p.funnel_stage, p.rationale ?? null, teamId)
+          `INSERT INTO prompts (id, brand_id, persona_id, text, funnel_stage, rationale) VALUES (?, ?, ?, ?, ?, ?)`
+        ).bind(crypto.randomUUID(), brandId, personaId, p.text, p.funnel_stage, p.rationale ?? null)
       )
     )
   }
@@ -558,10 +549,11 @@ brands.post('/:id/supplement', async c => {
   const body = await c.req.json<{ text: string }>()
   if (!body.text?.trim()) return c.json({ error: 'text is required' }, 400)
 
-  const brand = await requireBrand(c, brandId)
-  if (!brand) return c.json({ error: 'Not found' }, 404)
+  const brand = await c.env.DB.prepare(`SELECT * FROM brands WHERE id = ?`)
+    .bind(brandId)
+    .first<Brand>()
 
-  const teamId = c.get('teamId')
+  if (!brand) return c.json({ error: 'Brand not found' }, 404)
 
   await c.env.DB.prepare(`UPDATE brands SET supplement = ? WHERE id = ?`)
     .bind(body.text.trim(), brandId)
@@ -588,8 +580,8 @@ brands.post('/:id/supplement', async c => {
   const deleteStmt = c.env.DB.prepare(`DELETE FROM personas WHERE brand_id = ?`).bind(brandId)
   const insertStmts = personas.map(p =>
     c.env.DB.prepare(
-      `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale, team_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(crypto.randomUUID(), brandId, p.name, p.description, JSON.stringify(p.goals ?? []), JSON.stringify(p.pain_points ?? []), p.system_message, p.rationale ?? null, teamId)
+      `INSERT INTO personas (id, brand_id, name, description, goals, pain_points, system_message, rationale) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(crypto.randomUUID(), brandId, p.name, p.description, JSON.stringify(p.goals ?? []), JSON.stringify(p.pain_points ?? []), p.system_message, p.rationale ?? null)
   )
   try {
     await c.env.DB.batch([deletePromptsStmt, deleteStmt, ...insertStmts])

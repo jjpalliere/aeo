@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>Dashboard — AEO</title>
+  <title>Dashboard — terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css?v=3" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -265,21 +265,83 @@
     #output-modal-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: var(--text-md); }
     #output-modal-body { padding: 16px; overflow-y: auto; font-size: var(--text-sm); line-height: 1.6; }
 
-    /* ── Sidebar layout ───────────────────────────────────────────────── */
-    body { display: flex; min-height: 100vh; margin: 0; background: #0a0a0a; }
-    .sb-page-layout { display: flex; flex: 1; }
-    #aeo-sidebar {
-      width: var(--sidebar-width); min-width: var(--sidebar-width);
-      background: rgba(17,17,17,0.92); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; z-index: 50;
-    }
+    /* ── Runs drawer ───────────────────────────────────────────────────── */
+    /* Runs sidebar — fixed left panel, collapsible (default: collapsed) */
     #content { display: none; min-height: 100vh; }
+    #runs-sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-width);
+      background: rgba(17,17,17,0.92); border-right: 1px solid var(--border);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      display: flex; flex-direction: column; overflow: hidden;
+      z-index: 50;
+      transition: width 0.2s ease;
+    }
+    #runs-sidebar.collapsed {
+      width: 48px;
+    }
+    #runs-sidebar.collapsed .sidebar-logo,
+    #runs-sidebar.collapsed #sidebar-list { display: none; }
+    .sidebar-toggle {
+      background: none; border: none; color: var(--text2); cursor: pointer;
+      padding: 4px; font-size: 14px; line-height: 1;
+      flex-shrink: 0;
+    }
+    .sidebar-toggle:hover { color: var(--accent); }
+    #runs-sidebar.collapsed .sidebar-header { justify-content: center; padding: 13px 0; }
     .dash-main {
       margin-left: var(--sidebar-width);
       width: calc(100vw - var(--sidebar-width));
       flex: 1; display: flex; flex-direction: column; min-width: 0;
       overflow-y: auto;
+      transition: margin-left 0.2s ease, width 0.2s ease;
     }
+    #runs-sidebar.collapsed ~ .dash-main {
+      margin-left: 48px;
+      width: calc(100vw - 48px);
+    }
+    .sidebar-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:13px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+      min-width:0;
+    }
+    .sidebar-logo { font-size: var(--text-md); font-weight: 600; letter-spacing: 0.06em; text-decoration: none; color: inherit; }
+    #sidebar-list { flex:1; overflow-y:auto; }
+    .sidebar-run {
+      padding:11px 16px; border-bottom:1px solid var(--border);
+      cursor:pointer; transition:background 0.1s; position:relative;
+      min-height: 76px; display: flex; flex-direction: column; justify-content: center;
+    }
+    .sidebar-run:hover { background:var(--bg); }
+    .sidebar-run.current { background:var(--w-04); border-left:3px solid var(--accent); }
+    .sidebar-run-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px; min-height:20px; }
+    .sidebar-run-date { font-size:var(--text-xs); color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+    .sidebar-run-status {
+      font-size:var(--text-xs); letter-spacing:0.1em; text-transform:uppercase;
+      padding:2px 7px; border-radius:1px;
+      min-width:78px; text-align:center; flex-shrink:0;
+    }
+    .sidebar-status-complete  { background:rgba(160,190,130,0.15); color:var(--success); }
+    .sidebar-status-querying,
+    .sidebar-status-scraping,
+    .sidebar-status-analyzing,
+    .sidebar-status-pending   { background:rgba(251,191,36,0.12); color:var(--accent); }
+    .sidebar-status-failed    { background:rgba(248,113,113,0.12); color:var(--danger); }
+    .sidebar-run-brand { min-height:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sidebar-run-bar  { height:2px; background:var(--surface2); border-radius:1px; margin:5px 0; flex-shrink:0; }
+    .sidebar-run-fill { height:100%; border-radius:1px; background:var(--accent); transition:width 0.3s; }
+    .sidebar-run-footer { display:flex; align-items:center; justify-content:space-between; min-height:20px; flex-shrink:0; }
+    .sidebar-run-pct  { font-size:var(--text-xs); color:var(--text3); }
+    .sidebar-del-btn  {
+      background:none; border:none; color:var(--text3); cursor:pointer;
+      font-size:var(--text-xs); letter-spacing:0.06em; padding:2px 0;
+      opacity:0; transition:opacity 0.15s, color 0.15s;
+    }
+    .sidebar-run:hover .sidebar-del-btn { opacity:1; }
+    .sidebar-del-btn:hover { color:var(--danger); }
+    .sidebar-del-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .sidebar-del-btn:disabled:hover { color:var(--text3); }
+
     .dash-nav-row .dash-nav { flex: 0 0 auto; gap: 12px; }
     .dash-nav-row .dash-nav-item { flex: 0 0 auto; }
     .dash-nav-item[href] { text-decoration: none; }
@@ -305,9 +367,14 @@
 <body>
   <div id="loading"><span class="spinner"></span><span>Loading results…</span></div>
 
-  <div class="sb-page-layout">
-    <div id="aeo-sidebar"></div>
   <div id="content">
+    <aside id="runs-sidebar" class="collapsed">
+      <div class="sidebar-header">
+        <a href="/" class="logo sidebar-logo">terrain<em>.run</em></a>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar">▶</button>
+      </div>
+      <div id="sidebar-list"></div>
+    </aside>
     <main class="dash-main">
     <div class="page-wide">
       <div class="dash-nav-row">
@@ -502,7 +569,6 @@
     </div>
     </main>
   </div>
-  </div>
 
   <!-- Output modal (LLM response viewer) -->
   <div id="output-modal-overlay" onclick="closeOutputModal(event)">
@@ -547,7 +613,7 @@
     }
     function downloadErrorLog() {
       const text = [
-        'AEO ERROR LOG',
+        'TERRAIN.RUN ERROR LOG',
         `Generated: ${new Date().toISOString()}`,
         `Run: ${runId || 'n/a'}`,
         `URL: ${location.href}`,
@@ -555,7 +621,7 @@
         '',
         ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '─'.repeat(40)].filter(Boolean).join('\n')),
       ].join('\n')
-      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `aeo-errors-${Date.now()}.txt` })
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `terrain-errors-${Date.now()}.txt` })
       a.click()
     }
 
@@ -1505,7 +1571,7 @@
     }
 
     // ── Chat persistence ─────────────────────────────────────────────────────
-    const CHAT_KEY = `aeo-chat-${runId}`
+    const CHAT_KEY = `terrain-chat-${runId}`
     let assistantReady = false
 
     function saveChatHistory() {
@@ -1792,7 +1858,7 @@
 
       if (fmt === 'md') {
         const lines = [
-          `# AEO Report — ${brandName}`,
+          `# terrain.run Report — ${brandName}`,
           `**Generated:** ${new Date().toLocaleString()}  `,
           `**Run ID:** ${run?.id ?? '—'}`,
           '',
@@ -1832,7 +1898,7 @@
           ...promptDetail.slice(0, 30).map(r => `| ${r.funnel_stage} | ${r.llm} | ${r.brand_name} | ${(r.prompt_text || '').substring(0, 70)} |`),
           '',
           '---',
-          '_Report generated by AEO_',
+          '_Report generated by terrain.run_',
         ]
         return lines.join('\n')
       }
@@ -1841,7 +1907,7 @@
       const L = '─'.repeat(54)
       const D = '═'.repeat(54)
       const lines = [
-        `AEO REPORT — ${brandName.toUpperCase()}`,
+        `TERRAIN.RUN REPORT — ${brandName.toUpperCase()}`,
         `Generated: ${new Date().toLocaleString()}`,
         `Run ID: ${run?.id ?? '—'}`,
         D, '',
@@ -1872,7 +1938,7 @@
           `${(r.funnel_stage || '').padEnd(6)}  ${(r.llm || '').padEnd(10)}  ${(r.brand_name || '').padEnd(26)}  ${(r.prompt_text || '').substring(0, 65)}`
         ),
         '', D,
-        'Report generated by AEO',
+        'Report generated by terrain.run',
       ]
       return lines.join('\n')
     }
@@ -1888,7 +1954,7 @@
       const brand = (data?.run?.brand_name || data?.run?.brand_domain || 'report').replace(/[^a-z0-9]/gi, '-').toLowerCase()
       const a = Object.assign(document.createElement('a'), {
         href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })),
-        download: `aeo-${brand}-${new Date().toISOString().slice(0, 10)}${ext}`,
+        download: `terrain-${brand}-${new Date().toISOString().slice(0, 10)}${ext}`,
       })
       a.click()
     }
@@ -2010,8 +2076,90 @@
 
     load()
 
+    // ── Runs sidebar ───────────────────────────────────────────────────────────
+    async function loadSidebar() {
+      const list = document.getElementById('sidebar-list')
+      if (!list) return
+      list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--text3)">Loading…</div>'
+      try {
+        const res = await fetch(API('/api/runs/list'))
+        const json = await safeJson(res)
+        if (!res.ok) {
+          list.innerHTML = `<div style="padding:16px;font-size:var(--text-xs);color:var(--danger)">${res.status === 401 ? 'Session expired' : 'Failed to load runs'}</div>`
+          return
+        }
+        const allRuns = json.runs || []
+        if (!allRuns.length) {
+          list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--text3)">No runs yet.</div>'
+          return
+        }
+        list.innerHTML = allRuns.map(r => {
+          const total = r.total_queries || 0
+          const done = r.completed_queries || 0
+          const pct = total > 0 ? Math.round((done / total) * 100) : (r.status === 'complete' ? 100 : 0)
+          const isCurrent = r.id === runId
+          const d = new Date(r.created_at)
+          const dateStr = d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
+          const brandLabel = r.brand_name || r.brand_domain || 'Brand'
+          const statusClass = `sidebar-status-${r.status || 'pending'}`
+          const statusLabel = (r.status === 'failed' && (r.error || '').toLowerCase().includes('cancelled')) ? 'canceled' : (r.status || 'pending')
+          const inProgress = ['pending','querying','scraping','analyzing'].includes(r.status || '')
+          const delAttrs = inProgress ? ' disabled title="Wait for run to complete or fail before deleting"' : ''
+          return `<div class="sidebar-run${isCurrent ? ' current' : ''}" onclick="navigateRun('${r.id}')">
+            <div class="sidebar-run-meta">
+              <span class="sidebar-run-date" title="${brandLabel}">${dateStr}</span>
+              <span class="sidebar-run-status ${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="sidebar-run-brand" style="font-size:var(--text-xs);color:var(--text3);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(brandLabel)}</div>
+            <div class="sidebar-run-bar"><div class="sidebar-run-fill" style="width:${pct}%"></div></div>
+            <div class="sidebar-run-footer">
+              <span class="sidebar-run-pct">${pct}%${isCurrent ? ' · current' : ''}</span>
+              <button class="sidebar-del-btn" onclick="deleteRun(event,'${r.id}')"${delAttrs}>Delete</button>
+            </div>
+          </div>`
+        }).join('')
+      } catch (err) {
+        list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--danger)">Failed to load runs.</div>'
+      }
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('runs-sidebar')
+      const btn = sidebar?.querySelector('.sidebar-toggle')
+      if (!sidebar || !btn) return
+      const isCollapsed = sidebar.classList.toggle('collapsed')
+      btn.textContent = isCollapsed ? '▶' : '◀'
+      btn.title = isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+      btn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar')
+    }
+
+    function navigateRun(id) {
+      if (id === runId) return
+      const base = location.pathname.replace(/\/[^/]*$/, '') || ''
+      location.href = `${base}/dashboard.html?runId=${id}`
+    }
+
+    async function deleteRun(event, id) {
+      event.stopPropagation()
+      if (!confirm('Delete this run? All queries, citations, and brand data will be removed. This cannot be undone.')) return
+      try {
+        const res = await fetch(API(`/api/runs/${id}`), { method: 'DELETE' })
+        if (res.ok) {
+          const base = location.pathname.replace(/\/[^/]*$/, '') || ''
+          if (id === runId) {
+            location.href = base || '/'
+          } else {
+            loadSidebar()
+          }
+        } else {
+          alert('Failed to delete run.')
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`)
+      }
+    }
+
+    loadSidebar()
   </script>
-  <script src="/assets/sidebar.js"></script>
-  <script>initSidebar()</script>
 </body>
 </html>

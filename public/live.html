@@ -4,19 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>Live Responses — AEO</title>
+  <title>Live Responses — terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
     html, body { height: 100vh; overflow: hidden; margin: 0; padding: 0; }
-    .sb-page-layout { display: flex; height: 100vh; }
-    #aeo-sidebar {
-      width: var(--sidebar-width); min-width: var(--sidebar-width);
-      background: rgba(17,17,17,0.92); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; z-index: 50;
-    }
-    .page-main {
-      margin-left: var(--sidebar-width); flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden;
-    }
 
     .top-bar { flex-shrink: 0; }
 
@@ -30,8 +21,8 @@
     .live-scroll::-webkit-scrollbar { display: none; }
 
     .live-col {
-      flex: 0 0 calc((100vw - var(--sidebar-width)) / 3);
-      min-width: calc((100vw - var(--sidebar-width)) / 3);
+      flex: 0 0 calc(100vw / 3);
+      min-width: calc(100vw / 3);
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -41,8 +32,8 @@
 
     /* ── Log column (generating-page terminal style) ── */
     .log-col {
-      flex: 0 0 calc((100vw - var(--sidebar-width)) / 3);
-      min-width: calc((100vw - var(--sidebar-width)) / 3);
+      flex: 0 0 calc(100vw / 3);
+      min-width: calc(100vw / 3);
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -300,12 +291,9 @@
   </style>
 </head>
 <body>
-  <div class="sb-page-layout">
-    <div id="aeo-sidebar"></div>
-    <main class="page-main">
 
   <div class="top-bar">
-    <a href="/" class="logo">AEO</a>
+    <a href="/" class="logo">terrain<em>.run</em></a>
     <div style="display:flex;align-items:center;align-self:center;gap:12px">
       <div class="live-indicator" id="live-ind" style="display:none">
         <div class="live-dot"></div>LIVE
@@ -456,7 +444,7 @@
     }
     function downloadErrorLog() {
       const text = [
-        'AEO ERROR LOG',
+        'TERRAIN.RUN ERROR LOG',
         `Generated: ${new Date().toISOString()}`,
         `Run: ${runId || 'n/a'}`,
         `URL: ${location.href}`,
@@ -464,7 +452,7 @@
         '',
         ...errorLog.map((e, i) => [`[${i + 1}] ${e.time}`, `Source: ${e.source}`, `Message: ${e.message}`, e.detail ? `Detail: ${e.detail}` : '', '-'.repeat(40)].filter(Boolean).join('\n')),
       ].join('\n')
-      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `aeo-errors-${Date.now()}.txt` })
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: `terrain-errors-${Date.now()}.txt` })
       a.click()
     }
 
@@ -673,9 +661,5 @@
     tick()
     interval = setInterval(tick, 2500)
   </script>
-    </main>
-  </div>
-  <script src="/assets/sidebar.js"></script>
-  <script>initSidebar()</script>
 </body>
 </html>

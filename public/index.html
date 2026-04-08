@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>AEO</title>
+  <title>terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,21 +22,64 @@
     }
     .frost-overlay::after { display: none; }
     body { display: flex; min-height: 100vh; margin: 0; }
-    .sb-page-layout { display: flex; flex: 1; min-width: 0; }
-    #aeo-sidebar {
-      width: var(--sidebar-width); min-width: var(--sidebar-width);
+    .index-layout { display: flex; flex: 1; min-width: 0; }
+    #runs-sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-width);
       background: rgba(17,17,17,0.92); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; z-index: 50;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      display: flex; flex-direction: column; overflow: hidden;
+      z-index: 50;
+      transition: width 0.2s ease;
     }
+    #runs-sidebar.collapsed { width: 48px; }
+    #runs-sidebar.collapsed .sidebar-logo,
+    #runs-sidebar.collapsed #sidebar-list { display: none; }
+    .sidebar-toggle {
+      background: none; border: none; color: var(--text2); cursor: pointer;
+      padding: 4px; font-size: 14px; line-height: 1; flex-shrink: 0;
+    }
+    .sidebar-toggle:hover { color: var(--accent); }
+    .sidebar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sidebar-logo { font-size: var(--text-md); font-weight: 600; letter-spacing: 0.06em; text-decoration: none; color: inherit; }
+    #runs-sidebar.collapsed .sidebar-header { justify-content: center; padding: 13px 0; }
+    #sidebar-list { flex:1; overflow-y:auto; }
+    .sidebar-run { padding:11px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.1s; min-height:76px; display:flex; flex-direction:column; justify-content:center; }
+    .sidebar-run:hover { background:var(--bg); }
+    .sidebar-run-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px; min-height:20px; }
+    .sidebar-run-date { font-size:var(--text-xs); color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+    .sidebar-run-status { font-size:var(--text-xs); letter-spacing:0.1em; text-transform:uppercase; padding:2px 7px; border-radius:1px; min-width:78px; text-align:center; flex-shrink:0; }
+    .sidebar-status-complete { background:rgba(160,190,130,0.15); color:var(--success); }
+    .sidebar-status-querying, .sidebar-status-scraping, .sidebar-status-analyzing, .sidebar-status-pending { background:rgba(251,191,36,0.12); color:var(--accent); }
+    .sidebar-status-failed { background:rgba(248,113,113,0.12); color:var(--danger); }
+    .sidebar-run-bar { height:2px; background:var(--surface2); border-radius:1px; margin:5px 0; flex-shrink:0; }
+    .sidebar-run-fill { height:100%; border-radius:1px; background:var(--accent); transition:width 0.3s; }
+    .sidebar-run-footer { display:flex; align-items:center; justify-content:space-between; min-height:20px; flex-shrink:0; }
+    .sidebar-run-pct { font-size:var(--text-xs); color:var(--text3); }
+    .sidebar-run-brand { font-size:var(--text-xs); color:var(--text3); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:16px; }
+    .sidebar-del-btn { background:none; border:none; color:var(--text3); cursor:pointer; font-size:var(--text-xs); letter-spacing:0.06em; padding:2px 0; opacity:0; transition:opacity 0.15s, color 0.15s; }
+    .sidebar-run:hover .sidebar-del-btn { opacity:1; }
+    .sidebar-del-btn:hover { color:var(--danger); }
+    .sidebar-del-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .sidebar-del-btn:disabled:hover { color:var(--text3); }
     .index-main {
       margin-left: var(--sidebar-width);
       width: calc(100vw - var(--sidebar-width));
       flex: 1; display: flex; align-items: flex-start; justify-content: center; min-width: 0;
       overflow-y: auto;
       padding: 40px 0 64px;
+      transition: margin-left 0.2s ease, width 0.2s ease;
       background: transparent;
       position: relative;
       z-index: 1;
+    }
+    #runs-sidebar.collapsed ~ .index-main {
+      margin-left: 48px;
+      width: calc(100vw - 48px);
     }
     .setup-wrap {
       width: 100%; max-width: 720px; padding: 32px 24px;
@@ -257,8 +300,15 @@
 <body>
   <canvas id="bg-canvas"></canvas>
   <div class="frost-overlay"></div>
-  <div class="sb-page-layout">
-    <div id="aeo-sidebar"></div>
+  <div id="tr-logo-corner" style="position:fixed;top:16px;right:20px;z-index:99"></div>
+  <div class="index-layout">
+    <aside id="runs-sidebar" class="collapsed">
+      <div class="sidebar-header">
+        <a href="/" class="logo sidebar-logo">terrain<em>.run</em></a>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar">▶</button>
+      </div>
+      <div id="sidebar-list"></div>
+    </aside>
     <main class="index-main">
   <div class="setup-wrap">
     <div class="above-fold">
@@ -353,12 +403,42 @@
       <div id="qr-status" style="font-size:var(--text-sm);color:var(--text2);min-height:18px;margin-top:10px"></div>
     </div>
       </div><!-- /above-fold-content -->
+
+    <!-- Scroll hint: pinned to bottom of above-fold viewport -->
+    <div class="scroll-hint" onclick="document.querySelector('.below-fold').scrollIntoView({behavior:'smooth'})">
+      <button class="scroll-arrow-btn">↓</button>
+    </div>
   </div><!-- /above-fold -->
 
-  <div style="position:fixed;bottom:12px;right:16px;z-index:99;font-size:11px;letter-spacing:0.1em;color:var(--text3)">AEO · v0.5</div>
+    <div class="below-fold" style="scroll-margin-top: 16px; padding-top: 0;">
+    <!-- Strategy Brief (below the fold) -->
+    <section class="strategy-brief">
+      <h2 class="strategy-brief-title">Strategy Brief</h2>
+      <div class="strategy-brief-content" id="strategy-brief-content">
+        <p><strong>92% of searches that show an AI summary never result in a website click.</strong> LLMs are being asked questions about your brand every day. terrain.run is how you understand what they're saying — and influence it.</p>
+        <p>Answer Engine Optimization (AEO) is a set of analyses that show how AI assistants like ChatGPT, Claude, and Gemini are representing a brand when buyers ask them questions, and what to do to improve that representation.</p>
+        <h3>Measuring LLM visibility</h3>
+        <p>The tool queries programmatically. It submits prompts to each LLM via API and analyzes responses across hundreds of calls: which brands get mentioned, in what rank order, which URLs get cited. Persona scoring, channel analysis, and format recommendations all start from this data.</p>
+        <h3>Persona scoring</h3>
+        <p>Performance is scored per persona, not just in aggregate. Every prompt is mapped to a specific persona. The output shows how a brand is performing for each buyer type: where it's well-represented, and where it's absent.</p>
+        <h3>Channel analysis</h3>
+        <p>LLMs cite a brand's website, but they give more weight to third-party sources. The channel analysis classifies every cited URL: owned pages, competitor pages, news outlets, industry sites, review platforms. Outlets that appear in a category but haven't covered a brand are PR targets.</p>
+        <h3>Format analysis</h3>
+        <p>How content is structured affects whether LLMs can use it. Headers written as questions create direct matches to user queries. FAQ sections mirror the format LLMs use. Schema markup and updated metadata give the AI an immediate read on what a page is about.</p>
+        <h3>Gap analysis</h3>
+        <p>The right prompts to track come from mapping what a brand covers, what competitors cover, and what buyers actually need to know. Where those three don't overlap is where the content strategy has room to go.</p>
+        <p><strong>Every audit starts with the gap analysis, building the right prompt set before running anything.</strong> From there, the tool queries at scale, scores results by persona, maps the citation footprint, and identifies format improvements from what the data shows.</p>
+      </div>
+    </section>
+    </div><!-- /below-fold -->
+
+  <div style="position:fixed;bottom:12px;right:16px;z-index:99;font-size:11px;letter-spacing:0.1em;color:var(--text)"><a href="/" style="color:inherit;text-decoration:none">terrain.run</a> · v0.5</div>
   </div><!-- /setup-wrap -->
     </main>
   </div>
+
+  <script src="/assets/tr-logo-anim.js"></script>
+  <script>initTRLogo('#tr-logo-corner', { size: window.innerWidth <= 768 ? 96 : 186 });</script>
 
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>
@@ -387,6 +467,83 @@
       return base + (path.startsWith('/') ? path : '/' + path)
     }
 
+    function toggleSidebar() {
+      const sidebar = document.getElementById('runs-sidebar')
+      const btn = sidebar?.querySelector('.sidebar-toggle')
+      if (!sidebar || !btn) return
+      const isCollapsed = sidebar.classList.toggle('collapsed')
+      btn.textContent = isCollapsed ? '▶' : '◀'
+      btn.title = isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+      btn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar')
+    }
+
+    async function loadSidebar() {
+      const list = document.getElementById('sidebar-list')
+      if (!list) return
+      list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--text3)">Loading…</div>'
+      try {
+        const res = await fetch(API('/api/runs/list'))
+        const json = await safeJson(res)
+        if (!res.ok) {
+          list.innerHTML = `<div style="padding:16px;font-size:var(--text-xs);color:var(--danger)">${res.status === 401 ? 'Session expired' : 'Failed to load runs'}</div>`
+          return
+        }
+        const allRuns = json.runs || []
+        if (!allRuns.length) {
+          list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--text3)">No runs yet.</div>'
+          return
+        }
+        list.innerHTML = allRuns.map(r => {
+          const total = r.total_queries || 0
+          const done = r.completed_queries || 0
+          const pct = total > 0 ? Math.round((done / total) * 100) : (r.status === 'complete' ? 100 : 0)
+          const d = new Date(r.created_at)
+          const dateStr = d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
+          const brandLabel = r.brand_name || r.brand_domain || 'Brand'
+          const statusClass = `sidebar-status-${r.status || 'pending'}`
+          const statusLabel = (r.status === 'failed' && (r.error || '').toLowerCase().includes('cancelled')) ? 'canceled' : (r.status || 'pending')
+          const inProgress = ['pending','querying','scraping','analyzing'].includes(r.status || '')
+          const delAttrs = inProgress ? ' disabled title="Wait for run to complete or fail before deleting"' : ''
+          return `<div class="sidebar-run" onclick="navigateToRun('${r.id}')">
+            <div class="sidebar-run-meta">
+              <span class="sidebar-run-date">${dateStr}</span>
+              <span class="sidebar-run-status ${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="sidebar-run-brand">${escHtml(brandLabel)}</div>
+            <div class="sidebar-run-bar"><div class="sidebar-run-fill" style="width:${pct}%"></div></div>
+            <div class="sidebar-run-footer">
+              <span class="sidebar-run-pct">${pct}%</span>
+              <button class="sidebar-del-btn" onclick="deleteRun(event,'${r.id}')"${delAttrs}>Delete</button>
+            </div>
+          </div>`
+        }).join('')
+      } catch (err) {
+        list.innerHTML = '<div style="padding:16px;font-size:var(--text-xs);color:var(--danger)">Failed to load runs.</div>'
+      }
+    }
+
+    function navigateToRun(id) {
+      const base = location.pathname.replace(/\/[^/]*$/, '') || ''
+      location.href = `${base}/dashboard.html?runId=${id}`
+    }
+
+    async function deleteRun(event, id) {
+      event.stopPropagation()
+      if (!confirm('Delete this run? All queries, citations, and brand data will be removed. This cannot be undone.')) return
+      try {
+        const API = (path) => { const base = location.pathname.replace(/\/[^/]*$/, '') || ''; return base + (path.startsWith('/') ? path : '/' + path) }
+        const res = await fetch(API(`/api/runs/${id}`), { method: 'DELETE' })
+        if (res.ok) {
+          loadSidebar()
+        } else {
+          alert('Failed to delete run.')
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`)
+      }
+    }
+
+    loadSidebar()
 
     function isValidUrl(val) {
       const s = (val || '').trim()
@@ -624,7 +781,5 @@
       }
     })
   </script>
-  <script src="/assets/sidebar.js"></script>
-  <script>initSidebar()</script>
 </body>
 </html>

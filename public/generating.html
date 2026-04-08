@@ -4,19 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>Generating — AEO</title>
+  <title>Generating — terrain.run</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
-    body { display: flex; min-height: 100vh; margin: 0; background: #0a0a0a; }
-    .sb-page-layout { display: flex; flex: 1; }
-    #aeo-sidebar {
-      width: var(--sidebar-width); min-width: var(--sidebar-width);
-      background: rgba(17,17,17,0.92); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; z-index: 50;
-    }
-    .page-main {
-      margin-left: var(--sidebar-width); flex: 1; min-width: 0;
-    }
     #loading { display: flex; flex-direction: column; height: 100vh; padding: 0; margin: 0; box-sizing: border-box; overflow: hidden; }
     .loading-log-layout {
       display: flex;
@@ -38,9 +28,6 @@
   </style>
 </head>
 <body>
-  <div class="sb-page-layout">
-    <div id="aeo-sidebar"></div>
-    <main class="page-main">
   <div id="tr-logo-corner" style="position:fixed;top:16px;right:20px;z-index:99"></div>
   <div id="loading">
     <div class="loading-log-layout">
@@ -338,9 +325,5 @@
   </script>
   <script src="/assets/tr-logo-anim.js"></script>
   <script>initTRLogo('#tr-logo-corner', { size: window.innerWidth <= 768 ? 96 : 186 });</script>
-    </main>
-  </div>
-  <script src="/assets/sidebar.js"></script>
-  <script>initSidebar()</script>
 </body>
 </html>
