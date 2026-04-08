@@ -3,7 +3,7 @@ document.documentElement.style.visibility = 'hidden'
 fetch('/api/auth/me')
   .then(function (r) {
     if (r.status === 401) {
-      window.location.replace('/login.html')
+      window.location.replace('/home.html')
       return
     }
     if (!r.ok) {
