@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { Env } from './types'
 import { sessionMiddleware } from './middleware/auth'
+import { validateSession, getCookie } from './services/auth'
 import { brands } from './routes/brands'
 import { prompts } from './routes/prompts'
 import { personas } from './routes/personas'
@@ -32,6 +33,28 @@ app.route('/api/teams', teams)
 app.route('/api/admin', admin)
 
 app.get('/api/health', c => c.json({ ok: true, ts: Date.now() }))
+
+// Landing page: unauthenticated visitors see home.html, authenticated users see index.html
+app.get('/', async c => {
+  const token = getCookie(c.req.header('Cookie'), 'aeo_session')
+  if (token) {
+    const session = await validateSession(c.env.DB, token)
+    if (session) {
+      // Authenticated — serve the app (index.html)
+      if (c.env.ASSETS) return c.env.ASSETS.fetch(c.req.raw)
+      return new Response('Not found', { status: 404 })
+    }
+  }
+  // Unauthenticated — serve landing page
+  if (c.env.ASSETS) {
+    const url = new URL('/home.html', c.req.url)
+    return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw))
+  }
+  return new Response('Not found', { status: 404 })
+})
+
+// Clean URL for login
+app.get('/login', c => c.redirect('/login.html', 302))
 
 // 404 for unmatched API routes
 app.notFound(c => {

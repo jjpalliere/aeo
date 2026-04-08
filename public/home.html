@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terrain — Answer Engine Optimization</title>
+  <meta name="description" content="Measure how AI assistants rank and cite your brand. Audit visibility across Claude, ChatGPT, and Gemini." />
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    html, body {
+      background: #0a0a0a !important;
+      margin: 0;
+      overflow-x: hidden;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .frost-overlay {
+      position: fixed; inset: 0; z-index: 0;
+      backdrop-filter: blur(2.5px);
+      -webkit-backdrop-filter: blur(2.5px);
+      background: rgba(8,8,28,0.2);
+      pointer-events: none;
+    }
+    .frost-overlay::after { display: none; }
+
+    /* ── Nav ──────────────────────────────────────────────── */
+    .landing-nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 24px 40px;
+      background: linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 100%);
+    }
+    .landing-logo { height: 32px; width: auto; opacity: 0.9; }
+    .nav-login {
+      font-family: var(--font);
+      font-size: var(--text-xs);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text2);
+      text-decoration: none;
+      border: 1px solid var(--border2);
+      padding: 8px 20px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .nav-login:hover { color: var(--text); border-color: var(--text3); }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    .landing-hero {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 32px 80px;
+      box-sizing: border-box;
+    }
+    .hero-content { max-width: 720px; }
+    .hero-title {
+      font-family: var(--font-hero);
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      color: #fff;
+      margin: 0 0 28px;
+    }
+    .hero-sub {
+      font-family: var(--font);
+      font-size: var(--text-sm);
+      color: var(--text2);
+      letter-spacing: 0.04em;
+      line-height: 1.8;
+      margin: 0 0 32px;
+      max-width: 480px;
+      margin-left: auto; margin-right: auto;
+    }
+    .hero-rule {
+      width: 48px; height: 1px;
+      background: var(--border2);
+      margin: 0 auto 24px;
+    }
+    .hero-meta {
+      font-family: var(--font);
+      font-size: var(--text-xs);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin: 0;
+    }
+    .hero-scroll {
+      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      cursor: pointer;
+    }
+    .hero-scroll-arrow {
+      background: none;
+      border: 1px solid var(--w-08);
+      color: var(--w-20);
+      font-family: var(--font);
+      font-size: 20px; line-height: 1;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .hero-scroll-arrow:hover { color: var(--w-50); border-color: var(--w-20); }
+    .hero-scroll-label {
+      font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text3);
+    }
+
+    /* ── Sections (shared) ────────────────────────────────── */
+    .landing-section {
+      position: relative; z-index: 2;
+      padding: 96px 40px;
+    }
+    .section-inner {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .section-label {
+      display: block;
+      font-family: var(--font);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 20px;
+    }
+    .section-heading {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 3vw, 30px);
+      font-weight: 500;
+      color: #fff;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+      margin: 0 0 24px;
+    }
+    .section-body {
+      font-family: var(--font);
+      font-size: var(--text-sm);
+      color: var(--text2);
+      line-height: 1.9;
+      max-width: 600px;
+    }
+    .section-body p { margin: 0 0 1.2em; }
+    .section-body p:last-child { margin-bottom: 0; }
+
+    /* ── Section: What ────────────────────────────────────── */
+    .section-what {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+    .section-what .section-inner {
+      border-left: 1px solid var(--text);
+      padding-left: 32px;
+    }
+
+    /* ── Section: Demo ────────────────────────────────────── */
+    .section-demo {
+      background: var(--surface);
+    }
+    .video-container {
+      max-width: 900px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 16/9;
+      background: #000;
+      cursor: pointer;
+    }
+    .video-poster {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.3s;
+    }
+    .video-poster:hover .play-ring { border-color: var(--text2); }
+    .video-poster:hover .play-label { color: var(--text2); }
+    .play-ring {
+      width: 72px; height: 72px;
+      border: 1px solid var(--text3);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.2s;
+    }
+    .play-tri {
+      width: 0; height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 16px solid var(--text2);
+      margin-left: 3px;
+    }
+    .play-label {
+      position: absolute; bottom: 24px;
+      font-family: var(--font);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      transition: color 0.2s;
+    }
+    /* Fullscreen overlay */
+    .video-fullscreen {
+      display: none;
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.95);
+      align-items: center; justify-content: center;
+      cursor: default;
+    }
+    .video-fullscreen.active { display: flex; }
+    .video-fullscreen video {
+      max-width: 90vw; max-height: 90vh;
+      outline: none;
+    }
+    .video-close {
+      position: absolute; top: 20px; right: 28px;
+      background: none; border: none;
+      color: var(--text3);
+      font-family: var(--font);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 8px;
+      z-index: 10000;
+      transition: color 0.2s;
+    }
+    .video-close:hover { color: #fff; }
+
+    /* ── Section: Why ─────────────────────────────────────── */
+    .section-why {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Section: How ─────────────────────────────────────── */
+    .section-how {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 32px;
+    }
+    .step-card {
+      border: 1px solid var(--border);
+      padding: 24px;
+      background: var(--bg);
+    }
+    .step-number {
+      font-family: var(--font);
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 12px;
+    }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 500;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+    .step-desc {
+      font-family: var(--font);
+      font-size: var(--text-xs);
+      color: var(--text2);
+      line-height: 1.8;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .landing-footer {
+      position: relative; z-index: 1;
+      text-align: center;
+      padding: 96px 40px;
+      background: transparent;
+    }
+    .footer-cta {
+      display: inline-block;
+      font-family: var(--font);
+      font-size: var(--text-xs);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text2);
+      text-decoration: none;
+      border: 1px solid var(--border2);
+      padding: 14px 48px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .footer-cta:hover { color: var(--text); border-color: var(--text3); }
+    .footer-note {
+      font-family: var(--font);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-top: 20px;
+    }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 680px) {
+      .landing-nav { padding: 16px 20px; }
+      .landing-hero { padding: 100px 20px 80px; }
+      .landing-section { padding: 64px 20px; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .landing-footer { padding: 64px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+  <div class="frost-overlay"></div>
+
+  <!-- Nav -->
+  <nav class="landing-nav">
+    <img src="/assets/tr-logo.svg" alt="Terrain" class="landing-logo" />
+    <a href="/login" class="nav-login">Log in</a>
+  </nav>
+
+  <!-- Hero (above the fold) -->
+  <header class="landing-hero">
+    <div class="hero-content">
+      <h1 class="hero-title">Answer Engine<br>Optimization</h1>
+      <p class="hero-sub">Measure how AI assistants rank and cite your brand across Claude, ChatGPT, and Gemini.</p>
+      <div class="hero-rule"></div>
+      <p class="hero-meta">3 models &middot; 3 personas &middot; 180 queries per audit</p>
+    </div>
+    <div class="hero-scroll" onclick="document.querySelector('.section-what').scrollIntoView({behavior:'smooth'})">
+      <button class="hero-scroll-arrow">&darr;</button>
+      <span class="hero-scroll-label">Learn more</span>
+    </div>
+  </header>
+
+  <!-- 01 / What -->
+  <section class="landing-section section-what">
+    <div class="section-inner">
+      <span class="section-label">01 / What</span>
+      <h2 class="section-heading">Brand visibility in AI search</h2>
+      <div class="section-body">
+        <p>AEO audits how three major AI assistants respond to queries relevant to your brand. It simulates real user questions across awareness, consideration, and decision stages, then extracts every brand mention, ranking position, and citation URL from the responses.</p>
+        <p>The output is a structured dataset: who gets mentioned, how often, in what position, and with what sources. No guesswork, no opinions &mdash; just the raw signal of how AI sees your competitive landscape.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo -->
+  <section class="landing-section section-demo">
+    <div class="section-inner">
+      <span class="section-label">Demo</span>
+      <div class="video-container" onclick="openVideo()">
+        <div class="video-poster">
+          <div class="play-ring"><div class="play-tri"></div></div>
+          <span class="play-label">Watch demo</span>
+        </div>
+      </div>
+
+  <!-- Fullscreen video overlay (lazy — video only loads on click) -->
+  <div class="video-fullscreen" id="video-overlay" onclick="closeVideo(event)">
+    <button class="video-close" onclick="closeVideo(event)">&times;</button>
+  </div>
+    </div>
+  </section>
+
+  <!-- 02 / Why -->
+  <section class="landing-section section-why">
+    <div class="section-inner">
+      <span class="section-label">02 / Why</span>
+      <h2 class="section-heading">AI is the new search surface</h2>
+      <div class="section-body">
+        <p>When someone asks an AI for a product recommendation, the response is the entire result page. There are no ten blue links &mdash; there is one synthesized answer. Brands that appear capture intent. Brands that don't, disappear.</p>
+        <p>AEO makes this visible: it quantifies where your brand stands relative to competitors in AI-generated responses, tracks how that position shifts across funnel stages and buyer personas, and identifies the content gaps that determine who gets cited.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 / How -->
+  <section class="landing-section section-how">
+    <div class="section-inner">
+      <span class="section-label">03 / How</span>
+      <h2 class="section-heading">Audit workflow</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">Step 01</div>
+          <div class="step-title">Add brand</div>
+          <div class="step-desc">Provide your URL. The system crawls your site, identifies your brand, and maps your competitive landscape automatically.</div>
+        </div>
+        <div class="step-card">
+          <div class="step-number">Step 02</div>
+          <div class="step-title">Generate prompts</div>
+          <div class="step-desc">AEO produces ~60 search queries distributed across funnel stages and buyer personas. Review and approve before running.</div>
+        </div>
+        <div class="step-card">
+          <div class="step-number">Step 03</div>
+          <div class="step-title">Run audit</div>
+          <div class="step-desc">Each prompt is sent to Claude, ChatGPT, and Gemini. Responses are parsed for brand mentions, rankings, and citation URLs.</div>
+        </div>
+        <div class="step-card">
+          <div class="step-number">Step 04</div>
+          <div class="step-title">Analyze results</div>
+          <div class="step-desc">Dashboard surfaces rankings, citation sources, competitor overlap, and funnel breakdowns. A chat assistant lets you query the data directly.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <a href="/login" class="footer-cta">Log in</a>
+    <p class="footer-note">Invite-only access</p>
+  </footer>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="/assets/background.js"></script>
+  <script>
+    let videoEl = null
+    function openVideo() {
+      const overlay = document.getElementById('video-overlay')
+      if (!videoEl) {
+        videoEl = document.createElement('video')
+        videoEl.src = '/assets/demo.mp4'
+        videoEl.controls = true
+        videoEl.autoplay = true
+        videoEl.playsInline = true
+        overlay.appendChild(videoEl)
+      }
+      overlay.classList.add('active')
+      videoEl.play()
+    }
+    function closeVideo(e) {
+      if (e.target === videoEl) return          // clicking the video itself shouldn't close
+      const overlay = document.getElementById('video-overlay')
+      overlay.classList.remove('active')
+      if (videoEl) videoEl.pause()
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeVideo(e)
+    })
+  </script>
+</body>
+</html>
