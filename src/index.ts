@@ -1,53 +1,35 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { Env } from './types'
+import { sessionMiddleware } from './middleware/auth'
 import { brands } from './routes/brands'
 import { prompts } from './routes/prompts'
 import { personas } from './routes/personas'
 import { runs } from './routes/runs'
 import { assistant } from './routes/assistant'
-
-const AUTH_COOKIE = 'aeo_auth'
-const AUTH_TOKEN  = 'aeo_ok'
-
-function getCookie(header: string | undefined, name: string): string | null {
-  if (!header) return null
-  const match = header.split(';').map(s => s.trim()).find(s => s.startsWith(name + '='))
-  return match ? match.slice(name.length + 1) : null
-}
+import { auth } from './routes/auth'
+import { teams } from './routes/teams'
+import { admin } from './routes/admin'
 
 const app = new Hono<{ Bindings: Env }>()
 
-// Auth gate — protects all API routes; HTML pages are gated client-side via /assets/auth.js
-app.use('/api/*', async (c, next) => {
-  if (c.req.path === '/api/auth') return next()
-  if (getCookie(c.req.header('Cookie'), AUTH_COOKIE) === AUTH_TOKEN) return next()
-  return c.json({ error: 'Unauthorized' }, 401)
-})
-
-// Login endpoint — sets session cookie on correct password
-app.post('/api/auth', async c => {
-  const body = await c.req.json<{ password: string }>().catch(() => ({ password: '' }))
-  const pwd = c.env.AEO_PASSWORD || ':blob_with_it:'
-  if (body.password === pwd) {
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Set-Cookie': `${AUTH_COOKIE}=${AUTH_TOKEN}; Path=/; HttpOnly; SameSite=Strict; Max-Age=2592000`,
-      },
-    })
-  }
-  return c.json({ error: 'Unauthorized' }, 401)
-})
-
+// CORS for API routes
 app.use('/api/*', cors())
 
+// Session auth middleware — protects all /api/* except /api/auth/* and /api/health
+app.use('/api/*', sessionMiddleware)
+
+// Auth routes (public — handle their own session validation)
+app.route('/api/auth', auth)
+
+// Protected routes
 app.route('/api/brands', brands)
 app.route('/api/prompts', prompts)
 app.route('/api/personas', personas)
 app.route('/api/runs', runs)
 app.route('/api/assistant', assistant)
+app.route('/api/teams', teams)
+app.route('/api/admin', admin)
 
 app.get('/api/health', c => c.json({ ok: true, ts: Date.now() }))
 
@@ -61,4 +43,37 @@ app.notFound(c => {
   return new Response('Not found', { status: 404 })
 })
 
-export default app
+export default {
+  fetch: app.fetch,
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    try {
+      // 1. Clean up expired sessions and magic links
+      const sessions = await env.DB.prepare(
+        'DELETE FROM sessions WHERE expires_at < datetime("now")'
+      ).run()
+      const links = await env.DB.prepare(
+        'DELETE FROM magic_links WHERE expires_at < datetime("now")'
+      ).run()
+      console.log(`[cron] Cleaned ${sessions.meta.changes} sessions, ${links.meta.changes} magic links`)
+
+      // 2. Detect stalled runs (stuck in active status for > 1 hour)
+      const { results: stalled } = await env.DB.prepare(`
+        SELECT id, status FROM runs
+        WHERE status IN ('pending', 'querying', 'scraping', 'analyzing')
+          AND created_at < datetime('now', '-1 hour')
+      `).all<{ id: string; status: string }>()
+
+      if (stalled.length > 0) {
+        console.warn(`[cron] Found ${stalled.length} stalled runs: ${stalled.map(r => r.id.slice(0, 8)).join(', ')}`)
+        for (const run of stalled) {
+          await env.DB.prepare(
+            `UPDATE runs SET status = 'failed', error = 'Stalled — timed out after 1 hour' WHERE id = ? AND status = ?`
+          ).bind(run.id, run.status).run()
+        }
+      }
+    } catch (err) {
+      // Cloudflare does NOT retry failed crons. Log clearly for debugging.
+      console.error('[cron] Scheduled handler failed:', err)
+    }
+  },
+}

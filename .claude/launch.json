@@ -3,9 +3,21 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 8787
+      "runtimeExecutable": "/opt/homebrew/Cellar/node/23.2.0_1/bin/node",
+      "runtimeArgs": ["/Users/julienpalliere/AEO/node_modules/.bin/wrangler", "dev", "--port", "8791"],
+      "port": 8791
+    },
+    {
+      "name": "sb-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd '/Users/julienpalliere/Similarity Browser/frontend' && npx vite --port 5173"],
+      "port": 5173
+    },
+    {
+      "name": "logo-lab",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8891", "--directory", "/Users/julienpalliere/AEO/reference/logos"],
+      "port": 8891
     }
   ]
 }

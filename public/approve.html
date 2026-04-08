@@ -4,9 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
-  <title>Review — terrain.run</title>
+  <title>Review — AEO</title>
   <link rel="stylesheet" href="/assets/styles.css" />
   <style>
+    body { display: flex; min-height: 100vh; margin: 0; background: #0a0a0a; }
+    .sb-page-layout { display: flex; flex: 1; }
+    #aeo-sidebar {
+      width: var(--sidebar-width); min-width: var(--sidebar-width);
+      background: rgba(17,17,17,0.92); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; z-index: 50;
+    }
+    .page-main {
+      margin-left: var(--sidebar-width); flex: 1; min-width: 0;
+    }
     /* Funnel columns — side-by-side */
     .funnel-columns {
       display: grid;
@@ -306,11 +316,14 @@
   </style>
 </head>
 <body>
+  <div class="sb-page-layout">
+    <div id="aeo-sidebar"></div>
+    <main class="page-main">
   <div id="loading-approve"><span class="spinner"></span></div>
 
   <div id="content">
     <div class="top-bar">
-      <a href="/" class="logo">terrain<em>.run</em></a>
+      <a href="/" class="logo">AEO</a>
       <div style="font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text2)">
         Review › <span id="brand-name-top" style="color:var(--text)">–</span>
       </div>
@@ -1599,5 +1612,9 @@
 
     load()
   </script>
+    </main>
+  </div>
+  <script src="/assets/sidebar.js"></script>
+  <script>initSidebar()</script>
 </body>
 </html>

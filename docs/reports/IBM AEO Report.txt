@@ -1,0 +1,33 @@
+﻿AEO Competitive Research Report
+Key Takeaways for IBM IBV
+This section summarizes the strategic implications of the competitive AEO analysis for IBM IBV's content and distribution program. Each dimension below corresponds to a fuller treatment in the Aggregate Synthesis (Part 2) and Competitor Deep-Dives (Part 1).
+AEO starting position
+IBM IBV launches with no citation baseline, but with inherited institutional authority through IBM's existing content ecosystem (Think, IBV research reports, IBM.com). That advantage is only transferable if the new program is architecturally connected to that ecosystem from launch. Schema markup, FAQ companions, hub-and-spoke architecture, and third-party citation-building are pre-launch requirements. See Part 1.4 for format and technical requirements; see Microsoft Signal (Part 1) for the cost of deferring this infrastructure.
+Channels
+* Owned site: primary citation engine; requires AEO infrastructure at launch to perform
+* LinkedIn: highest-opportunity secondary channel; long-form articles with data-forward claims drive Google Snippets visibility specifically
+* Third-party authority clusters (Gartner, HBR, MIT Sloan, WeForum): highest-leverage infrastructure play; requires external placement and citation-building as a parallel workstream to editorial development
+* Wikipedia: low-effort, high-return action for ChatGPT visibility; IBM IBV should appear on relevant category reference pages at launch
+See Part 1.1 for full channel × competitor × content type × topic triangulation.
+Personas
+* CDO / CAIO: clearest white space; no competitor has meaningful cited content for these roles; IBM IBV's existing persona coverage is a direct translation opportunity
+* COO: most underserved persona in competitive citation data; operational AI content is largely absent across all three competitors
+* CHRO: underserved as a primary audience; workforce content exists in the competitive set but is framed through CEO and COO lenses, not the CHRO's mandate
+* CEO, CFO: well-covered by competitors; IBM IBV should have presence but needs a differentiated angle to earn citation share
+* CIO / CTO / Tech Leader: moderately covered; the cross-functional governance angle and short-term ROI tension are the clearest entry points
+See Part 1.2 for full persona-level gap assessment.
+Topics
+* Defensible ownership: CDO/CAIO accountability and operating model alignment; cross-functional C-suite alignment on AI; the "messy middle" of AI transformation; COO-specific operational AI
+* Competitive territory worth entering: state of AI in enterprise (with an operational data angle); AI transformation frameworks (with a cross-C-suite framing); CHRO-led workforce redesign
+See Part 1.3 for full topic gap analysis and competitive saturation assessment.
+Formats
+What IBM IBV can produce that competitors are not:
+* Proprietary data studies with standalone statistical callouts — IBV's research infrastructure is a format advantage; findings should surface as citable percentage-led claims, not just body copy
+* Named cross-C-suite frameworks — "From Siloed to Smarter" needs discrete named components with H2 structure to accumulate citation authority; an unnamed thesis does not get cited
+* Role-pair alignment briefs — structured short-form content addressing how two C-suite roles align on a specific decision (CDO + CAIO, CIO + CFO, CEO + COO); maps to the cross-functional gap and is optimized for AI extraction
+* FAQ companion pieces — one per major report or study; low production cost, high AEO return[a]
+See Part 1.4 for full format performance analysis and technical requirements.
+
+
+[a]1 total reaction
+Katherine Lee reacted with 🧨 at 2026-03-12 15:55 PM

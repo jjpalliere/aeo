@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>terrain.run — Typographic Logo Explorations v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #f0ebeb;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 60px 40px;
+  }
+
+  h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #9f9a9a;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: #555;
+    letter-spacing: 0.06em;
+    margin-bottom: 60px;
+    line-height: 1.8;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 80px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .exploration {
+    padding: 48px;
+    border: 1px solid #1a1a1a;
+    position: relative;
+  }
+
+  .exploration::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: #0a0a0a;
+    padding: 0 8px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  .desc {
+    font-size: 11px;
+    color: #555;
+    letter-spacing: 0.06em;
+    margin-top: 32px;
+    line-height: 1.6;
+  }
+
+  /* Contour letter styling — inline SVG colored via CSS */
+  .contour-letter {
+    display: inline-block;
+    vertical-align: baseline;
+    color: #f0ebeb;
+  }
+  .contour-letter svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Mono body text */
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    color: #f0ebeb;
+  }
+
+  .mono-muted {
+    font-family: 'JetBrains Mono', monospace;
+    color: #9f9a9a;
+  }
+
+  .accent { color: #EE5218; }
+  .green { color: #a0be82; }
+
+  /* ═══════════════════════════════════════
+     01 — BASELINE ALIGN
+     Contour T + R sit on the same baseline as mono text
+     ═══════════════════════════════════════ */
+  .logo-01 {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    user-select: none;
+  }
+  .logo-01 .contour-T { width: 56px; height: 72px; margin-right: -6px; margin-bottom: -4px; }
+  .logo-01 .body-errain { font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: 500; color: #f0ebeb; letter-spacing: -0.03em; line-height: 1; }
+  .logo-01 .dot { font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: 500; color: #EE5218; line-height: 1; }
+  .logo-01 .contour-R { width: 56px; height: 72px; margin-left: -4px; margin-right: -6px; margin-bottom: -4px; }
+  .logo-01 .body-un { font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: 500; color: #f0ebeb; letter-spacing: -0.03em; line-height: 1; }
+
+  /* ═══════════════════════════════════════
+     02 — OVERSIZED CONTOUR
+     T and R are much bigger than the mono text
+     ═══════════════════════════════════════ */
+  .logo-02 {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    user-select: none;
+  }
+  .logo-02 .contour-T { width: 80px; height: 100px; margin-right: -10px; margin-bottom: -6px; }
+  .logo-02 .body-errain { font-family: 'JetBrains Mono', monospace; font-size: 36px; font-weight: 400; color: #9f9a9a; letter-spacing: -0.02em; line-height: 1; padding-bottom: 4px; }
+  .logo-02 .dot { font-family: 'JetBrains Mono', monospace; font-size: 36px; font-weight: 400; color: #EE5218; line-height: 1; padding-bottom: 4px; }
+  .logo-02 .contour-R { width: 80px; height: 100px; margin-left: -6px; margin-right: -10px; margin-bottom: -6px; }
+  .logo-02 .body-un { font-family: 'JetBrains Mono', monospace; font-size: 36px; font-weight: 400; color: #9f9a9a; letter-spacing: -0.02em; line-height: 1; padding-bottom: 4px; }
+
+  /* ═══════════════════════════════════════
+     03 — STACKED
+     [contour T]ERRAIN on top, .[contour R]UN below
+     ═══════════════════════════════════════ */
+  .logo-03 { user-select: none; }
+  .logo-03 .line {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+  }
+  .logo-03 .contour-letter { width: 64px; height: 80px; margin-bottom: -4px; }
+  .logo-03 .text { font-family: 'JetBrains Mono', monospace; font-size: 52px; font-weight: 700; color: #f0ebeb; letter-spacing: -0.02em; line-height: 1; text-transform: uppercase; }
+  .logo-03 .line-2 { margin-top: -6px; }
+  .logo-03 .dot-prefix { font-family: 'JetBrains Mono', monospace; font-size: 52px; font-weight: 700; color: #EE5218; line-height: 1; }
+  .logo-03 .contour-R-stacked { margin-left: -4px; margin-right: -8px; }
+
+  /* ═══════════════════════════════════════
+     04 — TIGHT SMUSHED
+     Everything overlaps aggressively
+     ═══════════════════════════════════════ */
+  .logo-04 {
+    display: flex;
+    align-items: flex-end;
+    user-select: none;
+    gap: 0;
+  }
+  .logo-04 .contour-T { width: 70px; height: 88px; margin-right: -20px; margin-bottom: -5px; z-index: 2; position: relative; }
+  .logo-04 .body-errain { font-family: 'JetBrains Mono', monospace; font-size: 54px; font-weight: 700; color: #f0ebeb; letter-spacing: -0.1em; line-height: 1; }
+  .logo-04 .dot { font-family: 'JetBrains Mono', monospace; font-size: 54px; font-weight: 700; color: #EE5218; line-height: 1; margin-left: -6px; margin-right: -6px; }
+  .logo-04 .contour-R { width: 70px; height: 88px; margin-left: -18px; margin-right: -16px; margin-bottom: -5px; z-index: 2; position: relative; }
+  .logo-04 .body-un { font-family: 'JetBrains Mono', monospace; font-size: 54px; font-weight: 700; color: #f0ebeb; letter-spacing: -0.1em; line-height: 1; }
+
+  /* ═══════════════════════════════════════
+     05 — CATALOG ENTRY
+     TERRAIN—01 with contour T, metadata below
+     ═══════════════════════════════════════ */
+  .logo-05 { user-select: none; }
+  .logo-05 .main-line {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+  }
+  .logo-05 .contour-T { width: 50px; height: 62px; margin-right: -4px; margin-bottom: -2px; }
+  .logo-05 .text-errain { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 700; color: #f0ebeb; letter-spacing: -0.02em; line-height: 1; text-transform: uppercase; }
+  .logo-05 .dash-num { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 700; color: #EE5218; letter-spacing: -0.02em; line-height: 1; }
+  .logo-05 .rule { height: 1px; background: #333; margin: 10px 0; }
+  .logo-05 .meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #555;
+    text-transform: uppercase;
+  }
+  .logo-05 .meta .run-label { color: #9f9a9a; }
+
+  /* ═══════════════════════════════════════
+     06 — SPLIT WEIGHT with RULE
+     Contour T + errain | . contour R + un
+     ═══════════════════════════════════════ */
+  .logo-06 {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    user-select: none;
+  }
+  .logo-06 .left { display: flex; align-items: flex-end; }
+  .logo-06 .right { display: flex; align-items: flex-end; }
+  .logo-06 .contour-T { width: 52px; height: 66px; margin-right: -4px; margin-bottom: -3px; }
+  .logo-06 .contour-R { width: 52px; height: 66px; margin-left: -2px; margin-right: -6px; margin-bottom: -3px; }
+  .logo-06 .heavy { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 44px; color: #f0ebeb; letter-spacing: -0.03em; line-height: 1; }
+  .logo-06 .light { font-family: 'JetBrains Mono', monospace; font-weight: 300; font-size: 44px; color: #9f9a9a; letter-spacing: 0.02em; line-height: 1; }
+  .logo-06 .separator {
+    width: 1px; height: 48px;
+    background: #EE5218;
+    margin: 0 14px;
+    flex-shrink: 0;
+  }
+  .logo-06 .dot { font-family: 'JetBrains Mono', monospace; font-size: 44px; font-weight: 300; color: #EE5218; line-height: 1; }
+
+  /* ═══════════════════════════════════════
+     07 — GRID CELLS
+     Each char in a cell, T and R are contour SVGs
+     ═══════════════════════════════════════ */
+  .logo-07 {
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    gap: 3px;
+    max-width: 580px;
+    user-select: none;
+  }
+  .logo-07 .cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 26px;
+    color: #f0ebeb;
+    border: 1px solid #1a1a1a;
+  }
+  .logo-07 .cell-contour {
+    border-color: #333;
+    padding: 4px;
+  }
+  .logo-07 .cell-contour .contour-letter { width: 100%; height: 100%; }
+  .logo-07 .cell-dot {
+    background: #EE5218;
+    color: #0a0a0a;
+    border-color: #EE5218;
+    font-weight: 800;
+  }
+
+  /* ═══════════════════════════════════════
+     08 — REGISTRATION MARKS
+     Clean lockup with contour T and R + crosshairs
+     ═══════════════════════════════════════ */
+  .logo-08 {
+    user-select: none;
+    position: relative;
+    padding: 28px 32px;
+  }
+  .logo-08 .marks { position: absolute; inset: 0; pointer-events: none; }
+  .logo-08 .mark { position: absolute; width: 16px; height: 16px; }
+  .logo-08 .mark::before, .logo-08 .mark::after { content: ''; position: absolute; background: #333; }
+  .logo-08 .mark::before { width: 16px; height: 1px; top: 50%; left: 0; transform: translateY(-50%); }
+  .logo-08 .mark::after { width: 1px; height: 16px; left: 50%; top: 0; transform: translateX(-50%); }
+  .logo-08 .mark-tl { top: 0; left: 0; }
+  .logo-08 .mark-tr { top: 0; right: 0; }
+  .logo-08 .mark-bl { bottom: 0; left: 0; }
+  .logo-08 .mark-br { bottom: 0; right: 0; }
+  .logo-08 .lockup {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    justify-content: center;
+  }
+  .logo-08 .contour-T { width: 52px; height: 66px; margin-right: -4px; margin-bottom: -3px; }
+  .logo-08 .contour-R { width: 52px; height: 66px; margin-left: -2px; margin-right: -6px; margin-bottom: -3px; }
+  .logo-08 .body { font-family: 'JetBrains Mono', monospace; font-size: 44px; font-weight: 500; color: #f0ebeb; letter-spacing: -0.02em; line-height: 1; }
+  .logo-08 .dot { font-family: 'JetBrains Mono', monospace; font-size: 44px; font-weight: 500; color: #EE5218; line-height: 1; }
+
+  /* ═══════════════════════════════════════
+     09 — KNOCKOUT BLOCK
+     White block with contour letters reversed out
+     ═══════════════════════════════════════ */
+  .logo-09 {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    user-select: none;
+  }
+  .logo-09 .block {
+    background: #f0ebeb;
+    padding: 6px 10px 10px;
+    display: flex;
+    align-items: flex-end;
+  }
+  .logo-09 .block .contour-letter { color: #0a0a0a; }
+  .logo-09 .block .contour-T { width: 50px; height: 64px; margin-right: -4px; margin-bottom: -4px; }
+  .logo-09 .block .body { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 600; color: #0a0a0a; letter-spacing: -0.03em; line-height: 1; }
+  .logo-09 .outside {
+    display: flex;
+    align-items: flex-end;
+    margin-left: 6px;
+  }
+  .logo-09 .outside .dot { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 400; color: #EE5218; line-height: 1; }
+  .logo-09 .outside .contour-R { width: 50px; height: 64px; margin-left: -2px; margin-right: -6px; margin-bottom: -4px; color: #9f9a9a; }
+  .logo-09 .outside .body { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 400; color: #9f9a9a; letter-spacing: -0.03em; line-height: 1; }
+
+  /* ═══════════════════════════════════════
+     10 — LAYERED SHADOW
+     Multiple offset copies with contour letters
+     ═══════════════════════════════════════ */
+  .logo-10 {
+    user-select: none;
+    position: relative;
+    height: 90px;
+  }
+  .logo-10 .layer {
+    position: absolute;
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+  }
+  .logo-10 .l1 { top: 6px; left: 6px; }
+  .logo-10 .l1 .contour-letter { color: #1a1a1a; }
+  .logo-10 .l1 .body, .logo-10 .l1 .dot { color: #1a1a1a; }
+  .logo-10 .l2 { top: 3px; left: 3px; }
+  .logo-10 .l2 .contour-letter { color: #333; }
+  .logo-10 .l2 .body, .logo-10 .l2 .dot { color: #333; }
+  .logo-10 .l3 { top: 0; left: 0; }
+  .logo-10 .l3 .contour-letter { color: #f0ebeb; }
+  .logo-10 .l3 .body { color: #f0ebeb; }
+  .logo-10 .l3 .dot { color: #EE5218; }
+  .logo-10 .contour-T { width: 54px; height: 68px; margin-right: -5px; margin-bottom: -3px; }
+  .logo-10 .contour-R { width: 54px; height: 68px; margin-left: -3px; margin-right: -7px; margin-bottom: -3px; }
+  .logo-10 .body { font-family: 'JetBrains Mono', monospace; font-size: 46px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+  .logo-10 .dot { font-family: 'JetBrains Mono', monospace; font-size: 46px; font-weight: 600; line-height: 1; }
+
+  /* ═══════════════════════════════════════
+     11 — TERMINAL PROMPT
+     CLI-style with contour letters
+     ═══════════════════════════════════════ */
+  .logo-11 { user-select: none; }
+  .logo-11 .prompt-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #555;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+  .logo-11 .cmd-line {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+  }
+  .logo-11 .cursor-char {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 44px;
+    font-weight: 300;
+    color: #EE5218;
+    line-height: 1;
+    margin-right: 8px;
+  }
+  .logo-11 .contour-T { width: 48px; height: 60px; margin-right: -4px; margin-bottom: -3px; }
+  .logo-11 .contour-R { width: 48px; height: 60px; margin-left: -2px; margin-right: -6px; margin-bottom: -3px; }
+  .logo-11 .body { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 500; color: #f0ebeb; letter-spacing: -0.02em; line-height: 1; }
+  .logo-11 .dot { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 500; color: #EE5218; line-height: 1; }
+  .logo-11 .blink {
+    display: inline-block;
+    width: 22px; height: 3px;
+    background: #EE5218;
+    vertical-align: baseline;
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ═══════════════════════════════════════
+     12 — GREEN VARIANT
+     Same as 01 but in the washed green palette
+     ═══════════════════════════════════════ */
+  .logo-12 {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    user-select: none;
+  }
+  .logo-12 .contour-T { width: 56px; height: 72px; margin-right: -6px; margin-bottom: -4px; color: #a0be82; }
+  .logo-12 .body-errain { font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: 500; color: #f0ebeb; letter-spacing: -0.03em; line-height: 1; }
+  .logo-12 .dot { font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: 500; color: #a0be82; line-height: 1; }
+  .logo-12 .contour-R { width: 56px; height: 72px; margin-left: -4px; margin-right: -6px; margin-bottom: -4px; color: #a0be82; }
+  .logo-12 .body-un { font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: 500; color: #f0ebeb; letter-spacing: -0.03em; line-height: 1; }
+</style>
+</head>
+<body>
+
+<h1>terrain.run — Typographic Logo Explorations v2</h1>
+<div class="subtitle">
+  Rule: <strong>T</strong> and <strong>R</strong> are the topographic contour letters from the TR monogram.<br>
+  <strong>errain</strong> and <strong>un</strong> are in JetBrains Mono (terminal/code). <strong>.</strong> is the accent punctuation.
+</div>
+
+<div class="grid">
+
+  <!-- 01: Baseline Align -->
+  <div class="exploration" data-label="01 — Baseline Align">
+    <div class="logo-01">
+      <div class="contour-letter contour-T" id="t1"></div>
+      <span class="body-errain">errain</span>
+      <span class="dot">.</span>
+      <div class="contour-letter contour-R" id="r1"></div>
+      <span class="body-un">un</span>
+    </div>
+    <div class="desc">Clean baseline lockup. Contour T and R sit at the same baseline as the mono text. The organic contour lines contrast against the rigid monospace grid. Orange dot bridges the two words.</div>
+  </div>
+
+  <!-- 02: Oversized Contour -->
+  <div class="exploration" data-label="02 — Oversized Contour">
+    <div class="logo-02">
+      <div class="contour-letter contour-T" id="t2"></div>
+      <span class="body-errain">errain</span>
+      <span class="dot">.</span>
+      <div class="contour-letter contour-R" id="r2"></div>
+      <span class="body-un">un</span>
+    </div>
+    <div class="desc">T and R are 2x the height of the mono text — they dominate. The mono body text runs smaller and muted. Hierarchy: contour mark first, readable text second.</div>
+  </div>
+
+  <!-- 03: Stacked -->
+  <div class="exploration" data-label="03 — Stacked">
+    <div class="logo-03">
+      <div class="line">
+        <div class="contour-letter contour-letter" id="t3" style="width:64px;height:80px;margin-bottom:-4px;margin-right:-6px"></div>
+        <span class="text">ERRAIN</span>
+      </div>
+      <div class="line line-2">
+        <span class="dot-prefix">.</span>
+        <div class="contour-letter contour-R-stacked" id="r3" style="width:64px;height:80px;margin-bottom:-4px;margin-left:-4px;margin-right:-8px"></div>
+        <span class="text">UN</span>
+      </div>
+    </div>
+    <div class="desc">Two-line stacked lockup. [contour T]ERRAIN on line 1, .[contour R]UN on line 2. The stacking creates a block that works as a badge. Uppercase mono for maximum density.</div>
+  </div>
+
+  <!-- 04: Tight Smushed -->
+  <div class="exploration" data-label="04 — Tight Smushed">
+    <div class="logo-04">
+      <div class="contour-letter contour-T" id="t4"></div>
+      <span class="body-errain">errain</span>
+      <span class="dot">.</span>
+      <div class="contour-letter contour-R" id="r4"></div>
+      <span class="body-un">un</span>
+    </div>
+    <div class="desc">Everything collides. Negative letter-spacing on the mono, contour letters overlap their neighbors. Feels like a rally car livery where the type has been compressed to fit the bodywork.</div>
+  </div>
+
+  <!-- 05: Catalog Entry -->
+  <div class="exploration" data-label="05 — Catalog Entry">
+    <div class="logo-05">
+      <div class="main-line">
+        <div class="contour-letter contour-T" id="t5"></div>
+        <span class="text-errain">ERRAIN</span>
+        <span class="dash-num">—01</span>
+      </div>
+      <div class="rule"></div>
+      <div class="meta">
+        <span class="run-label">.run</span>
+        <span>competitive intelligence</span>
+        <span>2026</span>
+      </div>
+    </div>
+    <div class="desc">Swiss catalog style. Contour T leads into uppercase mono 'ERRAIN', followed by orange dash-number. Rule separator, metadata row below. Systematic, indexed, precise.</div>
+  </div>
+
+  <!-- 06: Split Weight with Rule -->
+  <div class="exploration" data-label="06 — Split Weight">
+    <div class="logo-06">
+      <div class="left">
+        <div class="contour-letter contour-T" id="t6"></div>
+        <span class="heavy">errain</span>
+      </div>
+      <div class="separator"></div>
+      <div class="right">
+        <span class="dot">.</span>
+        <div class="contour-letter contour-R" id="r6"></div>
+        <span class="light">un</span>
+      </div>
+    </div>
+    <div class="desc">Orange vertical rule splits the two words. Left side: contour T + bold 'errain'. Right side: orange dot + contour R + light 'un'. The pause creates tension between the two halves.</div>
+  </div>
+
+  <!-- 07: Grid Cells -->
+  <div class="exploration" data-label="07 — Grid Fragment">
+    <div class="logo-07">
+      <div class="cell cell-contour" id="t7-cell"></div>
+      <div class="cell">e</div>
+      <div class="cell">r</div>
+      <div class="cell">r</div>
+      <div class="cell">a</div>
+      <div class="cell">i</div>
+      <div class="cell">n</div>
+      <div class="cell cell-dot">.</div>
+      <div class="cell cell-contour" id="r7-cell"></div>
+      <div class="cell">u</div>
+      <div class="cell">n</div>
+    </div>
+    <div class="desc">Each character gets a grid cell. T and R cells contain the contour SVGs instead of plain text. The '.' cell is filled orange. The contour cells are the special ones — organic shapes in a rigid grid.</div>
+  </div>
+
+  <!-- 08: Registration Marks -->
+  <div class="exploration" data-label="08 — Registration Marks">
+    <div class="logo-08">
+      <div class="marks">
+        <div class="mark mark-tl"></div>
+        <div class="mark mark-tr"></div>
+        <div class="mark mark-bl"></div>
+        <div class="mark mark-br"></div>
+      </div>
+      <div class="lockup">
+        <div class="contour-letter contour-T" id="t8"></div>
+        <span class="body">errain</span>
+        <span class="dot">.</span>
+        <div class="contour-letter contour-R" id="r8"></div>
+        <span class="body">un</span>
+      </div>
+    </div>
+    <div class="desc">Printer's crosshairs frame the lockup. The registration marks say 'this is a proof, this is precise'. Inside: the clean contour T/R + mono text. Ready for production.</div>
+  </div>
+
+  <!-- 09: Knockout Block -->
+  <div class="exploration" data-label="09 — Knockout Block">
+    <div class="logo-09">
+      <div class="block">
+        <div class="contour-letter contour-T" id="t9"></div>
+        <span class="body">errain</span>
+      </div>
+      <div class="outside">
+        <span class="dot">.</span>
+        <div class="contour-letter contour-R" id="r9"></div>
+        <span class="body">un</span>
+      </div>
+    </div>
+    <div class="desc">White block knocks out 'terrain' with contour T reversed to black. '.run' sits outside in muted gray with the contour R. The block punches through the dark UI.</div>
+  </div>
+
+  <!-- 10: Layered Shadow -->
+  <div class="exploration" data-label="10 — Layered Shadow">
+    <div class="logo-10">
+      <div class="layer l1">
+        <div class="contour-letter contour-T" id="t10a"></div>
+        <span class="body">errain</span>
+        <span class="dot">.</span>
+        <div class="contour-letter contour-R" id="r10a"></div>
+        <span class="body">un</span>
+      </div>
+      <div class="layer l2">
+        <div class="contour-letter contour-T" id="t10b"></div>
+        <span class="body">errain</span>
+        <span class="dot">.</span>
+        <div class="contour-letter contour-R" id="r10b"></div>
+        <span class="body">un</span>
+      </div>
+      <div class="layer l3">
+        <div class="contour-letter contour-T" id="t10c"></div>
+        <span class="body">errain</span>
+        <span class="dot">.</span>
+        <div class="contour-letter contour-R" id="r10c"></div>
+        <span class="body">un</span>
+      </div>
+    </div>
+    <div class="desc">Triple-stacked offset layers — print misregistration effect. Each layer includes the contour letters. Top layer is full color, shadow layers fade. Letterpress / risograph energy.</div>
+  </div>
+
+  <!-- 11: Terminal Prompt -->
+  <div class="exploration" data-label="11 — Terminal Prompt">
+    <div class="logo-11">
+      <div class="prompt-line">$ cd /competitive-intelligence</div>
+      <div class="cmd-line">
+        <span class="cursor-char">›</span>
+        <div class="contour-letter contour-T" id="t11"></div>
+        <span class="body">errain</span>
+        <span class="dot">.</span>
+        <div class="contour-letter contour-R" id="r11"></div>
+        <span class="body">un</span>
+        <span class="blink"></span>
+      </div>
+    </div>
+    <div class="desc">CLI command with contour T and R embedded. The prompt context sets the scene, then the brandname appears as a command with topographic letters materializing from the terminal. Blinking cursor.</div>
+  </div>
+
+  <!-- 12: Green Variant -->
+  <div class="exploration" data-label="12 — Green Variant">
+    <div class="logo-12">
+      <div class="contour-letter contour-T" id="t12"></div>
+      <span class="body-errain">errain</span>
+      <span class="dot">.</span>
+      <div class="contour-letter contour-R" id="r12"></div>
+      <span class="body-un">un</span>
+    </div>
+    <div class="desc">Same as #01 but with washed green contour letters and dot. Shows how the system works with the secondary brand color.</div>
+  </div>
+
+</div>
+
+<div style="text-align:center;margin-top:80px;font-size:10px;color:#555;letter-spacing:0.08em">
+  12 explorations · contour T + R from logo #42 · JetBrains Mono body · terrain.run
+</div>
+
+<script>
+// Load the T and R SVGs and inject into all contour-letter containers
+async function loadContourLetters() {
+  const [tResp, rResp] = await Promise.all([
+    fetch('tr_letter_T.svg'),
+    fetch('tr_letter_R.svg')
+  ]);
+  const tSvg = await tResp.text();
+  const rSvg = await rResp.text();
+
+  // Inject T into all elements with IDs starting with 't'
+  document.querySelectorAll('[id^="t"]').forEach(el => {
+    if (el.id.match(/^t\d/)) {
+      el.innerHTML = tSvg;
+      // Make SVG fill the container
+      const svg = el.querySelector('svg');
+      if (svg) {
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+      }
+    }
+  });
+
+  // Inject R into all elements with IDs starting with 'r'
+  document.querySelectorAll('[id^="r"]').forEach(el => {
+    if (el.id.match(/^r\d/)) {
+      el.innerHTML = rSvg;
+      const svg = el.querySelector('svg');
+      if (svg) {
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+      }
+    }
+  });
+}
+
+loadContourLetters();
+</script>
+</body>
+</html>

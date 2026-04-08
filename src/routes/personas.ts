@@ -5,6 +5,7 @@ const personas = new Hono<{ Bindings: Env }>()
 
 // PATCH /api/personas/:id
 personas.patch('/:id', async c => {
+  const teamId = c.get('teamId')
   const body = await c.req.json<{
     name?: string
     description?: string
@@ -22,30 +23,38 @@ personas.patch('/:id', async c => {
 
   if (fields.length === 0) return c.json({ error: 'Nothing to update' }, 400)
 
-  values.push(c.req.param('id'))
-  await c.env.DB.prepare(`UPDATE personas SET ${fields.join(', ')} WHERE id = ?`)
+  values.push(c.req.param('id'), teamId)
+  await c.env.DB.prepare(`UPDATE personas SET ${fields.join(', ')} WHERE id = ? AND team_id = ?`)
     .bind(...values)
     .run()
 
-  const updated = await c.env.DB.prepare(`SELECT * FROM personas WHERE id = ?`)
-    .bind(c.req.param('id'))
+  const updated = await c.env.DB.prepare(`SELECT * FROM personas WHERE id = ? AND team_id = ?`)
+    .bind(c.req.param('id'), teamId)
     .first()
 
+  if (!updated) return c.json({ error: 'Not found' }, 404)
   return c.json(updated)
 })
 
 // DELETE /api/personas/:id — cascade-deletes persona's prompts too
 personas.delete('/:id', async c => {
+  const teamId = c.get('teamId')
   const id = c.req.param('id')
-  await c.env.DB.prepare(`DELETE FROM prompts WHERE persona_id = ?`).bind(id).run()
-  await c.env.DB.prepare(`DELETE FROM personas WHERE id = ?`).bind(id).run()
+  // Verify ownership before delete
+  const persona = await c.env.DB.prepare(`SELECT id FROM personas WHERE id = ? AND team_id = ?`)
+    .bind(id, teamId).first()
+  if (!persona) return c.json({ error: 'Not found' }, 404)
+
+  await c.env.DB.prepare(`DELETE FROM prompts WHERE persona_id = ? AND team_id = ?`).bind(id, teamId).run()
+  await c.env.DB.prepare(`DELETE FROM personas WHERE id = ? AND team_id = ?`).bind(id, teamId).run()
   return c.json({ ok: true })
 })
 
 // POST /api/personas/approve-all/:brandId
 personas.post('/approve-all/:brandId', async c => {
-  await c.env.DB.prepare(`UPDATE personas SET approved = 1 WHERE brand_id = ?`)
-    .bind(c.req.param('brandId'))
+  const teamId = c.get('teamId')
+  await c.env.DB.prepare(`UPDATE personas SET approved = 1 WHERE brand_id = ? AND team_id = ?`)
+    .bind(c.req.param('brandId'), teamId)
     .run()
   return c.json({ ok: true })
 })
