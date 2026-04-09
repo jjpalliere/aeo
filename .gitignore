@@ -1,6 +1,27 @@
+# Dependencies
 node_modules/
-.dev.vars
-.DS_Store
-.wrangler/
+
+# Build
 dist/
+
+# Cloudflare
+.wrangler/
+.dev.vars
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
 *.local
+.vscode/
+.idea/
+
+# Source videos (compressed copies in public/assets/ are deployed)
+videos/
+
+# Large media (already tracked — prevent new additions)
+*.mp4
+*.mov
+*.avi
+*.mkv
