@@ -155,7 +155,7 @@
       border-right: 1px solid var(--border);
     }
     .brief-tab {
-      padding: 16px 20px 16px 0;
+      padding: 16px 20px 12px 0;
       font-family: var(--font-display);
       font-size: 15px;
       font-weight: 500;
@@ -164,11 +164,32 @@
       transition: color 0.2s;
       border-bottom: 1px solid var(--border);
       user-select: none;
+      position: relative;
     }
     .brief-tab:last-child { border-bottom: none; }
     .brief-tab:hover { color: var(--text2); }
     .brief-tab.active {
       color: var(--text);
+    }
+    /* Progress bar under each tab */
+    .brief-tab-bar {
+      height: 2px;
+      background: var(--border);
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .brief-tab-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--text);
+      transition: none;
+    }
+    .brief-tab.active .brief-tab-fill {
+      animation: briefFill 3s linear forwards;
+    }
+    @keyframes briefFill {
+      from { width: 0%; }
+      to { width: 100%; }
     }
 
     /* Right: content pane */
@@ -385,11 +406,11 @@
       <div class="brief-layout">
         <!-- Left: tab labels -->
         <div class="brief-tabs">
-          <div class="brief-tab active" onclick="selectBrief(0)">Visibility</div>
-          <div class="brief-tab" onclick="selectBrief(1)">Personas</div>
-          <div class="brief-tab" onclick="selectBrief(2)">Channels</div>
-          <div class="brief-tab" onclick="selectBrief(3)">Format</div>
-          <div class="brief-tab" onclick="selectBrief(4)">Gaps</div>
+          <div class="brief-tab active" onclick="selectBrief(0, true)">Visibility<div class="brief-tab-bar"><div class="brief-tab-fill"></div></div></div>
+          <div class="brief-tab" onclick="selectBrief(1, true)">Personas<div class="brief-tab-bar"><div class="brief-tab-fill"></div></div></div>
+          <div class="brief-tab" onclick="selectBrief(2, true)">Channels<div class="brief-tab-bar"><div class="brief-tab-fill"></div></div></div>
+          <div class="brief-tab" onclick="selectBrief(3, true)">Format<div class="brief-tab-bar"><div class="brief-tab-fill"></div></div></div>
+          <div class="brief-tab" onclick="selectBrief(4, true)">Gaps<div class="brief-tab-bar"><div class="brief-tab-fill"></div></div></div>
         </div>
 
         <!-- Right: content panes -->
@@ -479,20 +500,41 @@
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>
   <script>
-    // Brief tab switching with fade
-    function selectBrief(idx) {
+    // Brief tab switching with fade + autorotation
+    let briefCurrent = 0
+    const briefCount = 5
+    let briefTimer = null
+
+    function selectBrief(idx, fromClick) {
+      briefCurrent = idx
+      // Reset all fills (force reflow to restart animation)
       document.querySelectorAll('.brief-tab').forEach((t, i) => {
-        t.classList.toggle('active', i === idx)
+        t.classList.remove('active')
+        const fill = t.querySelector('.brief-tab-fill')
+        if (fill) { fill.style.animation = 'none'; fill.offsetHeight; fill.style.animation = ''; }
       })
-      document.querySelectorAll('.brief-pane').forEach(p => {
-        p.classList.remove('active')
-      })
-      // Small delay for fade-out then fade-in
+      document.querySelectorAll('.brief-pane').forEach(p => p.classList.remove('active'))
+      // Activate
+      const tabs = document.querySelectorAll('.brief-tab')
+      if (tabs[idx]) tabs[idx].classList.add('active')
       setTimeout(() => {
         const target = document.querySelector('[data-brief="' + idx + '"]')
         if (target) target.classList.add('active')
       }, 50)
+      // Restart rotation from this tab
+      startBriefRotation()
     }
+
+    function startBriefRotation() {
+      if (briefTimer) clearInterval(briefTimer)
+      briefTimer = setInterval(() => {
+        briefCurrent = (briefCurrent + 1) % briefCount
+        selectBrief(briefCurrent, false)
+      }, 3000)
+    }
+
+    // Start autorotation on load
+    startBriefRotation()
 
     // Video
     let videoEl = null
