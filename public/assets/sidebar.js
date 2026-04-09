@@ -55,37 +55,31 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
       // State A — Navigation
       const brandParam = currentBrandId ? `?brandId=${currentBrandId}` : ''
       container.innerHTML = `
-        <div class="sb-columns">
-          <div class="sb-main">
-            <div class="sb-header">
-              <a href="/" class="sb-logo"><img src="/assets/tr-logo-orange.svg" alt="Terrain" style="height:44px;width:auto" /></a>
-            </div>
-            <div class="sb-brand-switcher" onclick="window.__sbTogglePicker()">
-              <span class="sb-caret">▲</span>
-              <span class="sb-active-brand">${escHtml(brandLabel)}</span>
-              <span class="sb-caret">▼</span>
-            </div>
-            <nav class="sb-nav">
-              <a href="/approve.html${brandParam}" class="sb-nav-item">Review</a>
-              <a href="/dashboard.html" class="sb-nav-item">Dashboard</a>
-              <a href="/similarity.html${brandParam}" class="sb-nav-item">Similarity</a>
-              <a href="/live.html" class="sb-nav-item">Live Runs</a>
-              <a href="/" class="sb-nav-item">Run History</a>
-            </nav>
-            <div class="sb-spacer"></div>
-            <nav class="sb-nav sb-nav-bottom">
-              <a href="/settings.html" class="sb-nav-item">Settings</a>
-              <a href="/team.html" class="sb-nav-item">Team</a>
-              ${user.is_owner ? '<a href="/admin.html" class="sb-nav-item">Admin</a>' : ''}
-            </nav>
-            <div class="sb-footer">
-              <div class="sb-user-email">${escHtml(user.email || '')}</div>
-              <div class="sb-team-name">${escHtml(user.team_name || '')}</div>
-            </div>
-          </div>
-          <div class="sb-gutter">
-            <button class="sb-toggle" onclick="window.__sbToggleSidebar()" title="Collapse sidebar">◀</button>
-          </div>
+        <div class="sb-header">
+          <a href="/" class="sb-logo"><img src="/assets/tr-logo-orange.svg" alt="Terrain" style="height:44px;width:auto" /></a>
+          <button class="sb-toggle-close" onclick="window.__sbToggleSidebar()" title="Collapse sidebar">◀</button>
+        </div>
+        <div class="sb-brand-switcher" onclick="window.__sbTogglePicker()">
+          <span class="sb-caret">▲</span>
+          <span class="sb-active-brand">${escHtml(brandLabel)}</span>
+          <span class="sb-caret">▼</span>
+        </div>
+        <nav class="sb-nav">
+          <a href="/approve.html${brandParam}" class="sb-nav-item">Review</a>
+          <a href="/dashboard.html" class="sb-nav-item">Dashboard</a>
+          <a href="/similarity.html${brandParam}" class="sb-nav-item">Similarity</a>
+          <a href="/live.html" class="sb-nav-item">Live Runs</a>
+          <a href="/" class="sb-nav-item">Run History</a>
+        </nav>
+        <div class="sb-spacer"></div>
+        <nav class="sb-nav sb-nav-bottom">
+          <a href="/settings.html" class="sb-nav-item">Settings</a>
+          <a href="/team.html" class="sb-nav-item">Team</a>
+          ${user.is_owner ? '<a href="/admin.html" class="sb-nav-item">Admin</a>' : ''}
+        </nav>
+        <div class="sb-footer">
+          <div class="sb-user-email">${escHtml(user.email || '')}</div>
+          <div class="sb-team-name">${escHtml(user.team_name || '')}</div>
         </div>
       `
     }
@@ -152,16 +146,21 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
   window.__sbToggleSidebar = function () {
     const sidebar = document.getElementById('aeo-sidebar')
     if (!sidebar) return
-    sidebar.classList.toggle('collapsed')
-    // Ensure floating button exists
-    if (!document.getElementById('sb-float-toggle')) {
-      const btn = document.createElement('button')
-      btn.id = 'sb-float-toggle'
-      btn.className = 'sb-toggle-floating'
-      btn.innerHTML = '▶'
-      btn.title = 'Open sidebar'
-      btn.onclick = function () { window.__sbToggleSidebar() }
-      sidebar.parentNode.insertBefore(btn, sidebar.nextSibling)
+    const isCollapsed = sidebar.classList.toggle('collapsed')
+
+    // Manage the gutter sliver (only visible when collapsed)
+    let gutter = document.getElementById('sb-gutter')
+    if (isCollapsed) {
+      if (!gutter) {
+        gutter = document.createElement('div')
+        gutter.id = 'sb-gutter'
+        gutter.className = 'sb-gutter'
+        gutter.innerHTML = '<button class="sb-toggle" onclick="window.__sbToggleSidebar()" title="Open sidebar">▶</button>'
+        sidebar.parentNode.insertBefore(gutter, sidebar.nextSibling)
+      }
+      gutter.style.display = ''
+    } else {
+      if (gutter) gutter.style.display = 'none'
     }
   }
 
