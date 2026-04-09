@@ -57,7 +57,6 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
       container.innerHTML = `
         <div class="sb-header">
           <a href="/" class="sb-logo"><img src="/assets/tr-logo.svg" alt="Terrain" style="height:22px;width:auto" /></a>
-          <button class="sb-toggle" onclick="window.__sbToggleSidebar()" title="Collapse sidebar">◀</button>
         </div>
         <div class="sb-brand-switcher" onclick="window.__sbTogglePicker()">
           <span class="sb-caret">▲</span>
@@ -67,10 +66,7 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
         <nav class="sb-nav">
           <a href="/approve.html${brandParam}" class="sb-nav-item">Review</a>
           <a href="/dashboard.html" class="sb-nav-item">Dashboard</a>
-          <a href="/similarity.html${brandParam}" class="sb-nav-item sb-nav-similarity">
-            <span>Similarity</span>
-            <span class="sb-sim-example-glob">${escHtml(window.AEO_SIMILARITY_EXAMPLE)}</span>
-          </a>
+          <a href="/similarity.html${brandParam}" class="sb-nav-item">Similarity</a>
           <a href="/live.html" class="sb-nav-item">Live Runs</a>
           <a href="/" class="sb-nav-item">Run History</a>
         </nav>
@@ -81,8 +77,13 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
           ${user.is_owner ? '<a href="/admin.html" class="sb-nav-item">Admin</a>' : ''}
         </nav>
         <div class="sb-footer">
-          <div class="sb-user-email">${escHtml(user.email || '')}</div>
-          <div class="sb-team-name">${escHtml(user.team_name || '')}</div>
+          <div class="sb-footer-top">
+            <div class="sb-footer-info">
+              <div class="sb-user-email">${escHtml(user.email || '')}</div>
+              <div class="sb-team-name">${escHtml(user.team_name || '')}</div>
+            </div>
+            <button class="sb-toggle" onclick="window.__sbToggleSidebar()" title="Collapse sidebar">◀</button>
+          </div>
         </div>
       `
     }
