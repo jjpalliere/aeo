@@ -211,6 +211,49 @@
       line-height: 1.8;
     }
 
+    /* ── Section: Strategy Brief ─────────────────────────── */
+    .section-brief {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+    .brief-stat {
+      font-family: var(--font-hero);
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .brief-subhead {
+      font-family: var(--font);
+      font-size: var(--text-sm);
+      color: var(--text2);
+      line-height: 1.8;
+      margin-bottom: 48px;
+      max-width: 560px;
+    }
+    .brief-block {
+      margin-bottom: 56px;
+    }
+    .brief-block:last-child { margin-bottom: 0; }
+    .brief-block-heading {
+      font-family: var(--font-display);
+      font-size: clamp(16px, 2vw, 20px);
+      font-weight: 500;
+      color: #fff;
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+    .brief-block-body {
+      font-family: var(--font);
+      font-size: var(--text-sm);
+      color: var(--text2);
+      line-height: 1.9;
+      max-width: 600px;
+    }
+    .brief-block-body p { margin: 0 0 1em; }
+    .brief-block-body p:last-child { margin-bottom: 0; }
+
     /* ── Section: Videos ──────────────────────────────────── */
     .section-videos {
       background: var(--surface);
@@ -406,6 +449,54 @@
           <div class="step-number">Step 04</div>
           <div class="step-title">Analyze results</div>
           <div class="step-desc">Dashboard surfaces rankings, citation sources, competitor overlap, and funnel breakdowns. A chat assistant lets you query the data directly.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Strategy Brief -->
+  <section class="landing-section section-brief">
+    <div class="section-inner">
+      <span class="section-label">Strategy Brief</span>
+      <div class="brief-stat">92% of AI-summarized searches never result in a click.</div>
+      <div class="brief-subhead">LLMs are being asked questions about your brand every day. AEO is how you understand what they're saying &mdash; and influence it.</div>
+
+      <div class="brief-block">
+        <div class="brief-block-heading">Measuring LLM visibility starts with querying at scale.</div>
+        <div class="brief-block-body">
+          <p>There's no platform that shows how an LLM is representing a brand. LLM responses vary &mdash; the same question asked twice returns a different answer &mdash; so manual spot-checking doesn't produce a reliable picture.</p>
+          <p>The tool queries programmatically. It submits prompts to each LLM via API and analyzes responses across hundreds of calls: which brands get mentioned, in what rank order, which URLs get cited. At that volume, consistent patterns emerge.</p>
+        </div>
+      </div>
+
+      <div class="brief-block">
+        <div class="brief-block-heading">Performance is scored per persona, not just in aggregate.</div>
+        <div class="brief-block-body">
+          <p>A CFO evaluating a purchase is asking completely different questions than the team member who'd actually use the product. Each persona has separate LLM interactions, different competitors surfacing, and different sources cited.</p>
+          <p>Every prompt is mapped to a specific persona. Performance gets scored at the prompt level, then rolled up into a persona-level view showing where a brand is well-represented and where it's absent.</p>
+        </div>
+      </div>
+
+      <div class="brief-block">
+        <div class="brief-block-heading">LLMs cite a brand's website, but give more weight to third-party sources.</div>
+        <div class="brief-block-body">
+          <p>The channel analysis collects every URL the LLMs cite and classifies each one: owned pages, competitor pages, news outlets, industry sites, review platforms.</p>
+          <p>Outlets that consistently appear but haven't covered a brand are PR targets. Third-party content that's outdated but still getting surfaced can be corrected. Sources that appear for competitors but not for a brand show where distribution is thin.</p>
+        </div>
+      </div>
+
+      <div class="brief-block">
+        <div class="brief-block-heading">How content is structured affects whether LLMs can use it.</div>
+        <div class="brief-block-body">
+          <p>Headers written as questions create direct matches to user queries. FAQ sections that restate a question and answer it in bullets mirror the format LLMs use in their own responses. Schema markup and metadata give the LLM an immediate read on what a page is about.</p>
+        </div>
+      </div>
+
+      <div class="brief-block">
+        <div class="brief-block-heading">The right prompts come from mapping what a brand covers, what competitors cover, and what buyers need to know.</div>
+        <div class="brief-block-body">
+          <p>A brand's website reflects what it has decided to talk about. But buyers ask LLMs who the main players are, how pricing works, and how approaches compare. Most brand websites don't address those questions directly.</p>
+          <p>The gap analysis maps three things: topics a brand covers, topics competitors cover, and questions buyers are asking. Where those don't overlap is where the content strategy has room to grow.</p>
         </div>
       </div>
     </div>
