@@ -2,7 +2,7 @@
 // Include after auth.js on any page that needs the sidebar.
 // Usage: <div id="aeo-sidebar"></div> then call initSidebar()
 
-/** Shown app-wide wherever Similarity is referenced (nav, pages, admin). */
+/** Reference label on Similarity page + admin docs (not shown in sidebar). */
 window.AEO_SIMILARITY_EXAMPLE = 'Example: C5 Customer Service Bot'
 
 /** Global default runs (KV run_id + chip label) — same for every brand; no D1 row required. Merged with optional per-brand rows from /api/similarity/runs. */
@@ -55,33 +55,35 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
       // State A — Navigation
       const brandParam = currentBrandId ? `?brandId=${currentBrandId}` : ''
       container.innerHTML = `
-        <div class="sb-header">
-          <a href="/" class="sb-logo"><img src="/assets/tr-logo.svg" alt="Terrain" style="height:22px;width:auto" /></a>
-        </div>
-        <div class="sb-brand-switcher" onclick="window.__sbTogglePicker()">
-          <span class="sb-caret">▲</span>
-          <span class="sb-active-brand">${escHtml(brandLabel)}</span>
-          <span class="sb-caret">▼</span>
-        </div>
-        <nav class="sb-nav">
-          <a href="/approve.html${brandParam}" class="sb-nav-item">Review</a>
-          <a href="/dashboard.html" class="sb-nav-item">Dashboard</a>
-          <a href="/similarity.html${brandParam}" class="sb-nav-item">Similarity</a>
-          <a href="/live.html" class="sb-nav-item">Live Runs</a>
-          <a href="/" class="sb-nav-item">Run History</a>
-        </nav>
-        <div class="sb-spacer"></div>
-        <nav class="sb-nav sb-nav-bottom">
-          <a href="/settings.html" class="sb-nav-item">Settings</a>
-          <a href="/team.html" class="sb-nav-item">Team</a>
-          ${user.is_owner ? '<a href="/admin.html" class="sb-nav-item">Admin</a>' : ''}
-        </nav>
-        <div class="sb-footer">
-          <div class="sb-footer-top">
-            <div class="sb-footer-info">
+        <div class="sb-columns">
+          <div class="sb-main">
+            <div class="sb-header">
+              <a href="/" class="sb-logo"><img src="/assets/tr-logo.svg" alt="Terrain" style="height:22px;width:auto" /></a>
+            </div>
+            <div class="sb-brand-switcher" onclick="window.__sbTogglePicker()">
+              <span class="sb-caret">▲</span>
+              <span class="sb-active-brand">${escHtml(brandLabel)}</span>
+              <span class="sb-caret">▼</span>
+            </div>
+            <nav class="sb-nav">
+              <a href="/approve.html${brandParam}" class="sb-nav-item">Review</a>
+              <a href="/dashboard.html" class="sb-nav-item">Dashboard</a>
+              <a href="/similarity.html${brandParam}" class="sb-nav-item">Similarity</a>
+              <a href="/live.html" class="sb-nav-item">Live Runs</a>
+              <a href="/" class="sb-nav-item">Run History</a>
+            </nav>
+            <div class="sb-spacer"></div>
+            <nav class="sb-nav sb-nav-bottom">
+              <a href="/settings.html" class="sb-nav-item">Settings</a>
+              <a href="/team.html" class="sb-nav-item">Team</a>
+              ${user.is_owner ? '<a href="/admin.html" class="sb-nav-item">Admin</a>' : ''}
+            </nav>
+            <div class="sb-footer">
               <div class="sb-user-email">${escHtml(user.email || '')}</div>
               <div class="sb-team-name">${escHtml(user.team_name || '')}</div>
             </div>
+          </div>
+          <div class="sb-gutter">
             <button class="sb-toggle" onclick="window.__sbToggleSidebar()" title="Collapse sidebar">◀</button>
           </div>
         </div>
