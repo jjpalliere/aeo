@@ -2,6 +2,14 @@
 // Include after auth.js on any page that needs the sidebar.
 // Usage: <div id="aeo-sidebar"></div> then call initSidebar()
 
+/** Shown app-wide wherever Similarity is referenced (nav, pages, admin). */
+window.AEO_SIMILARITY_EXAMPLE = 'Example: C5 Customer Service Bot'
+
+/** Global default runs (KV run_id + chip label) — same for every brand; no D1 row required. Merged with optional per-brand rows from /api/similarity/runs. */
+window.AEO_SIMILARITY_DEFAULT_RUNS = [
+  { run_id: 'a76731db', label: 'C5 History' },
+]
+
 ;(function () {
   'use strict'
 
@@ -49,6 +57,7 @@
       container.innerHTML = `
         <div class="sb-header">
           <a href="/" class="sb-logo"><img src="/assets/tr-logo.svg" alt="Terrain" style="height:22px;width:auto" /></a>
+          <button class="sb-toggle" onclick="window.__sbToggleSidebar()" title="Collapse sidebar">◀</button>
         </div>
         <div class="sb-brand-switcher" onclick="window.__sbTogglePicker()">
           <span class="sb-caret">▲</span>
@@ -58,6 +67,10 @@
         <nav class="sb-nav">
           <a href="/approve.html${brandParam}" class="sb-nav-item">Review</a>
           <a href="/dashboard.html" class="sb-nav-item">Dashboard</a>
+          <a href="/similarity.html${brandParam}" class="sb-nav-item sb-nav-similarity">
+            <span>Similarity</span>
+            <span class="sb-sim-example-glob">${escHtml(window.AEO_SIMILARITY_EXAMPLE)}</span>
+          </a>
           <a href="/live.html" class="sb-nav-item">Live Runs</a>
           <a href="/" class="sb-nav-item">Run History</a>
         </nav>
@@ -130,6 +143,23 @@
     pickerOpen = !pickerOpen
     const container = document.getElementById('aeo-sidebar')
     if (container) render(container)
+  }
+
+  // Toggle sidebar collapse
+  window.__sbToggleSidebar = function () {
+    const sidebar = document.getElementById('aeo-sidebar')
+    if (!sidebar) return
+    sidebar.classList.toggle('collapsed')
+    // Ensure floating button exists
+    if (!document.getElementById('sb-float-toggle')) {
+      const btn = document.createElement('button')
+      btn.id = 'sb-float-toggle'
+      btn.className = 'sb-toggle-floating'
+      btn.innerHTML = '▶'
+      btn.title = 'Open sidebar'
+      btn.onclick = function () { window.__sbToggleSidebar() }
+      sidebar.parentNode.insertBefore(btn, sidebar.nextSibling)
+    }
   }
 
   // Init
