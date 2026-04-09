@@ -517,9 +517,31 @@
   </div>
 
   <script>
+  ;(async function () {
     const params = new URLSearchParams(location.search)
-    const runId = params.get('runId')
-    if (!runId) location.href = '/'
+    let runId = params.get('runId')
+    if (!runId) {
+      try {
+        const [meRes, listRes] = await Promise.all([fetch('/api/auth/me'), fetch('/api/runs/list')])
+        if (meRes.ok && listRes.ok) {
+          const me = await meRes.json()
+          const { runs } = await listRes.json()
+          const list = Array.isArray(runs) ? runs : []
+          const bid = me.active_brand_id
+          const pool = bid ? list.filter((r) => r.brand_id === bid) : list
+          const pick = pool[0] || list[0]
+          if (pick?.id) {
+            runId = pick.id
+            history.replaceState(null, '', `?runId=${encodeURIComponent(runId)}`)
+          }
+        }
+      } catch { /* fall through */ }
+      if (!runId) {
+        document.getElementById('loading').innerHTML =
+          '<div style="color:var(--text2);font-size:var(--text-sm);letter-spacing:0.06em;max-width:440px;text-align:center;line-height:1.5">No runs yet. Start one from <a href="/" style="color:var(--accent)">Run History</a>.</div>'
+        return
+      }
+    }
 
     // API base for subpath deployments (e.g. /aeo/dashboard.html -> /aeo)
     const API = (path) => {
@@ -2010,7 +2032,7 @@
     }
 
     load()
-
+  })()
   </script>
   <script src="/assets/sidebar.js"></script>
   <script>initSidebar()</script>

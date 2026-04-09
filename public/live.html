@@ -382,9 +382,35 @@
   </div>
 
   <script>
+  ;(async function () {
     const params = new URLSearchParams(location.search)
-    const runId = params.get('runId')
-    if (!runId) location.href = '/'
+    let runId = params.get('runId')
+    if (!runId) {
+      try {
+        const [meRes, listRes] = await Promise.all([fetch('/api/auth/me'), fetch('/api/runs/list')])
+        if (meRes.ok && listRes.ok) {
+          const me = await meRes.json()
+          const { runs } = await listRes.json()
+          const list = Array.isArray(runs) ? runs : []
+          const bid = me.active_brand_id
+          const pool = bid ? list.filter((r) => r.brand_id === bid) : list
+          const active = ['pending', 'querying', 'scraping', 'analyzing']
+          const pick =
+            pool.find((r) => active.includes(r.status)) ||
+            list.find((r) => active.includes(r.status)) ||
+            pool[0] ||
+            list[0]
+          if (pick?.id) {
+            runId = pick.id
+            history.replaceState(null, '', `?runId=${encodeURIComponent(runId)}`)
+          }
+        }
+      } catch { /* fall through */ }
+      if (!runId) {
+        location.href = '/'
+        return
+      }
+    }
 
     // ── Scroll log column off-screen on load ──────────────────────────────
     const scrollEl = document.getElementById('live-scroll')
@@ -673,6 +699,7 @@
 
     tick()
     interval = setInterval(tick, 2500)
+  })()
   </script>
     </main>
   </div>

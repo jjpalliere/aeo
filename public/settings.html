@@ -20,7 +20,18 @@
     }
     h1 { font-family: var(--font-hero); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-bottom: 32px; }
     .section { margin-bottom: 40px; }
-    .section-title { font-size: var(--text-xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text2); margin-bottom: 16px; }
+    /* Section headers — distinct from field labels (larger, hero font, rule under) */
+    .section-title {
+      font-family: var(--font-hero);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin: 0 0 14px 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
     .field-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
     .field-label { font-size: var(--text-sm); color: var(--text2); }
     .field-value { font-size: var(--text-sm); color: var(--text); }

@@ -24,10 +24,6 @@
       font-family: var(--font-hero); font-size: var(--text-md); letter-spacing: 0.06em;
       color: var(--text2); text-transform: uppercase;
     }
-    .sim-global-example {
-      flex-shrink: 0; padding: 0 20px 12px; border-bottom: 1px solid var(--border2);
-      font-size: var(--text-xs); letter-spacing: 0.08em; color: var(--accent);
-    }
     .sim-toolbar {
       flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px;
       border-bottom: 1px solid var(--border2); max-height: 140px; overflow-y: auto;
@@ -65,7 +61,6 @@
     <div id="aeo-sidebar"></div>
     <main class="page-main">
       <div class="sim-header">Similarity browser</div>
-      <div class="sim-global-example" id="sim-global-example"></div>
       <div class="sim-toolbar">
         <span class="sim-example-chip" id="sim-example-chip" title="Reference label — map your own runs in Admin"></span>
         <div id="sim-toolbar-mapped" class="sim-toolbar-mapped"></div>
@@ -109,9 +104,7 @@
 
     function setExampleCopy() {
       const t = EX()
-      const ge = document.getElementById('sim-global-example')
       const chip = document.getElementById('sim-example-chip')
-      if (ge) ge.textContent = t
       if (chip) chip.textContent = t
     }
 
