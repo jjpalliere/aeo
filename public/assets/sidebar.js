@@ -58,7 +58,7 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
         <div class="sb-columns">
           <div class="sb-main">
             <div class="sb-header">
-              <a href="/" class="sb-logo"><img src="/assets/tr-logo.svg" alt="Terrain" style="height:22px;width:auto" /></a>
+              <a href="/" class="sb-logo"><img src="/assets/tr-logo-orange.svg" alt="Terrain" style="height:44px;width:auto" /></a>
             </div>
             <div class="sb-brand-switcher" onclick="window.__sbTogglePicker()">
               <span class="sb-caret">▲</span>
