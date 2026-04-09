@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" href="/favicon.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="/assets/auth.js"></script>
   <title>Admin — AEO</title>
@@ -77,6 +78,49 @@
         <h1>Admin</h1>
 
         <div class="section">
+          <div class="section-title">Join requests</div>
+          <div class="section-actions">
+            <label style="font-size:var(--text-xs);color:var(--text3)">Status</label>
+            <select id="jr-status" onchange="loadJoinRequests()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:6px 8px;font-family:var(--font);font-size:var(--text-sm)">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="all">All</option>
+            </select>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="loadJoinRequests()">Refresh</button>
+          </div>
+          <div id="join-requests-table">Loading…</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Similarity mappings</div>
+          <div id="admin-sim-example-line" style="padding:10px 14px;border:1px solid var(--border2);background:var(--surface2);margin:0 0 14px;font-size:var(--text-sm);color:var(--text);letter-spacing:0.04em"></div>
+          <p style="font-size:var(--text-xs);color:var(--text3);margin:0 0 12px;line-height:1.5">
+            Optional: map extra KV runs per brand. Global defaults (same for every brand) live in <code style="font-size:10px">sidebar.js</code> as <code style="font-size:10px">AEO_SIMILARITY_DEFAULT_RUNS</code>.
+          </p>
+          <div class="section-actions" style="flex-wrap:wrap">
+            <label style="font-size:var(--text-xs);color:var(--text3)">Brand</label>
+            <select id="sim-brand-select" onchange="loadSimilarityMappings()" style="min-width:200px;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:6px 8px;font-family:var(--font);font-size:var(--text-sm)"></select>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="loadSimilarityKvKeys()">List KV keys</button>
+          </div>
+          <div id="sim-kv-status" style="font-size:var(--text-xs);color:var(--text2);min-height:18px;margin-bottom:8px"></div>
+          <div id="sim-kv-keys" style="font-size:var(--text-xs);color:var(--text3);margin-bottom:12px;max-height:120px;overflow-y:auto"></div>
+          <div class="section-actions" style="flex-wrap:wrap;align-items:flex-end">
+            <div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">run_id (from KV)</div>
+              <input type="text" id="sim-run-id" placeholder="paste key or run id" style="width:260px;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:8px 10px;font-family:var(--font);font-size:var(--text-sm)" />
+            </div>
+            <div>
+              <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Label</div>
+              <input type="text" id="sim-label" placeholder="e.g. C5 Customer Service Bot" style="width:240px;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:8px 10px;font-family:var(--font);font-size:var(--text-sm)" />
+            </div>
+            <button type="button" class="btn btn-primary" onclick="addSimilarityMapping()">Add mapping</button>
+          </div>
+          <div id="sim-map-status" style="font-size:var(--text-xs);margin-top:8px;min-height:16px"></div>
+          <div id="sim-mappings-table" style="margin-top:16px">Select a brand…</div>
+        </div>
+
+        <div class="section">
           <div class="section-title">Signup Codes</div>
           <div class="section-actions">
             <button class="btn btn-primary" onclick="generateCode()">Generate Code</button>
@@ -97,9 +141,206 @@
           <div id="fallback-tokens" style="font-size:var(--text-xs);color:var(--text3)">Loading…</div>
         </div>
       `
+      const exEl = document.getElementById('admin-sim-example-line')
+      if (exEl) exEl.textContent = window.AEO_SIMILARITY_EXAMPLE
+
+      loadJoinRequests()
+      loadSimilarityBrands()
       loadCodes()
       loadAccounts()
       loadFallbackTokens()
+    }
+
+    async function loadSimilarityBrands() {
+      const sel = document.getElementById('sim-brand-select')
+      if (!sel) return
+      try {
+        const res = await fetch('/api/brands')
+        const data = await res.json()
+        const brands = data.brands || []
+        sel.innerHTML = brands.map(b => `<option value="${b.id}">${escHtml(b.name || b.domain || b.id)}</option>`).join('')
+        const u = window.__aeo_user || {}
+        if (u.active_brand_id && brands.some(b => b.id === u.active_brand_id)) {
+          sel.value = u.active_brand_id
+        }
+        loadSimilarityMappings()
+      } catch {
+        sel.innerHTML = '<option value="">Failed to load brands</option>'
+      }
+    }
+
+    async function loadSimilarityMappings() {
+      const el = document.getElementById('sim-mappings-table')
+      const sel = document.getElementById('sim-brand-select')
+      const brandId = sel?.value
+      if (!brandId) {
+        el.innerHTML = '<div style="color:var(--text3)">No brand</div>'
+        return
+      }
+      try {
+        const res = await fetch('/api/similarity/runs?brand_id=' + encodeURIComponent(brandId))
+        const data = await res.json()
+        const rows = data.runs || []
+        if (rows.length === 0) {
+          el.innerHTML = '<div style="color:var(--text3)">No mappings for this brand yet. List KV keys, pick run_id, add label, Add mapping.</div>'
+          return
+        }
+        el.innerHTML = `<table>
+          <tr><th>Label</th><th>run_id</th><th></th></tr>
+          ${rows.map(r => `<tr>
+            <td>${escHtml(r.label)}</td>
+            <td class="code-cell" style="font-size:var(--text-xs)">${escHtml(r.run_id)}</td>
+            <td><button type="button" class="btn btn-ghost btn-sm" onclick="deleteSimilarityMapping('${r.id}')">Remove</button></td>
+          </tr>`).join('')}
+        </table>`
+      } catch {
+        el.innerHTML = '<div style="color:var(--danger)">Failed to load mappings</div>'
+      }
+    }
+
+    async function loadSimilarityKvKeys() {
+      const status = document.getElementById('sim-kv-status')
+      const box = document.getElementById('sim-kv-keys')
+      status.textContent = 'Loading…'
+      box.innerHTML = ''
+      try {
+        const res = await fetch('/api/similarity/available-runs')
+        const data = await res.json()
+        if (!res.ok) {
+          status.innerHTML = `<span style="color:var(--danger)">${escHtml(data.error || res.statusText)}</span>`
+          return
+        }
+        const keys = data.keys || []
+        status.textContent = keys.length ? `${keys.length} key(s) — click one to copy run_id into the field` : 'No keys in this KV namespace (or empty).'
+        window.__sim_kv_keys = keys
+        box.innerHTML = keys.length
+          ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${keys.map((k, i) => `
+            <button type="button" class="btn btn-ghost btn-sm" style="font-size:10px" onclick="document.getElementById('sim-run-id').value=window.__sim_kv_keys[${i}]">${escHtml(k.length > 40 ? k.slice(0, 38) + '…' : k)}</button>
+          `).join('')}</div>`
+          : ''
+      } catch {
+        status.innerHTML = '<span style="color:var(--danger)">Request failed</span>'
+      }
+    }
+
+    async function addSimilarityMapping() {
+      const status = document.getElementById('sim-map-status')
+      const brandId = document.getElementById('sim-brand-select')?.value
+      const runId = document.getElementById('sim-run-id')?.value?.trim()
+      const label = document.getElementById('sim-label')?.value?.trim()
+      status.textContent = ''
+      if (!brandId || !runId || !label) {
+        status.innerHTML = '<span style="color:var(--danger)">Brand, run_id, and label required</span>'
+        return
+      }
+      try {
+        const res = await fetch('/api/similarity/runs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brand_id: brandId, run_id: runId, label }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          status.innerHTML = '<span style="color:var(--success)">Saved</span>'
+          document.getElementById('sim-run-id').value = ''
+          document.getElementById('sim-label').value = ''
+          loadSimilarityMappings()
+        } else {
+          status.innerHTML = `<span style="color:var(--danger)">${escHtml(data.error || 'Failed')}</span>`
+        }
+      } catch {
+        status.innerHTML = '<span style="color:var(--danger)">Connection error</span>'
+      }
+    }
+
+    async function deleteSimilarityMapping(id) {
+      if (!confirm('Remove this mapping?')) return
+      try {
+        const res = await fetch('/api/similarity/runs/' + encodeURIComponent(id), { method: 'DELETE' })
+        const data = await res.json()
+        if (res.ok) loadSimilarityMappings()
+        else alert(data.error || 'Failed')
+      } catch {
+        alert('Connection error')
+      }
+    }
+
+    async function loadJoinRequests() {
+      const el = document.getElementById('join-requests-table')
+      const status = document.getElementById('jr-status')?.value || 'pending'
+      try {
+        const res = await fetch('/api/admin/join-requests?status=' + encodeURIComponent(status))
+        const data = await res.json()
+        const rows = data.requests || []
+        if (rows.length === 0) {
+          el.innerHTML = '<div style="color:var(--text3)">No join requests</div>'
+          return
+        }
+        el.innerHTML = `<table>
+          <tr><th>Email</th><th>Message</th><th>Status</th><th>Created</th><th></th></tr>
+          ${rows.map(r => {
+            const msg = (r.message || '—').length > 80 ? escHtml((r.message || '').slice(0, 80)) + '…' : escHtml(r.message || '—')
+            const actions = []
+            if (r.status === 'pending') {
+              actions.push(`<button type="button" class="btn btn-primary" style="margin-right:6px;font-size:11px;padding:4px 10px" onclick="approveJoin('${r.id}')">Approve</button>`)
+              actions.push(`<button type="button" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px" onclick="rejectJoin('${r.id}')">Reject</button>`)
+            }
+            if (r.status === 'approved') {
+              actions.push(`<button type="button" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px" onclick="resendJoinLink('${r.id}')">Resend link</button>`)
+            }
+            return `<tr>
+              <td>${escHtml(r.email)}</td>
+              <td style="color:var(--text3);font-size:var(--text-xs);max-width:220px">${msg}</td>
+              <td>${escHtml(r.status)}</td>
+              <td style="color:var(--text3);font-size:var(--text-xs)">${r.created_at ? new Date(r.created_at).toLocaleString() : '—'}</td>
+              <td style="white-space:nowrap">${actions.join('')}</td>
+            </tr>`
+          }).join('')}
+        </table>`
+      } catch {
+        el.innerHTML = '<div style="color:var(--danger)">Failed to load join requests</div>'
+      }
+    }
+
+    async function approveJoin(id) {
+      try {
+        const res = await fetch('/api/admin/join-requests/' + encodeURIComponent(id) + '/approve', { method: 'POST' })
+        const data = await res.json()
+        if (res.ok) {
+          loadJoinRequests()
+        } else {
+          alert(data.error || 'Failed')
+        }
+      } catch {
+        alert('Connection error')
+      }
+    }
+
+    async function rejectJoin(id) {
+      if (!confirm('Reject this request?')) return
+      try {
+        const res = await fetch('/api/admin/join-requests/' + encodeURIComponent(id) + '/reject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        const data = await res.json()
+        if (res.ok) loadJoinRequests()
+        else alert(data.error || 'Failed')
+      } catch {
+        alert('Connection error')
+      }
+    }
+
+    async function resendJoinLink(id) {
+      try {
+        const res = await fetch('/api/admin/join-requests/' + encodeURIComponent(id) + '/resend-link', { method: 'POST' })
+        const data = await res.json()
+        if (res.ok) alert('Login link sent again.')
+        else alert(data.error || 'Failed')
+      } catch {
+        alert('Connection error')
+      }
     }
 
     async function generateCode() {
