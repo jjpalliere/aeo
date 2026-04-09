@@ -2,8 +2,8 @@
 
 import { Hono } from 'hono'
 import type { Env } from '../types'
-import { validateSession, checkRateLimit, generateToken, generateInviteCode, getCookie } from '../services/auth'
-import { sendMagicLink } from '../services/email'
+import { validateSession, checkRateLimit, generateToken, createAccountWithDefaultTeam, getCookie } from '../services/auth'
+import { issueMagicLink, MAGIC_LINK_TTL_LOGIN_MIN } from '../services/magic-link'
 
 const auth = new Hono<{ Bindings: Env }>()
 
@@ -44,50 +44,11 @@ auth.post('/login', async c => {
       return c.json({ error: 'Invalid or exhausted invite code' }, 400)
     }
 
-    // Create account + team + membership atomically
-    const accountId = crypto.randomUUID()
-    const teamId = crypto.randomUUID()
-    const teamInviteCode = generateInviteCode()
-    const emailPrefix = email.split('@')[0].slice(0, 30) || 'My Team'
-
-    await c.env.DB.batch([
-      c.env.DB.prepare('INSERT INTO accounts (id, email, is_owner) VALUES (?, ?, 0)')
-        .bind(accountId, email),
-      c.env.DB.prepare('INSERT INTO teams (id, name, invite_code, created_by) VALUES (?, ?, ?, ?)')
-        .bind(teamId, `${emailPrefix}'s Team`, teamInviteCode, accountId),
-      c.env.DB.prepare('INSERT INTO team_members (team_id, account_id) VALUES (?, ?)')
-        .bind(teamId, accountId),
-    ])
-
+    const { accountId } = await createAccountWithDefaultTeam(c.env.DB, email)
     account = { id: accountId }
   }
 
-  // Invalidate existing unused magic links for this email
-  await c.env.DB.prepare(
-    'UPDATE magic_links SET used = 1 WHERE email = ? AND used = 0'
-  ).bind(email).run()
-
-  // Generate magic link
-  const token = generateToken()
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
-
-  await c.env.DB.prepare(
-    'INSERT INTO magic_links (id, email, token, expires_at) VALUES (?, ?, ?, ?)'
-  ).bind(crypto.randomUUID(), email, token, expiresAt).run()
-
-  // Send email with double try/catch fallback
-  const siteUrl = c.env.SITE_URL || 'https://terrain.run'
-  try {
-    await sendMagicLink(email, token, c.env.RESEND_API_KEY, siteUrl)
-  } catch (err) {
-    console.error('Email send failed:', err)
-    try {
-      await c.env.KV.put(`magic_link_fallback:${email}`, token, { expirationTtl: 900 })
-    } catch (kvErr) {
-      console.error('KV fallback also failed:', kvErr)
-    }
-    // Still return success — admin can retrieve the link from KV
-  }
+  await issueMagicLink(c.env, email, MAGIC_LINK_TTL_LOGIN_MIN)
 
   return c.json({ ok: true, message: 'Check your email for a login link' })
 })

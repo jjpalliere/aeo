@@ -1,8 +1,9 @@
-// src/routes/admin.ts — Owner-only: signup codes, accounts, fallback tokens
+// src/routes/admin.ts — Owner-only: signup codes, accounts, fallback tokens, join requests
 
 import { Hono } from 'hono'
 import type { Env } from '../types'
-import { generateInviteCode } from '../services/auth'
+import { createAccountWithDefaultTeam, generateInviteCode } from '../services/auth'
+import { issueMagicLink, MAGIC_LINK_TTL_APPROVAL_MIN } from '../services/magic-link'
 
 const admin = new Hono<{ Bindings: Env }>()
 
@@ -66,6 +67,112 @@ admin.get('/fallback-tokens', async c => {
     }
   }
   return c.json({ tokens })
+})
+
+// GET /api/admin/join-requests?status=pending|approved|rejected|all
+admin.get('/join-requests', async c => {
+  const raw = c.req.query('status') ?? 'pending'
+  const allowed = new Set(['pending', 'approved', 'rejected', 'all'])
+  const statusFilter = allowed.has(raw) ? raw : 'pending'
+
+  if (statusFilter === 'all') {
+    const { results } = await c.env.DB.prepare(
+      'SELECT * FROM join_requests ORDER BY created_at ASC'
+    ).all()
+    return c.json({ requests: results })
+  }
+
+  const { results } = await c.env.DB.prepare(
+    'SELECT * FROM join_requests WHERE status = ? ORDER BY created_at ASC'
+  )
+    .bind(statusFilter)
+    .all()
+  return c.json({ requests: results })
+})
+
+// POST /api/admin/join-requests/:id/approve
+admin.post('/join-requests/:id/approve', async c => {
+  const id = c.req.param('id')
+  const reviewer = c.get('account')
+
+  const row = await c.env.DB.prepare(
+    `SELECT * FROM join_requests WHERE id = ?`
+  ).bind(id).first<{
+    id: string
+    email: string
+    status: string
+  }>()
+
+  if (!row || row.status !== 'pending') {
+    return c.json({ error: 'Request not found or not pending' }, 400)
+  }
+
+  const email = row.email
+
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM accounts WHERE email = ?'
+  ).bind(email).first<{ id: string }>()
+  if (!existing) {
+    await createAccountWithDefaultTeam(c.env.DB, email)
+  }
+
+  const upd = await c.env.DB.prepare(
+    `UPDATE join_requests SET status = 'approved', reviewed_at = datetime('now'), reviewed_by = ?
+     WHERE id = ? AND status = 'pending'`
+  )
+    .bind(reviewer.id, id)
+    .run()
+
+  if (upd.meta.changes === 0) {
+    return c.json({ error: 'Request could not be approved' }, 400)
+  }
+
+  await issueMagicLink(c.env, email, MAGIC_LINK_TTL_APPROVAL_MIN)
+  return c.json({ ok: true })
+})
+
+// POST /api/admin/join-requests/:id/reject
+admin.post('/join-requests/:id/reject', async c => {
+  const id = c.req.param('id')
+  const reviewer = c.get('account')
+  const body = await c.req.json<{ reason?: string }>().catch(() => ({} as { reason?: string }))
+  const reason = body.reason?.trim().slice(0, 500) || null
+
+  const upd = await c.env.DB.prepare(
+    `UPDATE join_requests SET status = 'rejected', reviewed_at = datetime('now'), reviewed_by = ?, reject_reason = ?
+     WHERE id = ? AND status = 'pending'`
+  )
+    .bind(reviewer.id, reason, id)
+    .run()
+
+  if (upd.meta.changes === 0) {
+    return c.json({ error: 'Request not found or not pending' }, 400)
+  }
+
+  return c.json({ ok: true })
+})
+
+// POST /api/admin/join-requests/:id/resend-link — approved row only; new 2h magic link
+admin.post('/join-requests/:id/resend-link', async c => {
+  const id = c.req.param('id')
+
+  const row = await c.env.DB.prepare(
+    `SELECT * FROM join_requests WHERE id = ?`
+  ).bind(id).first<{ id: string; email: string; status: string }>()
+
+  if (!row || row.status !== 'approved') {
+    return c.json({ error: 'Only approved requests can resend a login link' }, 400)
+  }
+
+  const account = await c.env.DB.prepare(
+    'SELECT id FROM accounts WHERE email = ?'
+  ).bind(row.email).first<{ id: string }>()
+  if (!account) {
+    return c.json({ error: 'No account for this email' }, 400)
+  }
+
+  await issueMagicLink(c.env, row.email, MAGIC_LINK_TTL_APPROVAL_MIN)
+  return c.json({ ok: true })
 })
 
 export { admin }

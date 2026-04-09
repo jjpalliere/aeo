@@ -1,0 +1,180 @@
+{
+  "title": "Join request approval flow",
+  "version": 2,
+  "summary": "Request access → owner approves → user receives magic login link. Coexists with existing invite-code signup.",
+  "goal": "Add request access with owner approval alongside signup codes for instant onboarding when desired.",
+  "phases": [
+    {
+      "id": 1,
+      "name": "Data model",
+      "migration": "004_join_requests.sql",
+      "table": "join_requests",
+      "columns": [
+        { "name": "id", "notes": "UUID primary key" },
+        { "name": "email", "notes": "Normalized trim+lower" },
+        { "name": "status", "notes": "pending | approved | rejected" },
+        { "name": "message", "notes": "Optional text from requester" },
+        { "name": "created_at", "notes": "Default now" },
+        { "name": "reviewed_at", "notes": "Nullable" },
+        { "name": "reviewed_by", "notes": "Nullable FK to accounts.id" }
+      ],
+      "indexes": [
+        "status",
+        "created_at",
+        {
+          "name": "idx_join_requests_email_pending_unique",
+          "definition": "UNIQUE partial index on (email) WHERE status = 'pending'",
+          "notes": "D1/SQLite supports partial indexes; prevents concurrent double-pending for same email at DB level. App still checks account exists before insert."
+        }
+      ],
+      "duplicateAndLifecycle": {
+        "pendingUniqueness": "Enforced at DB via partial unique index on email WHERE status = 'pending'.",
+        "accountExists": "App rejects new request if accounts row exists (no duplicate signup).",
+        "rejectedThenRetry": "After reject, same email may submit again: duplicate checks MUST only consider status = 'pending' (and account existence), not all historical rows. A prior rejected (or approved) row does not block a new pending insert."
+      }
+    },
+    {
+      "id": 2,
+      "name": "Public API (unauthenticated)",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/api/join-requests",
+          "body": { "email": "string", "message": "optional string" },
+          "behavior": [
+            "Validate email; KV rate limit (reuse checkRateLimit pattern from auth)",
+            "If account already exists → 400/409 with message to use login link",
+            "If pending request for email → friendly already-submitted response (query WHERE status = 'pending' only)",
+            "If prior rejected/approved only → allow new pending row (subject to partial unique index)",
+            "Insert pending row; handle UNIQUE constraint conflict as 'already pending' race"
+          ]
+        }
+      ],
+      "middleware": "Extend sessionMiddleware to skip this path like /api/auth",
+      "abuseAndBots": {
+        "notes": "Unauthenticated POST creates DB rows; rate limiting alone is insufficient against scripted floods.",
+        "recommendations": [
+          "Honeypot field (hidden input must be empty; reject if filled)",
+          "Optional: minimum time since page load (client timestamp + server slack) to block instant POST scripts",
+          "Max length on message field"
+        ],
+        "csrf": "Classic CSRF is lower risk for JSON POST without cookie session, but bots are the main threat; honeypot + rate limit + tight validation address that."
+      }
+    },
+    {
+      "id": 3,
+      "name": "Shared signup logic",
+      "helper": "createAccountWithDefaultTeam(db, email)",
+      "consumers": [
+        "Existing invite branch in POST /api/auth/login",
+        "POST /api/admin/join-requests/:id/approve (or equivalent)"
+      ],
+      "notes": "Same behavior as invite: accounts + teams + team_members without consuming signup_codes"
+    },
+    {
+      "id": 4,
+      "name": "Owner admin API",
+      "base": "/api/admin",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/join-requests",
+          "query": { "status": "default pending" },
+          "notes": "Sorted by created_at"
+        },
+        {
+          "method": "POST",
+          "path": "/join-requests/:id/approve",
+          "notes": [
+            "Row must be pending",
+            "Idempotent if account already exists",
+            "Else createAccountWithDefaultTeam",
+            "Set approved, reviewed_at, reviewed_by",
+            "Invalidate unused magic links for email, insert new magic link",
+            "Magic link expiry: use 2 hours (7200s) for approve flow — 15 minutes is too tight for batched approvals and delayed inbox checks; align magic_links.expires_at and email copy",
+            "If auth login keeps 15 min, either parameterize expiry per insert or use 2h globally for all magic links (product decision)"
+          ]
+        },
+        {
+          "method": "POST",
+          "path": "/join-requests/:id/reject",
+          "body": { "reason": "optional" },
+          "notes": "Optional reject_reason column in v1 or later"
+        },
+        {
+          "method": "POST",
+          "path": "/join-requests/:id/resend-link",
+          "v1": "required",
+          "notes": "v1 includes resend (not optional): if email fails or user needs a fresh link, owner or user flow can trigger a new magic link without re-approving. Same invalidation + insert + send pattern as approve."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Email",
+      "items": [
+        "Reuse sendMagicLink for approved users; pass/site copy reflects 2h expiry if adopted",
+        "Optional sendJoinRequestNotification to OWNER_ALERT_EMAIL or first owner — v1 can be admin-UI only"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "UI",
+      "files": [
+        {
+          "path": "public/login.html",
+          "changes": "Request access toggle: email + optional message + honeypot; POST /api/join-requests; success messaging; optional client timestamp for timing check"
+        },
+        {
+          "path": "public/admin.html",
+          "changes": "Join requests section: table, Approve / Reject, Resend link, refresh"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Hardening and ops",
+      "items": [
+        "Cron: optional cleanup of old non-pending rows",
+        "Rate limit + max message length + honeypot",
+        "Short doc in SETUP.md or docs"
+      ]
+    }
+  ],
+  "implementationOrder": [
+    "Migration + partial unique index + types",
+    "createAccountWithDefaultTeam + refactor auth invite branch",
+    "Magic link TTL policy (2h approve path or global) + sendMagicLink/email copy",
+    "POST /api/join-requests + honeypot + middleware skip",
+    "Admin GET + approve + reject + resend-link (v1)",
+    "login.html + admin.html",
+    "Optional owner notification email + cron cleanup"
+  ],
+  "decisions": [
+    {
+      "topic": "Reject email",
+      "options": ["Send not approved email", "Silent reject"],
+      "recommendation": "Optional v1; admin copy only"
+    },
+    {
+      "topic": "Duplicate pending",
+      "options": ["Block second request", "Allow message update"],
+      "recommendation": "Block or same success message for privacy; DB partial unique index backs this under concurrency"
+    },
+    {
+      "topic": "Rejected user requests again",
+      "recommendation": "Allowed: only pending rows participate in uniqueness and 'already submitted' checks"
+    },
+    {
+      "topic": "Magic link TTL",
+      "recommendation": "2 hours for post-approve links (or global bump); resend-link endpoint in v1"
+    },
+    {
+      "topic": "Team on approve",
+      "notes": "v1: new default team per user (matches invite). Join existing team is a separate future feature (e.g. team_join_requests)"
+    }
+  ],
+  "unchanged": {
+    "signup_codes": "v1 keeps parallel instant path via codes"
+  }
+}

@@ -11,17 +11,20 @@ import { assistant } from './routes/assistant'
 import { auth } from './routes/auth'
 import { teams } from './routes/teams'
 import { admin } from './routes/admin'
+import { joinRequests } from './routes/join-requests'
+import { similarity } from './routes/similarity'
 
 const app = new Hono<{ Bindings: Env }>()
 
 // CORS for API routes
 app.use('/api/*', cors())
 
-// Session auth middleware — protects all /api/* except /api/auth/* and /api/health
+// Session auth middleware — protects all /api/* except /api/auth/*, /api/join-requests, /api/health
 app.use('/api/*', sessionMiddleware)
 
 // Auth routes (public — handle their own session validation)
 app.route('/api/auth', auth)
+app.route('/api/join-requests', joinRequests)
 
 // Protected routes
 app.route('/api/brands', brands)
@@ -31,6 +34,7 @@ app.route('/api/runs', runs)
 app.route('/api/assistant', assistant)
 app.route('/api/teams', teams)
 app.route('/api/admin', admin)
+app.route('/api/similarity', similarity)
 
 app.get('/api/health', c => c.json({ ok: true, ts: Date.now() }))
 

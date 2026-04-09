@@ -3,7 +3,8 @@
 Audit how AI assistants (Claude, ChatGPT, Gemini) rank and cite your brand vs competitors across search-style queries.
 
 **📖 [Documentation →](./docs/README.md)** — File-by-file docs from the codebase.  
-**🔧 [Setup Guide →](./SETUP.md)** — Step-by-step first-time setup.
+**🔧 [Setup Guide →](./docs/SETUP.md)** — Step-by-step first-time setup.  
+**🚀 [Deploy via Git →](./docs/DEPLOY_GIT.md)** — Two repos (AEO + Similarity) → Cloudflare; push instead of local `npm run deploy`.
 
 ---
 
@@ -83,7 +84,7 @@ Update `wrangler.toml` with the returned namespace ID.
 | Script | Purpose |
 |--------|---------|
 | `npm run dev` | Local dev server (Wrangler) |
-| `npm run deploy` | Deploy to Cloudflare Workers |
+| `npm run deploy` | Deploy Worker manually (prefer [Git → Cloudflare](./docs/DEPLOY_GIT.md) in production) |
 | `npm run db:create` | Create D1 database (first time) |
 | `npm run db:migrate` | Apply schema to local D1 |
 | `npm run db:migrate:remote` | Apply schema to remote D1 |

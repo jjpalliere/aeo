@@ -8,6 +8,7 @@ Technical documentation for the AEO (Answer Engine Optimization) codebase. Use t
 
 ## Contents
 
+0. **[Deployment (Git + Cloudflare)](./DEPLOY_GIT.md)** — Two repos; push instead of local `wrangler deploy`
 1. [Introduction](#introduction)
 2. [System Overview](#system-overview)
 3. [Key Concepts](#key-concepts)

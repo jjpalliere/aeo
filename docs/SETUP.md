@@ -103,19 +103,21 @@ Open [http://localhost:8787](http://localhost:8787)
 
 ## Step 8 — Deploy to Cloudflare
 
-First, migrate the remote database:
+**Production:** Connect **[jjpalliere/aeo](https://github.com/jjpalliere/aeo)** to the Worker in Cloudflare and push to your production branch—see **[DEPLOY_GIT.md](./DEPLOY_GIT.md)** (includes the Similarity Pages repo).
+
+First, migrate the remote database when schema changes:
 
 ```bash
 npm run db:migrate:remote
 ```
 
-Then deploy:
+Then either **push to Git** (dashboard runs `wrangler deploy`) or deploy manually:
 
 ```bash
 npm run deploy
 ```
 
-Your app will be live at `https://aeo.<your-subdomain>.workers.dev`
+Your app will be live at `https://aeo.<your-subdomain>.workers.dev` or your custom domain.
 
 ---
 

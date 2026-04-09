@@ -7,6 +7,8 @@ import { validateSession, getCookie } from '../services/auth'
 export async function sessionMiddleware(c: Context<{ Bindings: Env }>, next: Next) {
   // Skip auth routes — they handle session validation internally
   if (c.req.path.startsWith('/api/auth')) return next()
+  // Public join-request submission
+  if (c.req.path.startsWith('/api/join-requests')) return next()
   // Skip health check
   if (c.req.path === '/api/health') return next()
 

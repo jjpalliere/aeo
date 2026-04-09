@@ -1,6 +1,8 @@
 export interface Env {
   DB: D1Database
   KV: KVNamespace
+  /** Optional: Similarity Browser KV (same namespace as Pages app) for listing run keys */
+  SIMILARITY_KV?: KVNamespace
   ANTHROPIC_API_KEY: string
   OPENAI_API_KEY: string
   GOOGLE_AI_API_KEY: string

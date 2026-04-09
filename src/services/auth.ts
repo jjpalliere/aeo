@@ -32,6 +32,15 @@ export async function checkRateLimit(email: string, kv: KVNamespace): Promise<bo
   return true
 }
 
+/** Same window as auth — separate key prefix for join-request POST */
+export async function checkRateLimitJoinRequest(email: string, kv: KVNamespace): Promise<boolean> {
+  const key = `rate:joinreq:${email.toLowerCase()}`
+  const current = parseInt(await kv.get(key) || '0', 10)
+  if (current >= 3) return false
+  await kv.put(key, String(current + 1), { expirationTtl: 900 })
+  return true
+}
+
 /** Generate a 64-char hex token using crypto.getRandomValues */
 export function generateToken(): string {
   const bytes = new Uint8Array(32)
@@ -46,6 +55,25 @@ export function generateInviteCode(): string {
   crypto.getRandomValues(bytes)
   const code = Array.from(bytes).map(b => chars[b % chars.length]).join('')
   return `${code.slice(0, 4)}-${code.slice(4)}`
+}
+
+/** Bootstrap account + default team + membership (invite or approved join request). */
+export async function createAccountWithDefaultTeam(db: D1Database, email: string): Promise<{ accountId: string }> {
+  const accountId = crypto.randomUUID()
+  const teamId = crypto.randomUUID()
+  const teamInviteCode = generateInviteCode()
+  const emailPrefix = email.split('@')[0].slice(0, 30) || 'My Team'
+
+  await db.batch([
+    db.prepare('INSERT INTO accounts (id, email, is_owner) VALUES (?, ?, 0)')
+      .bind(accountId, email),
+    db.prepare('INSERT INTO teams (id, name, invite_code, created_by) VALUES (?, ?, ?, ?)')
+      .bind(teamId, `${emailPrefix}'s Team`, teamInviteCode, accountId),
+    db.prepare('INSERT INTO team_members (team_id, account_id) VALUES (?, ?)')
+      .bind(teamId, accountId),
+  ])
+
+  return { accountId }
 }
 
 /** Parse aeo_session cookie from Cookie header */

@@ -1,5 +1,7 @@
 # Internal / Debranded Deployment
 
+**Routine production deploys:** Use Git → Cloudflare for **[jjpalliere/aeo](https://github.com/jjpalliere/aeo)** and the Similarity Browser repo—see **[DEPLOY_GIT.md](./DEPLOY_GIT.md)**.
+
 This branch (`internal`) is a debranded version of AEO for internal circulation. It removes terrain.run branding so it can be shared without implying a separate company.
 
 ## What's different

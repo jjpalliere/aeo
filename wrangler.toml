@@ -17,6 +17,11 @@ database_id = "c8328931-24a2-421c-a73a-e732c00b49a7"
 binding = "KV"
 id = "6f792aef4e41455f92397167aac95e9b"
 
+# Similarity Browser (same KV as similarity-browser.pages.dev) — list keys for admin mapping
+[[kv_namespaces]]
+binding = "SIMILARITY_KV"
+id = "942017366eb249cf99ab89efff1084e4"
+
 # Cron: garbage collection + stalled run recovery (daily at 3am UTC)
 [triggers]
 crons = ["0 3 * * *"]
