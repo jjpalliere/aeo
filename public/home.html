@@ -54,10 +54,11 @@
     /* ── Hero ─────────────────────────────────────────────── */
     .landing-hero {
       position: relative; z-index: 1;
-      min-height: 100vh;
+      height: 100vh;
       display: flex; align-items: flex-start; justify-content: center;
-      padding: 25vh 40px 80px;
+      padding: 25vh 40px 0;
       box-sizing: border-box;
+      overflow: hidden;
     }
     .hero-layout {
       display: flex;
@@ -109,9 +110,110 @@
       color: var(--text3);
     }
 
-    /* ── Brief: shared ────────────────────────────────────── */
-    .landing-section {
+    /* ── Strategy Brief: interactive tabs ─────────────────── */
+    .section-brief {
       position: relative; z-index: 2;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 96px 40px;
+    }
+    .brief-inner {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .brief-header {
+      margin-bottom: 20px;
+    }
+    .brief-header-label {
+      font-family: var(--font);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 16px;
+    }
+    .brief-header-sub {
+      font-family: var(--font);
+      font-size: var(--text-sm);
+      color: var(--text2);
+      line-height: 1.8;
+      max-width: 520px;
+    }
+    .brief-layout {
+      display: flex;
+      gap: 0;
+      margin-top: 40px;
+      min-height: 320px;
+    }
+
+    /* Left: tab nav */
+    .brief-tabs {
+      width: 200px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+    .brief-tab {
+      padding: 16px 20px 16px 0;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text3);
+      cursor: pointer;
+      transition: color 0.2s;
+      border-bottom: 1px solid var(--border);
+      user-select: none;
+    }
+    .brief-tab:last-child { border-bottom: none; }
+    .brief-tab:hover { color: var(--text2); }
+    .brief-tab.active {
+      color: var(--text);
+    }
+
+    /* Right: content pane */
+    .brief-content {
+      flex: 1;
+      padding: 8px 0 8px 48px;
+      position: relative;
+    }
+    .brief-pane {
+      position: absolute;
+      top: 8px; left: 48px; right: 0;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+    .brief-pane.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+      position: relative;
+      top: auto; left: auto; right: auto;
+    }
+    .brief-pane-heading {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 2.2vw, 24px);
+      font-weight: 500;
+      color: #fff;
+      line-height: 1.35;
+      margin-bottom: 20px;
+    }
+    .brief-pane-body {
+      font-family: var(--font);
+      font-size: var(--text-sm);
+      color: var(--text2);
+      line-height: 1.9;
+    }
+    .brief-pane-body p { margin: 0 0 1em; }
+    .brief-pane-body p:last-child { margin-bottom: 0; }
+
+    /* ── Section: Videos ──────────────────────────────────── */
+    .section-videos {
+      position: relative; z-index: 2;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
       padding: 96px 40px;
     }
     .section-inner {
@@ -126,101 +228,6 @@
       text-transform: uppercase;
       color: var(--text3);
       margin-bottom: 20px;
-    }
-
-    /* ── Brief: hero stat ─────────────────────────────────── */
-    .section-brief-hero {
-      background: var(--bg);
-      border-top: 1px solid var(--border);
-      padding: 96px 40px 64px;
-    }
-    .brief-stat {
-      font-family: var(--font-hero);
-      font-size: clamp(32px, 5vw, 52px);
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1.15;
-      margin-bottom: 20px;
-      max-width: 700px;
-    }
-    .brief-subhead {
-      font-family: var(--font);
-      font-size: var(--text-sm);
-      color: var(--text2);
-      line-height: 1.8;
-      max-width: 520px;
-    }
-
-    /* ── Brief: framed cards ──────────────────────────────── */
-    .section-brief-cards {
-      background: var(--surface);
-      padding: 0 40px 96px;
-    }
-    .brief-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2px;
-      max-width: 860px;
-      margin: 0 auto;
-      background: var(--border);
-    }
-    .brief-card {
-      background: var(--bg);
-      padding: 36px 32px;
-      display: flex;
-      flex-direction: column;
-    }
-    .brief-card-label {
-      font-family: var(--font);
-      font-size: 9px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--text);
-      margin-bottom: 16px;
-    }
-    .brief-card-heading {
-      font-family: var(--font-display);
-      font-size: clamp(15px, 1.8vw, 18px);
-      font-weight: 500;
-      color: #fff;
-      line-height: 1.4;
-      margin-bottom: 16px;
-    }
-    .brief-card-body {
-      font-family: var(--font);
-      font-size: var(--text-xs);
-      color: var(--text2);
-      line-height: 1.9;
-      flex: 1;
-    }
-    .brief-card-body p { margin: 0 0 0.8em; }
-    .brief-card-body p:last-child { margin-bottom: 0; }
-
-    /* Full-width card spans both columns */
-    .brief-card-full {
-      grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 32px;
-      padding: 40px 32px;
-      background: var(--bg);
-    }
-    .brief-card-full .brief-card-left { }
-    .brief-card-full .brief-card-right {
-      font-family: var(--font);
-      font-size: var(--text-xs);
-      color: var(--text2);
-      line-height: 1.9;
-      border-left: 1px solid var(--text);
-      padding-left: 24px;
-    }
-    .brief-card-full .brief-card-right p { margin: 0 0 0.8em; }
-    .brief-card-full .brief-card-right p:last-child { margin-bottom: 0; }
-
-    /* ── Section: Videos ──────────────────────────────────── */
-    .section-videos {
-      background: var(--bg);
-      border-top: 1px solid var(--border);
     }
     .videos-grid {
       display: grid;
@@ -238,7 +245,6 @@
       cursor: pointer;
     }
     .video-card:hover .play-ring { border-color: var(--text); }
-    .video-card:hover .video-card-label { color: var(--text2); }
     .video-poster {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -265,7 +271,6 @@
       color: var(--text3);
       text-align: center;
       margin-top: 12px;
-      transition: color 0.2s;
     }
 
     /* Fullscreen overlay */
@@ -326,13 +331,17 @@
     /* ── Responsive ───────────────────────────────────────── */
     @media (max-width: 680px) {
       .landing-nav { padding: 16px 20px; }
-      .landing-hero { padding: 100px 20px 80px; }
+      .landing-hero { padding: 100px 20px 0; }
       .hero-layout { flex-direction: column-reverse; gap: 32px; text-align: center; }
       .hero-logo { height: 80px; }
-      .landing-section, .section-brief-hero, .section-brief-cards { padding-left: 20px; padding-right: 20px; }
-      .brief-grid { grid-template-columns: 1fr; }
-      .brief-card-full { grid-template-columns: 1fr; }
-      .brief-card-full .brief-card-right { border-left: none; padding-left: 0; border-top: 1px solid var(--text); padding-top: 16px; }
+      .section-brief { padding: 64px 20px; }
+      .brief-layout { flex-direction: column; }
+      .brief-tabs { width: 100%; flex-direction: row; flex-wrap: wrap; gap: 0; border-right: none; border-bottom: 1px solid var(--border); }
+      .brief-tab { padding: 12px 16px; border-bottom: none; border-right: 1px solid var(--border); font-size: 13px; }
+      .brief-tab:last-child { border-right: none; }
+      .brief-content { padding: 24px 0 0; }
+      .brief-pane { left: 0; }
+      .section-videos { padding: 64px 20px; }
       .videos-grid { grid-template-columns: 1fr; }
       .landing-footer { padding: 64px 20px; }
     }
@@ -348,7 +357,7 @@
     <a href="/login" class="nav-login">Log in</a>
   </nav>
 
-  <!-- Hero -->
+  <!-- Hero (exactly 100vh) -->
   <header class="landing-hero">
     <div class="hero-layout">
       <div class="hero-text">
@@ -359,81 +368,80 @@
         <img src="/assets/tr-logo-orange.svg" alt="Terrain" class="hero-logo" />
       </div>
     </div>
-    <div class="hero-scroll" onclick="document.querySelector('.section-brief-hero').scrollIntoView({behavior:'smooth'})">
+    <div class="hero-scroll" onclick="document.querySelector('.section-brief').scrollIntoView({behavior:'smooth'})">
       <button class="hero-scroll-arrow">&darr;</button>
       <span class="hero-scroll-label">Learn more</span>
     </div>
   </header>
 
-  <!-- Brief: stat + subhead -->
-  <section class="section-brief-hero">
-    <div class="section-inner">
-      <span class="section-label">Strategy Brief</span>
-      <div class="brief-stat">92% of AI-summarized searches never result in a click.</div>
-      <div class="brief-subhead">LLMs are being asked questions about your brand every day. AEO is how you understand what they're saying &mdash; and influence it.</div>
-    </div>
-  </section>
-
-  <!-- Brief: framed card grid -->
-  <section class="section-brief-cards">
-    <div class="brief-grid">
-
-      <!-- Card 1: Querying at scale -->
-      <div class="brief-card">
-        <div class="brief-card-label">Visibility</div>
-        <div class="brief-card-heading">Querying at scale</div>
-        <div class="brief-card-body">
-          <p>There's no platform that shows how an LLM represents a brand. Responses vary &mdash; the same question asked twice returns a different answer.</p>
-          <p>The tool submits prompts to each LLM via API and analyzes hundreds of responses: which brands get mentioned, in what rank order, which URLs get cited. At volume, patterns emerge.</p>
-        </div>
+  <!-- Strategy Brief -->
+  <section class="section-brief" id="brief">
+    <div class="brief-inner">
+      <div class="brief-header">
+        <div class="brief-header-label">Strategy Brief</div>
+        <div class="brief-header-sub">LLMs are being asked questions about your brand every day. AEO is how you understand what they're saying &mdash; and influence it.</div>
       </div>
 
-      <!-- Card 2: Persona scoring -->
-      <div class="brief-card">
-        <div class="brief-card-label">Personas</div>
-        <div class="brief-card-heading">Scored per buyer type</div>
-        <div class="brief-card-body">
-          <p>A CFO evaluating a purchase asks completely different questions than the team member who'd use the product day-to-day.</p>
-          <p>Every prompt is mapped to a persona. Performance is scored at the prompt level, then rolled up: where a brand is well-represented and where it's absent.</p>
+      <div class="brief-layout">
+        <!-- Left: tab labels -->
+        <div class="brief-tabs">
+          <div class="brief-tab active" onclick="selectBrief(0)">Visibility</div>
+          <div class="brief-tab" onclick="selectBrief(1)">Personas</div>
+          <div class="brief-tab" onclick="selectBrief(2)">Channels</div>
+          <div class="brief-tab" onclick="selectBrief(3)">Format</div>
+          <div class="brief-tab" onclick="selectBrief(4)">Gaps</div>
+        </div>
+
+        <!-- Right: content panes -->
+        <div class="brief-content">
+
+          <div class="brief-pane active" data-brief="0">
+            <div class="brief-pane-heading">The ecosystem around your brand</div>
+            <div class="brief-pane-body">
+              <p>Your brand is the sum of its online presence &mdash; every page, mention, review, and citation that AI models draw from when answering questions about your category.</p>
+              <p>AEO submits prompts to Claude, ChatGPT, and Gemini via API and analyzes hundreds of responses: which brands get mentioned, in what rank order, which URLs get cited. At that volume, consistent patterns emerge &mdash; a map of how the AI ecosystem sees you relative to everyone else.</p>
+            </div>
+          </div>
+
+          <div class="brief-pane" data-brief="1">
+            <div class="brief-pane-heading">Addressing the demands of every ideal customer profile</div>
+            <div class="brief-pane-body">
+              <p>A CFO evaluating a purchase and the practitioner who'd use the product day-to-day are asking fundamentally different questions. Each has separate interactions with LLMs, different competitors surfacing, different sources cited.</p>
+              <p>Every prompt is mapped to a specific ideal customer profile. We use different forms of data &mdash; funnel stage, intent signals, role context &mdash; to make sure we're accurately capturing what each persona needs and where the brand is falling short.</p>
+            </div>
+          </div>
+
+          <div class="brief-pane" data-brief="2">
+            <div class="brief-pane-heading">How audiences engage across different surfaces</div>
+            <div class="brief-pane-body">
+              <p>Audiences engage in unique ways across different channels &mdash; search, AI chat, review platforms, industry publications. How you show up on each determines whether you reach them at all.</p>
+              <p>The channel analysis classifies every cited URL: owned pages, competitor pages, news outlets, review platforms. Outlets that consistently appear but haven't covered your brand are PR targets. Sources that surface for competitors but not for you show where distribution is thin. How you engage alongside other players on each channel matters as much as whether you're present.</p>
+            </div>
+          </div>
+
+          <div class="brief-pane" data-brief="3">
+            <div class="brief-pane-heading">Mapping formats to channels to personas</div>
+            <div class="brief-pane-body">
+              <p>This isn't just about discoverability. It's about exposing your brand to the different digital mediators &mdash; whether that's search engines, LLMs, or aggregator platforms &mdash; in the formats they can actually parse and surface.</p>
+              <p>We map which content formats perform on which channels for which personas. The goal is to understand not just where to be, but what shape the content needs to take to reach the right people through the right surface.</p>
+            </div>
+          </div>
+
+          <div class="brief-pane" data-brief="4">
+            <div class="brief-pane-heading">Competitive opportunities and blue sky territory</div>
+            <div class="brief-pane-body">
+              <p>The gap analysis surfaces what competitors are doing well that you should draw from, what they're neglecting that you can own, and where neither side is playing yet.</p>
+              <p>Part of this is making sure you're present in the same spaces as your competitors &mdash; signaling to AI that you're a legitimate, active authority in the category. The other part is finding blue sky territory: topics and angles nobody has claimed, where being first means owning the conversation.</p>
+            </div>
+          </div>
+
         </div>
       </div>
-
-      <!-- Card 3 (full-width): Channel analysis -->
-      <div class="brief-card-full">
-        <div class="brief-card-left">
-          <div class="brief-card-label">Channels</div>
-          <div class="brief-card-heading">Third-party sources carry more weight than owned pages</div>
-        </div>
-        <div class="brief-card-right">
-          <p>The channel analysis classifies every cited URL: owned pages, competitor pages, news outlets, industry sites, review platforms.</p>
-          <p>Outlets that appear consistently but haven't covered a brand are PR targets. Sources that surface for competitors but not for a brand show where distribution is thin.</p>
-        </div>
-      </div>
-
-      <!-- Card 4: Format analysis -->
-      <div class="brief-card">
-        <div class="brief-card-label">Format</div>
-        <div class="brief-card-heading">Structure determines whether LLMs can use content</div>
-        <div class="brief-card-body">
-          <p>Headers as questions create direct query matches. FAQ sections mirror the format LLMs use in responses. Schema markup gives the AI an immediate read on what a page is about.</p>
-        </div>
-      </div>
-
-      <!-- Card 5: Gap analysis -->
-      <div class="brief-card">
-        <div class="brief-card-label">Gaps</div>
-        <div class="brief-card-heading">What a brand covers vs. what buyers actually ask</div>
-        <div class="brief-card-body">
-          <p>A website reflects what a brand has decided to talk about. Buyers ask LLMs who the main players are, how pricing works, and how approaches compare.</p>
-          <p>The gap analysis maps three things against each other. Where they don't overlap is where content strategy has room to grow.</p>
-        </div>
-      </div>
-
     </div>
   </section>
 
   <!-- Videos -->
-  <section class="landing-section section-videos">
+  <section class="section-videos">
     <div class="section-inner">
       <span class="section-label">Watch</span>
       <div class="videos-grid">
@@ -471,6 +479,22 @@
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>
   <script>
+    // Brief tab switching with fade
+    function selectBrief(idx) {
+      document.querySelectorAll('.brief-tab').forEach((t, i) => {
+        t.classList.toggle('active', i === idx)
+      })
+      document.querySelectorAll('.brief-pane').forEach(p => {
+        p.classList.remove('active')
+      })
+      // Small delay for fade-out then fade-in
+      setTimeout(() => {
+        const target = document.querySelector('[data-brief="' + idx + '"]')
+        if (target) target.classList.add('active')
+      }, 50)
+    }
+
+    // Video
     let videoEl = null
     function openVideo(src) {
       const overlay = document.getElementById('video-overlay')
