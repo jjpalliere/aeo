@@ -45,8 +45,15 @@
       margin-bottom: 56px;
     }
     .login-brand img {
-      height: 48px;
+      height: 96px;
       width: auto;
+    }
+    @keyframes logo-pulse {
+      0%, 100% { opacity: 0.85; }
+      50% { opacity: 0.4; }
+    }
+    .login-brand img {
+      animation: logo-pulse 2s ease-in-out infinite;
     }
     .login-rule {
       width: 48px;
@@ -155,7 +162,7 @@
   <div class="frost-overlay"></div>
 
   <div class="login-container">
-    <div id="login-logo" class="login-brand"><img src="/assets/tr-logo.svg" alt="Terrain" /></div>
+    <div id="login-logo" class="login-brand"><img src="/assets/tr-logo-orange.svg" alt="Terrain" /></div>
     <div class="login-rule"></div>
 
     <!-- State 1/2: Login form -->
@@ -171,9 +178,35 @@
       </div>
 
       <div class="toggle-link" id="toggle-invite" onclick="toggleInvite()">First time? I have an invite code</div>
+      <div class="toggle-link" id="toggle-request" onclick="showRequestAccess()">Need access? Request access</div>
 
       <button class="login-submit" id="submit-btn" onclick="submitLogin()">Send Login Link</button>
       <div id="err"></div>
+    </div>
+
+    <!-- Request access (no invite) -->
+    <div id="request-access-form" class="hidden">
+      <div class="toggle-link" onclick="showLoginForm()">Back to sign in</div>
+      <div class="login-field" style="margin-top: 24px">
+        <span class="login-prefix">@</span>
+        <input type="email" id="req-email" placeholder="email" autocomplete="email" />
+      </div>
+      <div class="login-field" style="align-items: flex-start">
+        <span class="login-prefix" style="align-self: flex-start; padding-top: 10px">—</span>
+        <textarea id="req-message" rows="3" placeholder="Optional message" maxlength="2000" style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--border2);color:var(--text);font-family:var(--font);font-size:var(--text-sm);resize:vertical;padding:10px 0;outline:none"></textarea>
+      </div>
+      <label class="hidden" aria-hidden="true">Company
+        <input type="text" id="website-hp" name="website" tabindex="-1" autocomplete="off" />
+      </label>
+      <button class="login-submit" id="req-submit-btn" onclick="submitJoinRequest()">Submit request</button>
+      <div id="req-err"></div>
+    </div>
+
+    <!-- State: request submitted -->
+    <div id="request-sent" class="check-email hidden">
+      <p>Thanks — we'll email you if your request is approved.</p>
+      <p style="color: var(--text3); font-size: var(--text-xs); margin-top: 12px;">Check your inbox (and spam) for a login link after an owner approves your request.</p>
+      <span class="toggle-link" style="display:inline-block;margin-top:24px" onclick="showLoginForm()">Back to sign in</span>
     </div>
 
     <!-- State 3: Check your email -->
@@ -190,6 +223,7 @@
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="/assets/background.js"></script>
   <script>
+    const pageLoadedAt = Date.now()
     let showingInvite = false
     let lastEmail = ''
     let resendTimer = null
@@ -212,6 +246,9 @@
     document.getElementById('invite-code').addEventListener('keydown', e => {
       if (e.key === 'Enter') submitLogin()
     })
+    document.getElementById('req-email').addEventListener('keydown', e => {
+      if (e.key === 'Enter') submitJoinRequest()
+    })
 
     function toggleInvite() {
       showingInvite = !showingInvite
@@ -220,6 +257,56 @@
         ? 'Already have an account? Just enter email'
         : 'First time? I have an invite code'
       if (showingInvite) document.getElementById('invite-code').focus()
+    }
+
+    function showRequestAccess() {
+      document.getElementById('login-form').classList.add('hidden')
+      document.getElementById('request-access-form').classList.remove('hidden')
+      document.getElementById('request-sent').classList.add('hidden')
+      const main = document.getElementById('email').value.trim()
+      if (main) document.getElementById('req-email').value = main
+      document.getElementById('req-email').focus()
+    }
+
+    function showLoginForm() {
+      document.getElementById('login-form').classList.remove('hidden')
+      document.getElementById('request-access-form').classList.add('hidden')
+      document.getElementById('request-sent').classList.add('hidden')
+    }
+
+    async function submitJoinRequest() {
+      const email = document.getElementById('req-email').value.trim()
+      const hp = document.getElementById('website-hp').value
+      const err = document.getElementById('req-err')
+      const btn = document.getElementById('req-submit-btn')
+      err.textContent = ''
+      if (!email) return
+      if (hp) return
+      btn.disabled = true
+      try {
+        const body = {
+          email,
+          message: document.getElementById('req-message').value.trim(),
+          website: document.getElementById('website-hp').value,
+          page_loaded_at: pageLoadedAt,
+        }
+        const res = await fetch('/api/join-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          document.getElementById('request-access-form').classList.add('hidden')
+          document.getElementById('request-sent').classList.remove('hidden')
+        } else {
+          err.textContent = data.error || 'Something went wrong'
+          btn.disabled = false
+        }
+      } catch {
+        err.textContent = 'Connection error'
+        btn.disabled = false
+      }
     }
 
     async function submitLogin() {
