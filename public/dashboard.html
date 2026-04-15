@@ -628,7 +628,7 @@
       return Number(r?.mention_count) || 0
     }
 
-    window.showPanel = function showPanel(name, el) {
+    function showPanel(name, el) {
       document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'))
       document.querySelectorAll('.dash-nav-item').forEach(i => i.classList.remove('active'))
       document.getElementById(`panel-${name}`).classList.add('active')
@@ -818,7 +818,7 @@
     let promptGroups = []
     let rankingSort = { col: 'mentions', dir: -1 }  // -1 = desc, 1 = asc
 
-    window.setRankingSort = function setRankingSort(col, thEl) {
+    function setRankingSort(col, thEl) {
       const same = rankingSort.col === col
       rankingSort = { col, dir: same ? -rankingSort.dir : -1 }
       document.querySelectorAll('.sortable-th').forEach(h => {
@@ -830,7 +830,7 @@
       buildRanking()
     }
 
-    window.setRankFilter = function setRankFilter(filter, btn) {
+    function setRankFilter(filter, btn) {
       rankFilter = filter
       document.querySelectorAll('#rank-filter-btns .rank-filter-btn').forEach(b => b.classList.remove('active'))
       btn.classList.add('active')
@@ -1082,7 +1082,7 @@
       if (pop && !pop.contains(e.target) && !e.target.closest('.citation-col-filter')) closeCitationColFilter()
     }
 
-    window.openCitationColFilter = function openCitationColFilter(col, ev) {
+    function openCitationColFilter(col, ev) {
       ev.stopPropagation()
       const pop = document.getElementById('citation-col-popover')
       if (!pop) return
@@ -1414,7 +1414,7 @@
       }
     }
 
-    window.closeOutputModal = function closeOutputModal(event) {
+    function closeOutputModal(event) {
       const overlay = document.getElementById('output-modal-overlay')
       if (!overlay) return
       if (event && event.target !== overlay) return
@@ -1905,7 +1905,7 @@
       if (preview) preview.textContent = generateReportText('txt')
     }
 
-    window.downloadReport = function downloadReport(fmt) {
+    function downloadReport(fmt) {
       const text = generateReportText(fmt)
       const ext = fmt === 'md' ? '.md' : '.txt'
       const brand = (data?.run?.brand_name || data?.run?.brand_domain || 'report').replace(/[^a-z0-9]/gi, '-').toLowerCase()
@@ -2032,6 +2032,14 @@
     }
 
     load()
+    // Expose all onclick/onchange-referenced functions to global scope
+    Object.assign(window, {
+      showPanel, setRankFilter, setRankingSort, openCitationColFilter,
+      closeOutputModal, downloadReport, toggleCitationBrandFilter,
+      setCitationDomainFilter, toggleCitationLLMFilter, toggleCitationSourceFilter,
+      toggleCitationRow, togglePromptGroup, toggleCompAnalysisGroup,
+      loadPgResponse, loadCitationResponse, openOutputModal, askSuggestion
+    })
   })()
   </script>
   <script src="/assets/sidebar.js"></script>
