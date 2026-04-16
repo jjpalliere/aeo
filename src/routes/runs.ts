@@ -792,10 +792,10 @@ runs.get('/:id/results', async c => {
   // All approved personas from the brand — so dashboard can show personas before their prompts have returned
   const { results: personas = [] } = run.brand_id
     ? await c.env.DB.prepare(
-        `SELECT id, name, description FROM personas WHERE brand_id = ? AND approved = 1 ORDER BY created_at`
+        `SELECT id, name, description, goals, pain_points, rationale FROM personas WHERE brand_id = ? AND approved = 1 ORDER BY created_at`
       )
         .bind(run.brand_id)
-        .all<{ id: string; name: string; description?: string }>()
+        .all<{ id: string; name: string; description?: string; goals?: string; pain_points?: string; rationale?: string }>()
     : { results: [] }
 
   return c.json({
@@ -1086,10 +1086,10 @@ runs.get('/:id/partial', async c => {
 
   const { results: personas = [] } = run.brand_id
     ? await c.env.DB.prepare(
-        `SELECT id, name, description FROM personas WHERE brand_id = ? AND approved = 1 ORDER BY created_at`
+        `SELECT id, name, description, goals, pain_points, rationale FROM personas WHERE brand_id = ? AND approved = 1 ORDER BY created_at`
       )
         .bind(run.brand_id)
-        .all<{ id: string; name: string; description?: string }>()
+        .all<{ id: string; name: string; description?: string; goals?: string; pain_points?: string; rationale?: string }>()
     : { results: [] }
 
   return c.json({
