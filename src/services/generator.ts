@@ -456,7 +456,7 @@ const PERSONAS_SCHEMA = {
     },
     brand_name: {
       type: 'string',
-      description: 'The actual company or brand name as it appears on the site — not a tagline or value proposition. E.g. "Column Five Media" not "B2B Marketing Agency for SaaS Companies". Use the domain-derived name if the content does not clearly state the brand.',
+      description: 'The actual company or brand name as it appears on the site — not a tagline or value proposition. E.g. "Column Five Media" not "B2B Marketing Agency for SaaS Companies". Use the domain-derived name if the content does not clearly state the brand. NEVER substitute a similarly-named but different company (e.g. do not return "Prisma Cloud" when the domain is "poweredbyprisma").',
     },
   },
   required: ['personas', 'brand_name'],
@@ -487,7 +487,12 @@ The site title or domain suggests: ${brand.brand_name}
 Website summary:
 ${brand.summary}
 ${supplementSection}
-First, extract the actual company/brand name from the content. Return it in brand_name. Do not return taglines or value propositions (e.g. "B2B Marketing Agency for SaaS Companies") — return the real company name (e.g. "Column Five Media"). If unclear, use the domain-derived name above.
+First, extract the actual company/brand name from the content. Return it in brand_name.
+IMPORTANT:
+- The domain-derived name "${brand.brand_name}" is the ground truth for which company this is. The website belongs to THIS company, not to a similarly-named enterprise product or competitor.
+- Do NOT confuse this brand with other companies that share a similar word (e.g. a company called "PoweredByPrisma" is NOT "Prisma Cloud from Palo Alto Networks"; a company called "ArcTools" is NOT "Arc Browser").
+- Do not return taglines or value propositions (e.g. "B2B Marketing Agency for SaaS Companies") — return the real company name (e.g. "Column Five Media").
+- If the site content does not clearly state a different brand name, use the domain-derived name above.
 
 For each persona provide:
 - description: 2-3 sentences on who they are, their role and day-to-day context
