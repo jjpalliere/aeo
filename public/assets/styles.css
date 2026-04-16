@@ -839,6 +839,32 @@ tr:hover td { background: var(--surface2); }
   font-weight: 500;
 }
 
+/* Tool-use pills shown in assistant chat bubbles */
+.tool-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.tool-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+}
+.tool-pill.err {
+  color: #c47070;
+  border-color: #c47070;
+}
+.tool-pill-name { font-weight: 500; }
+.tool-pill-meta { opacity: 0.7; }
+
 .chat-input-row {
   display: flex;
   gap: 8px;

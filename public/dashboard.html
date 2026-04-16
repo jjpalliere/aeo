@@ -1577,51 +1577,83 @@
       }
     }
 
-    // ── Chat persistence ─────────────────────────────────────────────────────
-    const CHAT_KEY = `aeo-chat-${runId}`
+    // ── Chat persistence & tool-use ──────────────────────────────────────────
+    // Legacy key used before the tool-use refactor; still read on load so existing
+    // conversations render, but no longer written to.
+    const CHAT_KEY       = `aeo-chat-${runId}`
+    // New key: stores proper turn history including raw Anthropic content arrays
+    // for assistant turns (needed so tool_use blocks keep matching tool_results on
+    // multi-turn continuations).
+    const CHAT_TURNS_KEY = `aeo-chat-${runId}-turns`
+    const MAX_TURNS_SENT = 20
     let assistantReady = false
 
-    function saveChatHistory() {
-      try {
-        const msgs = document.getElementById('chat-messages')
-        const items = [...msgs.querySelectorAll('.chat-message')].map(el => ({
-          role: el.classList.contains('user') ? 'user' : 'assistant',
-          html: el.querySelector('.chat-bubble').innerHTML,
-        }))
-        localStorage.setItem(CHAT_KEY, JSON.stringify(items))
-      } catch {}
+    function loadTurns() {
+      try { return JSON.parse(localStorage.getItem(CHAT_TURNS_KEY) || '[]') } catch { return [] }
+    }
+    function saveTurns(turns) {
+      try { localStorage.setItem(CHAT_TURNS_KEY, JSON.stringify(turns.slice(-50))) } catch {}
     }
 
-    function loadChatHistory() {
+    function renderPill(entry) {
+      const meta = entry.ok
+        ? `${entry.rows != null ? entry.rows + ' rows · ' : ''}${entry.duration_ms}ms`
+        : 'error'
+      return `<span class="tool-pill ${entry.ok ? 'ok' : 'err'}">
+        <span class="tool-pill-name">${escHtml(entry.name)}</span>
+        <span class="tool-pill-meta">${escHtml(meta)}</span>
+      </span>`
+    }
+
+    function appendBubble(role, text, toolTrace) {
+      const msgs = document.getElementById('chat-messages')
+      const pills = (toolTrace && toolTrace.length)
+        ? `<div class="tool-pills">${toolTrace.map(renderPill).join('')}</div>`
+        : ''
+      const safeText = String(text ?? '')
+      const html = `<div class="chat-message ${role}"><div class="chat-bubble">${pills}<div class="bubble-text">${safeText.replace(/\n/g,'<br>')}</div></div></div>`
+      msgs.insertAdjacentHTML('beforeend', html)
+      msgs.scrollTop = msgs.scrollHeight
+    }
+
+    function loadChatHistoryV2() {
+      const msgs = document.getElementById('chat-messages')
+      // Render legacy HTML bubbles first (from old key) — one-time, no migration.
       try {
         const saved = localStorage.getItem(CHAT_KEY)
-        if (!saved) return
-        const items = JSON.parse(saved)
-        if (!items?.length) return
-        const msgs = document.getElementById('chat-messages')
-        msgs.innerHTML = items.map(item =>
-          `<div class="chat-message ${item.role}"><div class="chat-bubble">${item.html}</div></div>`
-        ).join('')
-        msgs.scrollTop = msgs.scrollHeight
+        if (saved) {
+          const items = JSON.parse(saved)
+          if (items && items.length) {
+            msgs.innerHTML = items.map(item =>
+              `<div class="chat-message ${item.role}"><div class="chat-bubble">${item.html}</div></div>`
+            ).join('')
+          }
+        }
       } catch {}
+      // Append structured turns (from new key).
+      for (const t of loadTurns()) {
+        const displayText = t.role === 'user'
+          ? (typeof t.content === 'string' ? t.content : '')
+          : (t.text || '')
+        appendBubble(t.role, escHtml(displayText), t.tool_trace)
+      }
+      msgs.scrollTop = msgs.scrollHeight
     }
 
     function buildAssistant() {
       const qs = [
-        'Which LLM ranks us worst?',
-        'What owned pages should we improve?',
-        'What are our top competitors doing better?',
-        'Which citation sources should we target?',
-        'What topics are missing in our ToFu coverage?',
+        'Which LLM ranks us worst and why?',
+        'Which BOFU prompts do we lose on?',
+        'Show competitors mentioned alongside us with their positioning.',
+        'What owned pages are cited, and which are missing?',
       ]
       document.getElementById('suggestions').innerHTML = qs.map(q=>
         `<button class="btn btn-ghost btn-sm" onclick="askSuggestion('${escHtml(q)}')">${escHtml(q)}</button>`
       ).join('')
 
-      // Only wire up listeners and restore history once
       if (!assistantReady) {
         assistantReady = true
-        loadChatHistory()
+        loadChatHistoryV2()
         document.getElementById('chat-send').addEventListener('click', sendChat)
         document.getElementById('chat-input').addEventListener('keydown', e => {
           if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendChat() }
@@ -1640,31 +1672,49 @@
       if (!q) return
       input.value = ''
 
-      const msgs = document.getElementById('chat-messages')
-      msgs.innerHTML += `<div class="chat-message user"><div class="chat-bubble">${escHtml(q)}</div></div>`
+      const turns = loadTurns()
+      turns.push({ role: 'user', content: q, ts: Date.now() })
+
+      appendBubble('user', escHtml(q))
       const lid = `m${Date.now()}`
-      msgs.innerHTML += `<div class="chat-message assistant" id="${lid}"><div class="chat-bubble"><span class="spinner"></span></div></div>`
-      msgs.scrollTop = msgs.scrollHeight
-      saveChatHistory()
+      document.getElementById('chat-messages').insertAdjacentHTML(
+        'beforeend',
+        `<div class="chat-message assistant" id="${lid}"><div class="chat-bubble"><span class="spinner"></span></div></div>`
+      )
 
       const btn = document.getElementById('chat-send')
       btn.disabled = true
 
       try {
+        // Send raw content on assistant turns (preserves tool_use blocks for threading).
+        const payloadTurns = turns.slice(-MAX_TURNS_SENT).map(t => ({ role: t.role, content: t.content }))
         const res = await fetch(API('/api/assistant'), {
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ run_id: runId, question: q }),
+          body: JSON.stringify({ run_id: runId, messages: payloadTurns }),
         })
         const result = await safeJson(res)
+        const answer     = result.answer || result.error || 'No response'
+        const rawContent = result.content || [{ type:'text', text: answer }]
+        const trace      = result.tool_trace || []
+
+        const pills = trace.length ? `<div class="tool-pills">${trace.map(renderPill).join('')}</div>` : ''
         document.getElementById(lid).querySelector('.chat-bubble').innerHTML =
-          (result.answer || result.error || 'No response').replace(/\n/g,'<br>')
+          `${pills}<div class="bubble-text">${escHtml(answer).replace(/\n/g,'<br>')}</div>`
+
+        turns.push({
+          role: 'assistant',
+          content: rawContent,     // full Anthropic content array — resent on next turn
+          text: answer,             // text-only copy for quick render on reload
+          tool_trace: trace,
+          ts: Date.now(),
+        })
+        saveTurns(turns)
       } catch(err) {
         document.getElementById(lid).querySelector('.chat-bubble').textContent = `Error: ${err.message}`
       }
       btn.disabled = false
-      msgs.scrollTop = msgs.scrollHeight
-      saveChatHistory()
+      document.getElementById('chat-messages').scrollTop = 1e9
     }
 
     const PERSONA_COLORS = ['#7a9cc8', '#c8956e', '#7dba84', '#a07abf', '#c8a96e', '#c47070', '#6db5b0', '#b07aaa']
