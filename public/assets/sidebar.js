@@ -36,6 +36,7 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
       // State B — Brand picker
       container.innerHTML = `
         <div class="sb-header">
+          <button type="button" class="sb-back" onclick="window.__sbTogglePicker()" title="Close picker" aria-label="Close picker">←</button>
           <span class="sb-section-title">Select Brand</span>
         </div>
         <div class="sb-brand-list">
