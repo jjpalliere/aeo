@@ -40,12 +40,15 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
         </div>
         <div class="sb-brand-list">
           ${brands.map(b => `
-            <div class="sb-brand-item ${b.id === currentBrandId ? 'active' : ''}" onclick="window.__sbSelectBrand('${b.id}')">
-              <span class="sb-brand-radio">${b.id === currentBrandId ? '●' : '○'}</span>
-              <div class="sb-brand-info">
-                <div class="sb-brand-name">${escHtml(b.name || b.domain || 'Brand')}</div>
-                <div class="sb-brand-domain">${escHtml(b.domain || '')}</div>
+            <div class="sb-brand-item ${b.id === currentBrandId ? 'active' : ''}">
+              <div class="sb-brand-item-main" onclick="window.__sbSelectBrand('${b.id}')">
+                <span class="sb-brand-radio">${b.id === currentBrandId ? '●' : '○'}</span>
+                <div class="sb-brand-info">
+                  <div class="sb-brand-name">${escHtml(b.name || b.domain || 'Brand')}</div>
+                  <div class="sb-brand-domain">${escHtml(b.domain || '')}</div>
+                </div>
               </div>
+              <button type="button" class="sb-brand-delete" title="Delete brand" aria-label="Delete brand" onclick="event.stopPropagation(); window.__sbDeleteBrand('${b.id}')">×</button>
             </div>
           `).join('')}
           <a href="/" class="sb-add-brand">+ Add Brand</a>
@@ -100,10 +103,9 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
         brands = (data.brands || []).map(b => ({ id: b.id, name: b.name, domain: b.domain }))
       }
 
-      // Auto-select first brand if none selected
-      if (!currentBrandId && brands.length > 0) {
+      // Auto-select first brand if none selected, or if active id no longer exists
+      if (brands.length > 0 && (!currentBrandId || !brands.some((x) => x.id === currentBrandId))) {
         currentBrandId = brands[0].id
-        // Persist selection
         fetch('/api/auth/active', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -133,6 +135,36 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
     if (typeof window.onBrandChanged === 'function') {
       window.onBrandChanged(brandId)
     }
+  }
+
+  window.__sbDeleteBrand = async function (brandId) {
+    const b = brands.find((x) => x.id === brandId)
+    const label = b ? (b.name || b.domain || 'this brand') : 'this brand'
+    if (!confirm('Delete "' + label + '" and all its runs and data?\n\nThis cannot be undone.')) return
+    try {
+      const res = await fetch('/api/brands/' + encodeURIComponent(brandId), { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error || 'Delete failed')
+        return
+      }
+      const meRes = await fetch('/api/auth/me')
+      if (meRes.ok) window.__aeo_user = await meRes.json()
+      await loadBrands()
+      const container = document.getElementById('aeo-sidebar')
+      if (container) render(container)
+      if (typeof window.onBrandChanged === 'function') {
+        window.onBrandChanged(currentBrandId)
+      }
+    } catch {
+      alert('Delete failed')
+    }
+  }
+
+  // Re-render sidebar (called after brand name changes, etc.)
+  window.__sbRefresh = function () {
+    const container = document.getElementById('aeo-sidebar')
+    if (container) render(container)
   }
 
   // Toggle picker

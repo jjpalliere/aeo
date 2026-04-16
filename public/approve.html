@@ -361,6 +361,14 @@
             Source Material
             <span id="source-toggle-label" style="font-size:var(--text-xs);color:var(--text3)">▶ Show pages crawled</span>
           </div>
+          <!-- Editable brand name -->
+          <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+            <label for="brand-name-input" style="font-size:var(--text-xs);letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);white-space:nowrap">Brand Name</label>
+            <input type="text" id="brand-name-input" spellcheck="false"
+              style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:var(--text-sm);padding:6px 10px;border-radius:4px;outline:none"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)';saveBrandName()" />
+            <span id="brand-name-status" style="font-size:var(--text-xs);color:var(--text3);min-width:40px"></span>
+          </div>
           <div style="flex:1;min-height:0"></div>
           <div id="source-material" style="display:none;margin-top:10px"></div>
         </div>
@@ -881,6 +889,8 @@
       document.getElementById('prompt-count').textContent = brand.prompts.length
       document.getElementById('persona-count').textContent = brand.personas.length
       document.getElementById('brand-name-top').textContent = brand.name || brand.url
+      const nameInput = document.getElementById('brand-name-input')
+      if (nameInput && !nameInput.matches(':focus')) nameInput.value = brand.name || ''
       updateLaunchBtn()
       applySupplementUI()
     }
@@ -1560,6 +1570,41 @@
         btn.textContent = `Add Selected (${importSelected.size}) →`
       }
     }
+
+    // ── Brand name editing ──────────────────────────────────────────────────
+
+    async function saveBrandName() {
+      const input = document.getElementById('brand-name-input')
+      const status = document.getElementById('brand-name-status')
+      const name = input.value.trim()
+      if (!brand) return
+      if (!name || name === brand.name) { input.value = brand.name || ''; return }
+      status.textContent = 'saving…'
+      status.style.color = 'var(--text3)'
+      try {
+        const res = await fetch(`/api/brands/${brand.id}/name`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        })
+        if (!res.ok) throw new Error('save failed')
+        brand.name = name
+        document.getElementById('brand-name-top').textContent = name
+        if (window.__sbRefresh) window.__sbRefresh()
+        status.textContent = 'saved'
+        status.style.color = 'var(--accent)'
+        setTimeout(() => { status.textContent = '' }, 2000)
+      } catch (e) {
+        input.value = brand.name || ''
+        status.textContent = 'error'
+        status.style.color = '#f55'
+        setTimeout(() => { status.textContent = '' }, 3000)
+      }
+    }
+
+    document.getElementById('brand-name-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.target.blur() }
+    })
 
     // ── Source material ───────────────────────────────────────────────────────
 

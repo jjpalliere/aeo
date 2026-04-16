@@ -552,6 +552,22 @@ brands.post('/:id/import-prompts', async c => {
   return c.json({ ok: true, count: valid.length, prompts: results })
 })
 
+// PATCH /api/brands/:id/name — manually set brand display name
+brands.patch('/:id/name', async c => {
+  const brandId = c.req.param('id')
+  let body: { name?: string }
+  try { body = await c.req.json() } catch { return c.json({ error: 'invalid JSON' }, 400) }
+  const name = body.name?.trim()
+  if (!name) return c.json({ error: 'name is required' }, 400)
+  if (name.length > 200) return c.json({ error: 'name too long' }, 400)
+
+  const brand = await requireBrand(c, brandId)
+  if (!brand) return c.json({ error: 'Not found' }, 404)
+
+  await c.env.DB.prepare(`UPDATE brands SET name = ? WHERE id = ?`).bind(name, brandId).run()
+  return c.json({ ok: true, name })
+})
+
 // POST /api/brands/:id/supplement — upload ICP text, regenerate personas
 brands.post('/:id/supplement', async c => {
   const brandId = c.req.param('id')
@@ -605,6 +621,76 @@ brands.post('/:id/supplement', async c => {
     .all()
 
   return c.json({ ok: true, personas: newPersonas })
+})
+
+// DELETE /api/brands/:id — remove brand, all runs, prompts, personas, similarity mappings; clear KV keys
+brands.delete('/:id', async c => {
+  const brandId = c.req.param('id')
+  const teamId = c.get('teamId')
+  const brand = await requireBrand(c, brandId)
+  if (!brand) return c.json({ error: 'Not found' }, 404)
+
+  const { results: runRows } = await c.env.DB.prepare(
+    `SELECT id FROM runs WHERE brand_id = ? AND team_id = ?`
+  )
+    .bind(brandId, teamId)
+    .all<{ id: string }>()
+
+  const stmts: D1PreparedStatement[] = []
+
+  await c.env.DB.prepare(`DELETE FROM similarity_runs WHERE brand_id = ?`).bind(brandId).run()
+
+  for (const r of runRows || []) {
+    const rid = r.id
+    stmts.push(
+      c.env.DB.prepare(
+        `DELETE FROM brand_mentions WHERE query_id IN (SELECT id FROM queries WHERE run_id = ?)`
+      ).bind(rid),
+      c.env.DB.prepare(
+        `DELETE FROM citations WHERE query_id IN (SELECT id FROM queries WHERE run_id = ?)`
+      ).bind(rid),
+      c.env.DB.prepare(`DELETE FROM queries WHERE run_id = ?`).bind(rid),
+      c.env.DB.prepare(`DELETE FROM runs WHERE id = ?`).bind(rid),
+    )
+  }
+  if (stmts.length) await c.env.DB.batch(stmts)
+
+  await c.env.DB.prepare(`DELETE FROM prompts WHERE brand_id = ?`).bind(brandId).run()
+  await c.env.DB.prepare(`DELETE FROM personas WHERE brand_id = ?`).bind(brandId).run()
+  await c.env.DB.prepare(`DELETE FROM brands WHERE id = ?`).bind(brandId).run()
+
+  const { results: remaining } = await c.env.DB.prepare(
+    `SELECT id FROM brands WHERE team_id = ? ORDER BY created_at DESC LIMIT 1`
+  )
+    .bind(teamId)
+    .all<{ id: string }>()
+  const nextBrandId = remaining[0]?.id ?? null
+
+  await c.env.DB.prepare(`UPDATE sessions SET active_brand_id = ? WHERE active_brand_id = ?`)
+    .bind(nextBrandId, brandId)
+    .run()
+
+  const env = c.env
+  const kvDeletes: Promise<unknown>[] = [
+    env.KV.delete(`${teamId}:logs:${brandId}`),
+    env.KV.delete(`${teamId}:progress:${brandId}`),
+    env.KV.delete(`${teamId}:error:${brandId}`),
+    env.KV.delete(`logs:${brandId}`),
+    env.KV.delete(`progress:${brandId}`),
+    env.KV.delete(`error:${brandId}`),
+  ]
+  for (const r of runRows || []) {
+    const rid = r.id
+    kvDeletes.push(
+      env.KV.delete(`${teamId}:logs:run:${rid}`),
+      env.KV.delete(`logs:run:${rid}`),
+      env.KV.delete(`lock:process:${rid}`),
+    )
+  }
+  await Promise.all(kvDeletes.map((p) => p.catch(() => {})))
+
+  console.log(`[brands] DELETE ${brandId.slice(0, 8)} — ok, nextBrand=${nextBrandId?.slice(0, 8) ?? 'none'}`)
+  return c.json({ ok: true, active_brand_id: nextBrandId })
 })
 
 export { brands }
