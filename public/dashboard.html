@@ -569,7 +569,10 @@
           const list = Array.isArray(runs) ? runs : []
           const bid = urlBrandId || me.active_brand_id
           const pool = bid ? list.filter((r) => r.brand_id === bid) : list
-          const pick = pool[0] || list[0]
+          // When a specific brand is requested, do NOT fall back to another
+          // brand's run — that's the "ghost data" bug. Only fall back to
+          // list[0] when no brand scope was provided at all.
+          const pick = bid ? pool[0] : (pool[0] || list[0])
           if (pick?.id) {
             runId = pick.id
             history.replaceState(null, '', `?runId=${encodeURIComponent(runId)}`)
