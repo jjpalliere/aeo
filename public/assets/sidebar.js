@@ -69,7 +69,7 @@ window.AEO_SIMILARITY_DEFAULT_RUNS = [
         </div>
         <nav class="sb-nav">
           <a href="/approve.html${brandParam}" class="sb-nav-item">Review</a>
-          <a href="/dashboard.html" class="sb-nav-item">Dashboard</a>
+          <a href="/dashboard.html${brandParam}" class="sb-nav-item">Dashboard</a>
           <a href="/similarity.html${brandParam}" class="sb-nav-item">Similarity</a>
           <a href="/live.html${brandParam}" class="sb-nav-item">Live Runs</a>
           <a href="/" class="sb-nav-item">Run History</a>
