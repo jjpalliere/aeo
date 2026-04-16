@@ -396,16 +396,11 @@
           const bid = urlBrandId || me.active_brand_id
           const pool = bid ? list.filter((r) => r.brand_id === bid) : list
           const active = ['pending', 'querying', 'scraping', 'analyzing']
-          // When a specific brand is requested, only pick from that brand's
-          // pool — don't fall back to another brand's run (the "ghost data"
-          // bug). Only allow cross-brand fallback when no brand scope was
-          // provided at all.
-          const pick = bid
-            ? (pool.find((r) => active.includes(r.status)) || pool[0])
-            : (pool.find((r) => active.includes(r.status)) ||
-               list.find((r) => active.includes(r.status)) ||
-               pool[0] ||
-               list[0])
+          const pick =
+            pool.find((r) => active.includes(r.status)) ||
+            list.find((r) => active.includes(r.status)) ||
+            pool[0] ||
+            list[0]
           if (pick?.id) {
             runId = pick.id
             history.replaceState(null, '', `?runId=${encodeURIComponent(runId)}`)
