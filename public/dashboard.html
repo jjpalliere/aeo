@@ -1605,13 +1605,92 @@
       </span>`
     }
 
+    // Minimal markdown → HTML. HTML-escapes first (XSS safe), then applies a
+    // deterministic, limited-grammar transformation. Supports: fenced + inline
+    // code, headings, bold, italic, unordered + ordered lists, links,
+    // blockquotes, and paragraph/break whitespace. No raw HTML passthrough.
+    function renderMarkdown(src) {
+      if (!src) return ''
+      let s = escHtml(String(src))
+
+      // Fenced code blocks ```...```
+      const codeBlocks = []
+      s = s.replace(/```([^\n`]*)\n([\s\S]*?)```/g, (_, _lang, code) => {
+        const i = codeBlocks.push(`<pre><code>${code.replace(/\n$/, '')}</code></pre>`) - 1
+        return `\u0000CB${i}\u0000`
+      })
+
+      // Inline code `...`
+      const inlineCodes = []
+      s = s.replace(/`([^`\n]+)`/g, (_, code) => {
+        const i = inlineCodes.push(`<code>${code}</code>`) - 1
+        return `\u0000IC${i}\u0000`
+      })
+
+      // Split into block-level chunks by blank lines
+      const blocks = s.split(/\n{2,}/).map(block => {
+        // Headings
+        if (/^######\s+/.test(block)) return `<h3>${block.replace(/^######\s+/, '')}</h3>`
+        if (/^#####\s+/.test(block))  return `<h3>${block.replace(/^#####\s+/, '')}</h3>`
+        if (/^####\s+/.test(block))   return `<h3>${block.replace(/^####\s+/, '')}</h3>`
+        if (/^###\s+/.test(block))    return `<h3>${block.replace(/^###\s+/, '')}</h3>`
+        if (/^##\s+/.test(block))     return `<h2>${block.replace(/^##\s+/, '')}</h2>`
+        if (/^#\s+/.test(block))      return `<h1>${block.replace(/^#\s+/, '')}</h1>`
+
+        // Blockquote (lines all starting with >)
+        const bqLines = block.split('\n')
+        if (bqLines.every(l => /^\s*&gt;\s?/.test(l))) {
+          return `<blockquote>${bqLines.map(l => l.replace(/^\s*&gt;\s?/, '')).join('<br>')}</blockquote>`
+        }
+
+        // Unordered list
+        if (bqLines.every(l => /^\s*[-*]\s+/.test(l))) {
+          const items = bqLines.map(l => `<li>${l.replace(/^\s*[-*]\s+/, '')}</li>`).join('')
+          return `<ul>${items}</ul>`
+        }
+
+        // Ordered list
+        if (bqLines.every(l => /^\s*\d+\.\s+/.test(l))) {
+          const items = bqLines.map(l => `<li>${l.replace(/^\s*\d+\.\s+/, '')}</li>`).join('')
+          return `<ol>${items}</ol>`
+        }
+
+        // Placeholder-only blocks (fenced code) — pass through raw
+        if (/^\u0000CB\d+\u0000$/.test(block.trim())) return block.trim()
+
+        // Paragraph — preserve single line breaks as <br>
+        return `<p>${block.replace(/\n/g, '<br>')}</p>`
+      })
+
+      s = blocks.join('\n')
+
+      // Inline transforms — applied within block content only.
+      // Links [text](url) — url restricted to safe schemes.
+      s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        (_, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`)
+      // Bold **...**
+      s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      // Italic *...* / _..._
+      s = s.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>')
+      s = s.replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>')
+
+      // Restore code placeholders
+      s = s.replace(/\u0000CB(\d+)\u0000/g, (_, i) => codeBlocks[+i])
+      s = s.replace(/\u0000IC(\d+)\u0000/g, (_, i) => inlineCodes[+i])
+
+      return s
+    }
+
     function appendBubble(role, text, toolTrace) {
       const msgs = document.getElementById('chat-messages')
       const pills = (toolTrace && toolTrace.length)
         ? `<div class="tool-pills">${toolTrace.map(renderPill).join('')}</div>`
         : ''
-      const safeText = String(text ?? '')
-      const html = `<div class="chat-message ${role}"><div class="chat-bubble">${pills}<div class="bubble-text">${safeText.replace(/\n/g,'<br>')}</div></div></div>`
+      // User bubbles: plain escaped text. Assistant: render markdown.
+      const body = role === 'assistant'
+        ? renderMarkdown(text)
+        : escHtml(String(text ?? '')).replace(/\n/g, '<br>')
+      const html = `<div class="chat-message ${role}"><div class="chat-bubble">${pills}<div class="bubble-text">${body}</div></div></div>`
       msgs.insertAdjacentHTML('beforeend', html)
       msgs.scrollTop = msgs.scrollHeight
     }
@@ -1700,7 +1779,7 @@
 
         const pills = trace.length ? `<div class="tool-pills">${trace.map(renderPill).join('')}</div>` : ''
         document.getElementById(lid).querySelector('.chat-bubble').innerHTML =
-          `${pills}<div class="bubble-text">${escHtml(answer).replace(/\n/g,'<br>')}</div>`
+          `${pills}<div class="bubble-text">${renderMarkdown(answer)}</div>`
 
         turns.push({
           role: 'assistant',

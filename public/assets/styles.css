@@ -829,9 +829,9 @@ tr:hover td { background: var(--surface2); }
   line-height: 1.6;
 }
 .chat-message.assistant .chat-bubble {
-  background: var(--surface2);
-  border: none;
-  color: var(--accent);
+  background: rgba(122, 156, 200, 0.10);
+  border: 1px solid rgba(122, 156, 200, 0.25);
+  color: var(--text);
 }
 .chat-message.user .chat-bubble {
   background: var(--accent);
@@ -864,6 +864,64 @@ tr:hover td { background: var(--surface2); }
 }
 .tool-pill-name { font-weight: 500; }
 .tool-pill-meta { opacity: 0.7; }
+
+/* Markdown formatting inside assistant bubbles */
+.bubble-text { line-height: 1.55; }
+.bubble-text p { margin: 0 0 8px 0; }
+.bubble-text p:last-child { margin-bottom: 0; }
+.bubble-text strong { color: var(--accent); font-weight: 600; }
+.bubble-text em { font-style: italic; color: var(--text); }
+.bubble-text code {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+.bubble-text pre {
+  background: rgba(0,0,0,0.45);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+.bubble-text pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.bubble-text ul, .bubble-text ol {
+  margin: 6px 0 8px 0;
+  padding-left: 22px;
+}
+.bubble-text li { margin: 2px 0; }
+.bubble-text h1, .bubble-text h2, .bubble-text h3 {
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: 10px 0 6px 0;
+  color: var(--accent);
+}
+.bubble-text h1:first-child,
+.bubble-text h2:first-child,
+.bubble-text h3:first-child { margin-top: 0; }
+.bubble-text a { color: var(--accent); text-decoration: underline; }
+.bubble-text blockquote {
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+  margin: 8px 0;
+  color: var(--text2);
+}
+.chat-message.user .bubble-text strong,
+.chat-message.user .bubble-text em,
+.chat-message.user .bubble-text h1,
+.chat-message.user .bubble-text h2,
+.chat-message.user .bubble-text h3,
+.chat-message.user .bubble-text a { color: #0a0a0a; }
 
 .chat-input-row {
   display: flex;
