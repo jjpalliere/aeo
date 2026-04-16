@@ -852,7 +852,7 @@ runs.get('/:id/live-responses', async c => {
      JOIN personas pe ON pe.id = q.persona_id
      WHERE q.run_id = ? AND q.status = 'complete'
      ORDER BY q.created_at DESC
-     LIMIT 60`
+     LIMIT 500`
   )
     .bind(runId)
     .all<{
