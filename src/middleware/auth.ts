@@ -9,6 +9,8 @@ export async function sessionMiddleware(c: Context<{ Bindings: Env }>, next: Nex
   if (c.req.path.startsWith('/api/auth')) return next()
   // Public join-request submission
   if (c.req.path.startsWith('/api/join-requests')) return next()
+  // Public invitation preview + acceptance — token is the auth
+  if (c.req.path.startsWith('/api/invitations')) return next()
   // Skip health check
   if (c.req.path === '/api/health') return next()
 

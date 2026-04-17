@@ -19,31 +19,6 @@
       margin-left: var(--sidebar-width); flex: 1; min-width: 0; height: 100vh;
       display: flex; flex-direction: column; background: #0a0a0a;
     }
-    .sim-header {
-      flex-shrink: 0; padding: 16px 20px 8px; border-bottom: 1px solid var(--border);
-      font-family: var(--font-hero); font-size: var(--text-md); letter-spacing: 0.06em;
-      color: var(--text2); text-transform: uppercase;
-    }
-    .sim-toolbar {
-      flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px;
-      border-bottom: 1px solid var(--border2); max-height: 140px; overflow-y: auto;
-    }
-    .sim-run-chip {
-      font-family: var(--font); font-size: var(--text-xs); letter-spacing: 0.06em;
-      padding: 8px 12px; border: 1px solid var(--border2); background: var(--surface2);
-      color: var(--text2); cursor: pointer; border-radius: 2px;
-    }
-    .sim-run-chip:hover { border-color: var(--text3); color: var(--text); }
-    .sim-run-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-    .sim-example-chip {
-      font-family: var(--font); font-size: var(--text-xs); letter-spacing: 0.06em;
-      padding: 8px 12px; border: 1px dashed var(--border2); background: transparent;
-      color: var(--accent); border-radius: 2px; flex-shrink: 0;
-    }
-    .sim-toolbar-mapped { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; min-width: 0; }
-    .sim-empty {
-      padding: 24px 20px; color: var(--text3); font-size: var(--text-sm); letter-spacing: 0.06em;
-    }
     .sim-frame-wrap {
       flex: 1; min-height: 0; position: relative;
     }
@@ -53,6 +28,7 @@
     .sim-placeholder {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       color: var(--text3); font-size: var(--text-sm); letter-spacing: 0.06em;
+      padding: 24px; text-align: center;
     }
   </style>
 </head>
@@ -60,15 +36,9 @@
   <div class="sb-page-layout">
     <div id="aeo-sidebar"></div>
     <main class="page-main">
-      <div class="sim-header">Similarity browser</div>
-      <div class="sim-toolbar">
-        <span class="sim-example-chip" id="sim-example-chip" title="Reference label — map your own runs in Admin"></span>
-        <div id="sim-toolbar-mapped" class="sim-toolbar-mapped"></div>
-      </div>
-      <div id="sim-empty" class="sim-empty hidden"></div>
+      <div id="sim-empty" class="sim-placeholder hidden"></div>
       <div class="sim-frame-wrap">
-        <div id="sim-placeholder" class="sim-placeholder">Select a mapped run above</div>
-        <iframe id="sim-iframe" title="Similarity" class="hidden" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+        <iframe id="sim-iframe" title="Similarity" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
       </div>
     </main>
   </div>
@@ -76,10 +46,6 @@
   <script src="/assets/sidebar.js"></script>
   <script>
     const SIMILARITY_ORIGIN = 'https://similarity-browser.pages.dev'
-    const EX = () => window.AEO_SIMILARITY_EXAMPLE ?? ''
-    let mappings = []
-    let selectedRunId = null
-
     function mergeDefaultRuns(apiRuns) {
       const defs = Array.isArray(window.AEO_SIMILARITY_DEFAULT_RUNS) ? window.AEO_SIMILARITY_DEFAULT_RUNS : []
       const seen = new Set()
@@ -102,20 +68,11 @@
       return out
     }
 
-    function setExampleCopy() {
-      const t = EX()
-      const chip = document.getElementById('sim-example-chip')
-      if (chip) chip.textContent = t
-    }
-
     async function loadMappings() {
-      setExampleCopy()
-      const toolbar = document.getElementById('sim-toolbar-mapped')
       const emptyEl = document.getElementById('sim-empty')
       const iframe = document.getElementById('sim-iframe')
-      const placeholder = document.getElementById('sim-placeholder')
+      const ex = window.AEO_SIMILARITY_EXAMPLE ?? ''
 
-      if (toolbar) toolbar.innerHTML = ''
       emptyEl.classList.add('hidden')
       emptyEl.textContent = ''
 
@@ -128,56 +85,26 @@
         }
       } catch { /* use defaults only */ }
 
-      mappings = mergeDefaultRuns(apiRuns)
+      const mappings = mergeDefaultRuns(apiRuns)
 
       if (mappings.length === 0) {
         emptyEl.classList.remove('hidden')
-        emptyEl.textContent = EX() + ' — Add default runs in sidebar.js (AEO_SIMILARITY_DEFAULT_RUNS) or map extras in Admin.'
-        iframe.classList.add('hidden')
-        placeholder.classList.remove('hidden')
-        selectedRunId = null
+        emptyEl.textContent = ex
+          ? ex + ' — Add default runs in sidebar.js (AEO_SIMILARITY_DEFAULT_RUNS) or map extras in Admin.'
+          : 'No similarity runs mapped for this brand. Add mappings in Admin.'
+        iframe.src = 'about:blank'
         return
       }
 
-      mappings.forEach(m => {
-        const btn = document.createElement('button')
-        btn.type = 'button'
-        btn.className = 'sim-run-chip' + (m.run_id === selectedRunId ? ' active' : '')
-        btn.textContent = m.label || m.run_id
-        btn.title = m.run_id
-        btn.onclick = () => selectRun(m.run_id)
-        toolbar.appendChild(btn)
-      })
-
-      if (selectedRunId && !mappings.some(m => m.run_id === selectedRunId)) {
-        selectedRunId = null
-      }
-      if (!selectedRunId && mappings[0]) {
-        selectRun(mappings[0].run_id)
-      } else if (selectedRunId) {
-        selectRun(selectedRunId)
-      }
-    }
-
-    function selectRun(runId) {
-      selectedRunId = runId
-      const iframe = document.getElementById('sim-iframe')
-      const placeholder = document.getElementById('sim-placeholder')
-      document.querySelectorAll('.sim-run-chip').forEach(el => {
-        el.classList.toggle('active', el.title === runId)
-      })
-      const url = SIMILARITY_ORIGIN + '/?run=' + encodeURIComponent(runId)
-      iframe.src = url
-      iframe.classList.remove('hidden')
-      placeholder.classList.add('hidden')
+      emptyEl.classList.add('hidden')
+      // Full app URL — user picks a run inside Similarity (saved runs list). No ?run= so list is default.
+      iframe.src = SIMILARITY_ORIGIN + '/'
     }
 
     window.onBrandChanged = function () {
-      selectedRunId = null
       loadMappings()
     }
 
-    setExampleCopy()
     initSidebar().then(loadMappings)
   </script>
 </body>

@@ -78,6 +78,19 @@
         <h1>Admin</h1>
 
         <div class="section">
+          <div class="section-title">Teams</div>
+          <div class="section-actions" style="flex-wrap:wrap">
+            <input type="text" id="new-team-name" placeholder="Team name" style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:6px 10px;font-family:var(--font);font-size:var(--text-sm)" />
+            <input type="email" id="new-team-assignee" placeholder="Assign to email (optional)" style="flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:6px 10px;font-family:var(--font);font-size:var(--text-sm)" />
+            <button type="button" class="btn btn-primary btn-sm" onclick="createTeam()">Create Team</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="loadTeams()">Refresh</button>
+          </div>
+          <div id="teams-status" style="font-size:var(--text-xs);color:var(--text2);min-height:16px;margin-bottom:8px"></div>
+          <div id="teams-table">Loading…</div>
+          <div id="team-detail" style="margin-top:16px"></div>
+        </div>
+
+        <div class="section">
           <div class="section-title">Join requests</div>
           <div class="section-actions">
             <label style="font-size:var(--text-xs);color:var(--text3)">Status</label>
@@ -144,11 +157,293 @@
       const exEl = document.getElementById('admin-sim-example-line')
       if (exEl) exEl.textContent = window.AEO_SIMILARITY_EXAMPLE
 
+      loadTeams()
       loadJoinRequests()
       loadSimilarityBrands()
       loadCodes()
       loadAccounts()
       loadFallbackTokens()
+    }
+
+    // ─── Teams management ───────────────────────────────────────────────────
+    let _teamsCache = []
+
+    async function loadTeams() {
+      const el = document.getElementById('teams-table')
+      el.innerHTML = 'Loading…'
+      try {
+        const res = await fetch('/api/admin/teams')
+        const data = await res.json()
+        if (!res.ok) {
+          el.innerHTML = `<div style="color:var(--danger)">${escHtml(data.error || 'Failed')}</div>`
+          return
+        }
+        _teamsCache = data.teams || []
+        if (_teamsCache.length === 0) {
+          el.innerHTML = '<div style="color:var(--text3)">No teams.</div>'
+          return
+        }
+        el.innerHTML = `<table>
+          <tr><th>Name</th><th>Members</th><th>Brands</th><th>Runs</th><th>Created</th><th></th></tr>
+          ${_teamsCache.map(t => `<tr>
+            <td>
+              <span class="team-name-display" data-id="${t.id}" onclick="editTeamName('${t.id}')" style="cursor:pointer;border-bottom:1px dotted var(--border)" title="Click to rename">
+                ${escHtml(t.name)}${t.is_archive ? ' <span style="color:var(--text3);font-size:10px">(archive)</span>' : ''}
+              </span>
+            </td>
+            <td>${t.member_count}</td>
+            <td>${t.brand_count}${t.archived_brand_count ? ` <span style="color:var(--text3);font-size:10px">+${t.archived_brand_count} archived</span>` : ''}</td>
+            <td>${t.run_count}</td>
+            <td style="color:var(--text3);font-size:var(--text-xs)">${(t.created_at || '').slice(0,10)}</td>
+            <td style="white-space:nowrap">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="openTeamDetail('${t.id}')">Manage</button>
+              ${t.is_archive
+                ? '<button type="button" class="btn btn-ghost btn-sm" disabled title="Cannot delete the archive team">Delete</button>'
+                : `<button type="button" class="btn btn-ghost btn-sm" onclick="deleteTeam('${t.id}','${escHtml(t.name).replace(/'/g,"\\'")}')">Delete</button>`}
+            </td>
+          </tr>`).join('')}
+        </table>`
+      } catch {
+        el.innerHTML = '<div style="color:var(--danger)">Failed to load teams</div>'
+      }
+    }
+
+    async function createTeam() {
+      const nameInput = document.getElementById('new-team-name')
+      const assigneeInput = document.getElementById('new-team-assignee')
+      const status = document.getElementById('teams-status')
+      const name = nameInput.value.trim()
+      if (!name) { status.innerHTML = '<span style="color:var(--danger)">Team name required</span>'; return }
+      status.textContent = 'Creating…'
+      try {
+        const body = { name }
+        const assignee = assigneeInput.value.trim()
+        if (assignee) body.assigneeEmail = assignee
+        const res = await fetch('/api/admin/teams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          status.innerHTML = `<span style="color:var(--danger)">${escHtml(data.error || 'Failed')}</span>`
+          return
+        }
+        status.innerHTML = '<span style="color:var(--success)">Team created</span>'
+        nameInput.value = ''
+        assigneeInput.value = ''
+        loadTeams()
+      } catch {
+        status.innerHTML = '<span style="color:var(--danger)">Connection error</span>'
+      }
+    }
+
+    async function editTeamName(teamId) {
+      const team = _teamsCache.find(t => t.id === teamId)
+      if (!team) return
+      const newName = prompt('New team name:', team.name)
+      if (!newName || newName.trim() === team.name) return
+      try {
+        const res = await fetch('/api/teams/' + encodeURIComponent(teamId), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName.trim() }),
+        })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || 'Rename failed'); return }
+        loadTeams()
+      } catch { alert('Connection error') }
+    }
+
+    async function deleteTeam(teamId, teamName) {
+      const confirmName = prompt(`Delete team "${teamName}"? Type the team name to confirm. Brands will be removed from your view. (This cannot be undone.)`)
+      if (!confirmName) return
+      try {
+        const res = await fetch('/api/admin/teams/' + encodeURIComponent(teamId), {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmName }),
+        })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || 'Delete failed'); return }
+        document.getElementById('team-detail').innerHTML = ''
+        loadTeams()
+      } catch { alert('Connection error') }
+    }
+
+    async function openTeamDetail(teamId) {
+      const team = _teamsCache.find(t => t.id === teamId)
+      if (!team) return
+      const panel = document.getElementById('team-detail')
+      panel.innerHTML = `<div style="color:var(--text3)">Loading team…</div>`
+      try {
+        const [memRes, invRes] = await Promise.all([
+          fetch('/api/admin/teams/' + encodeURIComponent(teamId) + '/members'),
+          fetch('/api/teams/' + encodeURIComponent(teamId) + '/invitations'),
+        ])
+        const members = (await memRes.json()).members || []
+        const invites = (await invRes.json()).invitations || []
+
+        panel.innerHTML = `
+          <div style="border:1px solid var(--border);padding:16px;background:var(--surface)">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+              <div style="font-size:var(--text-sm);font-weight:600;color:var(--text)">${escHtml(team.name)}</div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('team-detail').innerHTML=''">Close</button>
+            </div>
+            <div class="section-title" style="margin-top:8px">Invite code</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+              <code style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);letter-spacing:0.14em;color:var(--accent)">${escHtml(team.invite_code)}</code>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="rotateInvite('${team.id}')">Rotate</button>
+            </div>
+
+            <div class="section-title">Members (${members.length})</div>
+            <table style="margin-bottom:16px">
+              <tr><th>Email</th><th>Role</th><th>Joined</th><th></th></tr>
+              ${members.map(m => `<tr>
+                <td>${escHtml(m.email)}${m.is_owner ? ' <span style="color:var(--accent);font-size:10px">owner</span>' : ''}</td>
+                <td>
+                  <select onchange="setMemberRole('${team.id}','${m.id}',this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:2px 6px;font-size:var(--text-xs)">
+                    <option value="admin"${m.role === 'admin' ? ' selected' : ''}>admin</option>
+                    <option value="member"${m.role === 'member' ? ' selected' : ''}>member</option>
+                  </select>
+                </td>
+                <td style="color:var(--text3);font-size:var(--text-xs)">${(m.joined_at || '').slice(0,10)}</td>
+                <td><button type="button" class="btn btn-ghost btn-sm" onclick="kickMember('${team.id}','${m.id}','${escHtml(m.email).replace(/'/g,"\\'")}')">Remove</button></td>
+              </tr>`).join('')}
+            </table>
+
+            <div class="section-actions" style="flex-wrap:wrap">
+              <input type="email" id="add-member-email-${team.id}" placeholder="Existing account email" style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;font-size:var(--text-sm)" />
+              <button type="button" class="btn btn-ghost btn-sm" onclick="addExistingMember('${team.id}')">Add existing user</button>
+            </div>
+
+            <div class="section-title" style="margin-top:20px">Invite by email</div>
+            <div class="section-actions" style="flex-wrap:wrap">
+              <input type="email" id="invite-email-${team.id}" placeholder="new-user@example.com" style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;font-size:var(--text-sm)" />
+              <button type="button" class="btn btn-primary btn-sm" onclick="sendInvitation('${team.id}')">Send invitation</button>
+            </div>
+            <div id="invite-status-${team.id}" style="font-size:var(--text-xs);min-height:16px;margin-top:8px"></div>
+
+            <div class="section-title" style="margin-top:16px">Pending invitations (${invites.filter(i => i.status === 'pending').length})</div>
+            ${invites.length === 0
+              ? '<div style="color:var(--text3);font-size:var(--text-xs)">None</div>'
+              : `<table>
+                  <tr><th>Email</th><th>Status</th><th>Sent</th><th>Expires</th><th></th></tr>
+                  ${invites.map(i => `<tr>
+                    <td>${escHtml(i.email)}</td>
+                    <td style="color:${i.status === 'pending' ? 'var(--accent)' : 'var(--text3)'};font-size:var(--text-xs)">${escHtml(i.status)}</td>
+                    <td style="color:var(--text3);font-size:var(--text-xs)">${(i.created_at || '').slice(0,10)}</td>
+                    <td style="color:var(--text3);font-size:var(--text-xs)">${(i.expires_at || '').slice(0,10)}</td>
+                    <td style="white-space:nowrap">
+                      ${i.status === 'pending' ? `
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="resendInvitation('${team.id}','${i.id}')">Resend</button>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="revokeInvitation('${team.id}','${i.id}')">Revoke</button>
+                      ` : ''}
+                    </td>
+                  </tr>`).join('')}
+                </table>`
+            }
+          </div>
+        `
+      } catch (err) {
+        panel.innerHTML = `<div style="color:var(--danger)">Failed to load team details</div>`
+      }
+    }
+
+    async function rotateInvite(teamId) {
+      if (!confirm('Rotate invite code? The existing code will stop working.')) return
+      try {
+        const res = await fetch('/api/teams/' + encodeURIComponent(teamId) + '/rotate-invite', { method: 'POST' })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || 'Failed'); return }
+        loadTeams()
+        openTeamDetail(teamId)
+      } catch { alert('Connection error') }
+    }
+
+    async function addExistingMember(teamId) {
+      const input = document.getElementById('add-member-email-' + teamId)
+      const email = input?.value.trim()
+      if (!email) return
+      try {
+        const res = await fetch('/api/teams/' + encodeURIComponent(teamId) + '/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || 'Failed'); return }
+        input.value = ''
+        openTeamDetail(teamId)
+        loadTeams()
+      } catch { alert('Connection error') }
+    }
+
+    async function setMemberRole(teamId, accountId, role) {
+      try {
+        const res = await fetch(`/api/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(accountId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role }),
+        })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || 'Failed'); openTeamDetail(teamId) }
+      } catch { alert('Connection error') }
+    }
+
+    async function kickMember(teamId, accountId, email) {
+      if (!confirm('Remove ' + email + ' from the team?')) return
+      try {
+        const res = await fetch(`/api/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(accountId)}`, {
+          method: 'DELETE',
+        })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || 'Failed'); return }
+        openTeamDetail(teamId)
+        loadTeams()
+      } catch { alert('Connection error') }
+    }
+
+    async function sendInvitation(teamId) {
+      const input = document.getElementById('invite-email-' + teamId)
+      const status = document.getElementById('invite-status-' + teamId)
+      const email = input?.value.trim()
+      if (!email) { status.innerHTML = '<span style="color:var(--danger)">Email required</span>'; return }
+      status.textContent = 'Sending…'
+      try {
+        const res = await fetch('/api/teams/' + encodeURIComponent(teamId) + '/invitations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          status.innerHTML = `<span style="color:var(--danger)">${escHtml(data.error || 'Failed')}</span>`
+          return
+        }
+        status.innerHTML = '<span style="color:var(--success)">Invitation sent</span>'
+        input.value = ''
+        openTeamDetail(teamId)
+      } catch { status.innerHTML = '<span style="color:var(--danger)">Connection error</span>' }
+    }
+
+    async function resendInvitation(teamId, invId) {
+      try {
+        const res = await fetch(`/api/teams/${encodeURIComponent(teamId)}/invitations/${encodeURIComponent(invId)}/resend`, { method: 'POST' })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || 'Failed'); return }
+        openTeamDetail(teamId)
+      } catch { alert('Connection error') }
+    }
+
+    async function revokeInvitation(teamId, invId) {
+      if (!confirm('Revoke this invitation? The link will stop working.')) return
+      try {
+        const res = await fetch(`/api/teams/${encodeURIComponent(teamId)}/invitations/${encodeURIComponent(invId)}`, { method: 'DELETE' })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || 'Failed'); return }
+        openTeamDetail(teamId)
+      } catch { alert('Connection error') }
     }
 
     async function loadSimilarityBrands() {

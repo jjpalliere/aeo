@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invitation — AEO</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <style>
+    html, body {
+      background: #080807 !important;
+      margin: 0;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: var(--font-mono);
+    }
+    .invite-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 40px 36px;
+      max-width: 460px;
+      width: 92%;
+      color: var(--text);
+    }
+    .invite-logo {
+      font-family: var(--font-hero);
+      font-size: 28px;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 28px;
+    }
+    .invite-label {
+      font-size: var(--text-xs);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+    .invite-line { margin-bottom: 8px; line-height: 1.5; }
+    .invite-team { color: var(--accent); font-weight: 600; }
+    .invite-inviter { color: var(--text2); }
+    .invite-email { color: var(--text2); font-size: var(--text-sm); }
+    .invite-btn {
+      display: inline-block;
+      margin-top: 28px;
+      padding: 12px 22px;
+      background: var(--accent);
+      color: #0a0a0a;
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      font-size: var(--text-sm);
+      letter-spacing: 0.06em;
+    }
+    .invite-btn:hover { background: var(--accent-hover); }
+    .invite-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .invite-error {
+      color: #c47070;
+      font-size: var(--text-sm);
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+    .invite-success {
+      color: var(--success, #a0be82);
+      font-size: var(--text-sm);
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="invite-card">
+    <div class="invite-logo">AEO</div>
+    <div id="invite-loading" class="invite-line" style="color:var(--text3)">Loading invitation…</div>
+    <div id="invite-content" style="display:none">
+      <div class="invite-label">Invitation</div>
+      <div class="invite-line">You've been invited to join <span class="invite-team" id="team-name"></span>.</div>
+      <div class="invite-line invite-inviter">Invited by <span id="inviter-email"></span></div>
+      <div class="invite-email" id="invitee-email"></div>
+      <button id="accept-btn" class="invite-btn" onclick="acceptInvitation()">Accept invitation</button>
+      <div id="invite-error" class="invite-error" style="display:none"></div>
+    </div>
+    <div id="invite-gone" style="display:none">
+      <div class="invite-error" id="invite-gone-reason"></div>
+      <a href="/" class="invite-btn" style="text-decoration:none;display:inline-block;margin-top:20px">Go home</a>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const token = params.get('token')
+
+    function escHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+    }
+
+    async function loadInvitation() {
+      if (!token) {
+        showGone('Missing invitation token.')
+        return
+      }
+      try {
+        const res = await fetch('/api/invitations/' + encodeURIComponent(token))
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          showGone(data.error || 'This invitation is no longer valid.')
+          return
+        }
+        document.getElementById('invite-loading').style.display = 'none'
+        document.getElementById('invite-content').style.display = 'block'
+        document.getElementById('team-name').textContent = data.team_name
+        document.getElementById('inviter-email').textContent = data.inviter_email
+        document.getElementById('invitee-email').textContent = 'For: ' + data.email
+      } catch (err) {
+        showGone('Network error. Try reloading.')
+      }
+    }
+
+    function showGone(reason) {
+      document.getElementById('invite-loading').style.display = 'none'
+      document.getElementById('invite-content').style.display = 'none'
+      document.getElementById('invite-gone').style.display = 'block'
+      document.getElementById('invite-gone-reason').textContent = reason
+    }
+
+    async function acceptInvitation() {
+      const btn = document.getElementById('accept-btn')
+      const errEl = document.getElementById('invite-error')
+      btn.disabled = true
+      errEl.style.display = 'none'
+      try {
+        const res = await fetch('/api/invitations/accept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          errEl.textContent = data.error || 'Could not accept invitation.'
+          errEl.style.display = 'block'
+          btn.disabled = false
+          return
+        }
+        location.href = data.redirect || '/'
+      } catch (err) {
+        errEl.textContent = 'Network error. Try again.'
+        errEl.style.display = 'block'
+        btn.disabled = false
+      }
+    }
+
+    loadInvitation()
+  </script>
+</body>
+</html>

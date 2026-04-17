@@ -11,6 +11,7 @@ import { assistant } from './routes/assistant'
 import { auth } from './routes/auth'
 import { teams } from './routes/teams'
 import { admin } from './routes/admin'
+import { invitations } from './routes/invitations'
 import { joinRequests } from './routes/join-requests'
 import { similarity } from './routes/similarity'
 
@@ -25,6 +26,7 @@ app.use('/api/*', sessionMiddleware)
 // Auth routes (public — handle their own session validation)
 app.route('/api/auth', auth)
 app.route('/api/join-requests', joinRequests)
+app.route('/api/invitations', invitations)
 
 // Protected routes
 app.route('/api/brands', brands)
